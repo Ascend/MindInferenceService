@@ -225,7 +225,7 @@ class ConfigParser:
         
         engine_type_selected = config.get(OPTIMAL_ENGINE_TYPE, None)
         if engine_type_selected is not None:
-            EnvChecker._check_string_input("engine_type_selected", engine_type_selected)
+            EnvChecker.check_string_input("engine_type_selected", engine_type_selected)
         return True
 
     def engine_config_loading(self) -> GlobalArgs:
@@ -287,7 +287,7 @@ class ConfigParser:
             # Verify the attribute character string.
             args_attr = getattr(self.args, attr)
             if args_attr is None:
-                EnvChecker._check_string_input(attr, args_attr)
+                EnvChecker.check_string_input(attr, args_attr)
 
     def _is_config_attr_valid(self, config: Dict, engine_type_selected: str) -> bool:
         if not self._is_config_valid(config.get(engine_type_selected, None)):
