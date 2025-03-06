@@ -7,7 +7,7 @@ import yaml
 
 from mis_llm.logger import init_logger
 from mis.args import GlobalArgs
-from mis.utils.env_checker import EnvChecker
+from mis.utils.config_checker import ConfigChecker
 
 logger = init_logger(__name__)
 
@@ -40,7 +40,7 @@ CHECKER_VLLM = {
         "min": 1,
         "max": 131072
     },
-    "maxn_num_batched_tokens": {
+    "max_num_batched_tokens": {
         "type": "int",
         "min": 1,
         "max": 131072
@@ -57,7 +57,7 @@ CHECKER_VLLM = {
     },
     "block_size": {
         "type": "int",
-        "valid_values": [1, 2, 4, 8]
+        "valid_values": [8, 16, 32, 64, 128]
     },
     "swap_space": {
         "type": "int",
@@ -79,19 +79,24 @@ CHECKER_VLLM = {
         "max": 1024
     },
     "enable_chunked_prefill": {
-        "type": "bool"
+        "type": "bool",
+        "valid_values": [False]
     },
     "enable_prefix_caching": {
-        "type": "bool"
+        "type": "bool",
+        "valid_values": [False]
     },
     "disable_async_output_proc": {
-        "type": "bool"
+        "type": "bool",
+        "valid_values": [True, False]
     },
     "multi_step_stream_outputs": {
-        "type": "bool"
+        "type": "bool",
+        "valid_values": [True, False]
     },
     "enforce_eager": {
-        "type": "bool"
+        "type": "bool",
+        "valid_values": [True, False]
     }
 }
 
@@ -140,27 +145,6 @@ class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
     """
     VLLM engine configuration validator.
     """
-    keys_list = [
-        "dtype",
-        "tensor_parallel_size",
-        "pipeline_parallel_size",
-        "distributed_executor_backend",
-        "max_num_seqs",
-        "max_model_len",
-        "maxn_num_batched_tokens",
-        "max_seq_len_to_capture",
-        "gpu_memory_utilization",
-        "block_size",
-        "swap_space",
-        "cpu_offload_gb",
-        "scheduler_policy",
-        "num_scheduler_steps",
-        "enable_chunked_prefill",
-        "enable_prefix_caching",
-        "disable_async_output_proc",
-        "multi_step_stream_outputs",
-        "enforce_eager"
-    ]
 
     def __init__(self, config):
         super().__init__(config)
@@ -171,10 +155,10 @@ class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
         Verify the configuration is valid or not
         :return: Verify result
         """
-        diff_config = set(self.config.keys()) - self(self.keys_list)
+        diff_config = set(self.config.keys()) - self(self.checkers.keys())
         if diff_config:
             logger.warning(f"Configuration keys {diff_config} are not supported.")
-        config_update = {key: self.config[key] for key in self.keys_list if key in self.keys_list}
+        config_update = {key: self.config[key] for key in self.checkers.keys() if key in self.checkers.keys()}
         for key in config_update:
             checker = self.checkers.get(key, None)
             if checker is None:
@@ -182,14 +166,14 @@ class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
 
             value = self.config_update
             if checker["type"] == "str_in":
-                EnvChecker.check_str_in(key, value, checker.get("valid_values"))
+                ConfigChecker.is_str_value_in_range(key, value, checker.get("valid_values"))
             elif checker["type"] == "int":
                 if "valid_values" in checker:
-                    EnvChecker.check_int(key, value, valid_values=checker.get("valid_values"))
+                    ConfigChecker.is_int_value_in_range(key, value, valid_values=checker.get("valid_values"))
                 else:
-                    EnvChecker.check_int(key, value, checker.get("min"), checker.get("max"))
+                    ConfigChecker.is_int_value_in_range(key, value, checker.get("min"), checker.get("max"))
             elif checker["type"] == "float":
-                EnvChecker.check_float(key, value, checker.get("min"), checker.get("max"))
+                ConfigChecker.is_float_value_in_range(key, value, checker.get("min"), checker.get("max"))
             elif checker["type"] == "bool":
                 if not isinstance(value, bool):
                     logger.error(f"{key} must be a bool, but got {value}")
@@ -227,7 +211,7 @@ class ConfigParser:
         
         engine_type_selected = config.get(OPTIMAL_ENGINE_TYPE, None)
         if engine_type_selected is not None:
-            EnvChecker.check_string_input("engine_type_selected", engine_type_selected)
+            ConfigChecker.check_string_input("engine_type_selected", engine_type_selected)
         return True
 
     def engine_config_loading(self) -> GlobalArgs:
@@ -289,7 +273,7 @@ class ConfigParser:
             # Verify the attribute character string.
             args_attr = getattr(self.args, attr)
             if args_attr is None:
-                EnvChecker.check_string_input(attr, args_attr)
+                ConfigChecker.check_string_input(attr, args_attr)
 
     def _is_config_attr_valid(self, config: Dict, engine_type_selected: str) -> bool:
         if not self._is_config_valid(config.get(engine_type_selected, None)):

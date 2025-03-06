@@ -24,7 +24,8 @@ class ConfigChecker:
             return False
         
         if min_value is not None and max_value is not None and min_value > max_value:
-            logger.warning(f"Invalid range for {name}: min_value ({min_value}) should be less than or equal to max_value ({max_value})")
+            logger.warning(f"Invalid range for {name}: min_value ({min_value}) should be " 
+                           f"less than or equal to max_value ({max_value})")
             return False
         
         is_valid = True
@@ -36,7 +37,8 @@ class ConfigChecker:
             is_valid = False
         if valid_values is not None:
             if not isinstance(valid_values, list) or not all(isinstance(v, value_type) for v in valid_values):
-                logger.warning(f"valid_values for {name} must be a list of {value_type.__name__}, but got {type(valid_values).__name__}")
+                logger.warning(f"valid_values for {name} must be a list of {value_type.__name__}, " 
+                               f"but got {type(valid_values).__name__}")
                 return False
             if value not in valid_values:
                 logger.warning(f"{name} must be one of {valid_values}")
@@ -44,18 +46,20 @@ class ConfigChecker:
         
         return is_valid
 
-
     @staticmethod
-    def is_int_value_in_range(name: str, value: int, min_value: int = None, max_value: int = None, valid_values: list[int] = None):
+    def is_int_value_in_range(name: str, value: int, min_value: int = None, max_value: int = None, 
+                              valid_values: list[int] = None):
         return ConfigChecker.validate_value(name, value, int, min_value, max_value, valid_values)
 
-
     @staticmethod
-    def is_float_value_in_range(name: str, value: float, min_value: float = None, max_value: float = None, valid_values: list[float] = None):
+    def is_float_value_in_range(name: str, value: float, min_value: float = None, max_value: float = None, 
+                                valid_values: list[float] = None):
         return ConfigChecker.validate_value(name, value, (int, float), min_value, max_value, valid_values)
 
+    @staticmethod
     def is_bool_value_in_range(name: str, value: bool, valid_values: list[bool]):
-        if not isinstance(name, str) or not isinstance(value, bool) or not all(isinstance(v, bool) for v in valid_values):
+        if not isinstance(name, str) or not isinstance(value, bool) or not all(
+            isinstance(v, bool) for v in valid_values):
             logger.warning("Invalid parameter types")
             return False
 
@@ -63,9 +67,11 @@ class ConfigChecker:
             logger.warning(f"{name} must be one of {valid_values}")
             return False
         return True
+
     @staticmethod
     def is_str_value_in_range(name: str, value: str, valid_values: list[str]):
-        if not isinstance(name, str) or not isinstance(valid_values, list) or not all(isinstance(v, str) for v in valid_values):
+        if not isinstance(name, str) or not isinstance(valid_values, list) or not all(
+            isinstance(v, str) for v in valid_values):
             logger.warning("Invalid parameter types")
             return False
         
@@ -73,7 +79,6 @@ class ConfigChecker:
             logger.warning(f"{name}={value} not in {valid_values}")
             return False
         return True
-
 
     @staticmethod
     def check_string_input(input_string_name: str, input_string: str):
