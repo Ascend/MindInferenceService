@@ -1,7 +1,7 @@
 optimal_engine_type: "vllm"
 
 vllm:
-  dtype: ""bfloat16"
+  dtype: "bfloat16"
 
   tensor_parallel_size: 1
   pipline_parallel_size: 1
@@ -12,14 +12,18 @@ vllm:
   max_seq_len_to_capture: 4096
 
   gpu_memory_utilization: 0.95
-  block_size: 16
+  block_size: 8
   swap_space: 0
   cpu_offload_gb: 0
 
   scheduling_policy: "fcfs"
+
   disable_async_output_proc: false
   multi_step_stream_outputs: true
 
+  enable_chunked_prefill: false
+  enable_prefix_caching: false
+  
   enforce_eager: true
 
 mindie:

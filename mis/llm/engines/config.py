@@ -38,17 +38,17 @@ CHECKER_VLLM = {
     "max_model_len": {
         "type": "int",
         "min": 1,
-        "max": 140000
+        "max": 131072
     },
     "maxn_num_batched_tokens": {
         "type": "int",
         "min": 1,
-        "max": 140000
+        "max": 131072
     },
     "max_seq_len_to_capture": {
         "type": "int",
         "min": 1,
-        "max": 140000
+        "max": 131072
     },
     "gpu_memory_utilization": {
         "type": "float",
@@ -57,8 +57,7 @@ CHECKER_VLLM = {
     },
     "block_size": {
         "type": "int",
-        "min": 1,
-        "max": 256
+        "valid_values": [1, 2, 4, 8]
     },
     "swap_space": {
         "type": "int",
@@ -97,12 +96,12 @@ CHECKER_VLLM = {
 }
 
 
-class EngineConfigValidator(ABC):
-    _engine_config_validation: Dict[str, Type["EngineConfigValidator"]] = {}
+class AbsEngineConfigValidator(ABC):
+    _engine_config_validation: Dict[str, Type["AbsEngineConfigValidator"]] = {}
 
     def __init__(self, config):
         """
-        Initialize the EngineConfigValidator class.
+        Initialize the AbsEngineConfigValidator class.
         """
         self.config = config
     
@@ -119,7 +118,7 @@ class EngineConfigValidator(ABC):
         return decorator
 
     @classmethod
-    def get_validator(cls, engine_type: str) -> Type["EngineConfigValidator"]:
+    def get_validator(cls, engine_type: str) -> Type["AbsEngineConfigValidator"]:
         """
         Get the engine configuration validator.
         :param engine_type: Engine type.
@@ -136,8 +135,8 @@ class EngineConfigValidator(ABC):
         raise NotImplementedError("Subclass must implement this method.")
 
 
-@EngineConfigValidator.register("vllm")
-class VLLMEngineConfigValidator(EngineConfigValidator):
+@AbsEngineConfigValidator.register("vllm")
+class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
     """
     VLLM engine configuration validator.
     """
@@ -206,10 +205,13 @@ class ConfigParser:
     @staticmethod
     def _config_yaml_file_loading(config_file_path: str) -> bool:
         try:
-            with open(ROOT_DIR + config_file_path, "r") as file:
+            with open(config_file_path, "r") as file:
                 config = yaml.safe_load(file)
+        except FileNotFoundError:
+            logger.error(f"Config file {config_file_path} not found."
+                         f" The engine will be started with default parameters.")
         except yaml.YAMLError as e:
-            logger.error(f"YAML error in file {ROOT_DIR + config_file_path}: {e}")
+            logger.error(f"YAML error in file {config_file_path}: {e}")
             raise e
         return config
     
@@ -294,7 +296,7 @@ class ConfigParser:
             logger.error(f"No valid configuration found for engine type: {engine_type_selected}.")
             return False
         
-        validator_class = EngineConfigValidator.get_validator_class(engine_type_selected)
+        validator_class = AbsEngineConfigValidator.get_validator_class(engine_type_selected)
         if validator_class is None:
             logger.error(f"Engine type {engine_type_selected} is not supported")
             return False
