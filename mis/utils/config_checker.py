@@ -106,7 +106,7 @@ class ConfigChecker:
     def _validate_value_in(name: str, value, value_type, valid_values=None):
         if valid_values is not None:
             if not isinstance(valid_values, List) or not all(isinstance(v, value_type) for v in valid_values):
-                logger.warning(f"valid_values for {name} must be a list of {value_type.__name__}, " 
+                logger.warning(f"valid_values for {name} must be a list of {value_type.__name__}")
                 return False
             if value not in valid_values:
                 logger.warning(f"{name} must be one of {valid_values}")

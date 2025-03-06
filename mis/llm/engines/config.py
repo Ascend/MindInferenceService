@@ -5,7 +5,7 @@ from typing import Dict, Type
 
 import yaml
 
-from mis_llm.logger import init_logger
+from mis.logger import init_logger
 from mis.args import GlobalArgs
 from mis.utils.config_checker import ConfigChecker
 
@@ -159,7 +159,7 @@ class VLLMEngineConfigValidator(AbsEngineConfigValidator):
         Verify the configuration is valid or not.
         :return: Validation result
         """
-        diff_config = set(self.config.keys()) - self(self.checkers.keys())
+        diff_config = set(self.config.keys()) - set(self.checkers.keys())
         if diff_config:
             logger.warning(f"Configuration keys {diff_config} are not supported.")
         config_update = {key: self.config[key] for key in self.checkers.keys() if key in self.checkers.keys()}
@@ -168,7 +168,7 @@ class VLLMEngineConfigValidator(AbsEngineConfigValidator):
             if checker is None:
                 continue
 
-            value = self.config_update
+            value = config_update[key]
             if checker["type"] == "str_in":
                 ConfigChecker.is_str_value_in_range(key, value, checker.get("valid_values"))
             elif checker["type"] == "int":
@@ -274,7 +274,7 @@ class ConfigParser:
         # Validate the input parameters type.
         if not isinstance(self.args, GlobalArgs):
             logger.error("args must be an instance of GlobalArgs")
-            raise("args must be an instance of GlobalArgs")
+            raise TypeError("args must be an instance of GlobalArgs")
     
         # Verify the required attributes are present.
         required_attributes = ["model", "engine_type", "optimization_config_type"]
@@ -285,7 +285,7 @@ class ConfigParser:
             
             # Verify the attribute character string.
             args_attr = getattr(self.args, attr)
-            if args_attr is None:
+            if args_attr is not None:
                 ConfigChecker.check_string_input(attr, args_attr)
 
     def _is_config_attr_valid(self, config: Dict, engine_type_selected: str) -> bool:
@@ -299,7 +299,7 @@ class ConfigParser:
             logger.error(f"No valid configuration found for engine type: {engine_type_selected}.")
             return False
         
-        validator_class = AbsEngineConfigValidator.get_validator_class(engine_type_selected)
+        validator_class = AbsEngineConfigValidator.get_validator(engine_type_selected)
         if validator_class is None:
             logger.error(f"Engine type {engine_type_selected} is not supported")
             return False
