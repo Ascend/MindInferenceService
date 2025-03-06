@@ -141,19 +141,23 @@ class AbsEngineConfigValidator(ABC):
 
 
 @AbsEngineConfigValidator.register("vllm")
-class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
+class VLLMEngineConfigValidator(AbsEngineConfigValidator):
     """
     VLLM engine configuration validator.
     """
 
-    def __init__(self, config):
+    def __init__(self, config: Dict):
+        """
+        vLLM Engine configuration validator initialization.
+        :param config: Configuration parameters.
+        """
         super().__init__(config)
         self.checkers = CHECKER_VLLM
 
     def validate_config(self) -> bool:
         """
-        Verify the configuration is valid or not
-        :return: Verify result
+        Verify the configuration is valid or not.
+        :return: Validation result
         """
         diff_config = set(self.config.keys()) - self(self.checkers.keys())
         if diff_config:
@@ -183,11 +187,20 @@ class VLLMAbsEngineConfigValidator(AbsEngineConfigValidator):
 
 class ConfigParser:
     def __init__(self, args: GlobalArgs):
+        """
+        Check all args are valid.
+        :param args: global args
+        """
         self.args = args
         self._check_all_args_valid()
 
     @staticmethod
-    def _config_yaml_file_loading(config_file_path: str) -> bool:
+    def _config_yaml_file_loading(config_file_path: str) -> Dict:
+        """
+        Load config file.
+        :params config_file_path: config path
+        :return: True if config file is loaded successfully, False otherwise.
+        """
         try:
             with open(config_file_path, "r") as file:
                 config = yaml.safe_load(file)
@@ -200,7 +213,12 @@ class ConfigParser:
         return config
     
     @staticmethod
-    def _is_config_valid(self, config: Dict) -> bool:
+    def _is_config_valid(config: Dict) -> bool:
+        """
+        Checks if the config is valid.
+        :param config: Config to check.
+        :return: True if the config is valid, False otherwise.
+        """
         if config is None:
             logger.warning("Failed to load configuration from YANL file.")
             return False
@@ -218,10 +236,6 @@ class ConfigParser:
         """
         Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
         :return: Update global parameters
-        :raises: AttributeError if the configuration file is not found or the configuration is not valid.
-        :raises: ValueError if the configuration is not valid.
-        :raises: TypeError if the configuration is not valid.
-        :raises: KeyError if the configuration is not valid.
         """
         engine_optimization_config = None
 
@@ -256,7 +270,6 @@ class ConfigParser:
     def _check_all_args_valid(self):
         """
         Check all args are valid. If not, raise ValueError
-        param args: global args
         """
         # Validate the input parameters type.
         if not isinstance(self.args, GlobalArgs):
@@ -276,6 +289,12 @@ class ConfigParser:
                 ConfigChecker.check_string_input(attr, args_attr)
 
     def _is_config_attr_valid(self, config: Dict, engine_type_selected: str) -> bool:
+        """
+        Check if the config attribute is valid. 
+        :param config: The config dictionary.
+        :param engine_type_selected: The engine type selected.
+        :return: True if the config attribute is valid, False otherwise.
+        """
         if not self._is_config_valid(config.get(engine_type_selected, None)):
             logger.error(f"No valid configuration found for engine type: {engine_type_selected}.")
             return False
