@@ -11,7 +11,7 @@ from mis.utils.config_checker import ConfigChecker
 
 logger = init_logger(__name__)
 
-ROOT_DIR = "mis_llm/configs/"
+ROOT_DIR = "mis/llm/configs/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
 CHECKER_VLLM = {
     "dtype": {
@@ -162,7 +162,7 @@ class VLLMEngineConfigValidator(AbsEngineConfigValidator):
         diff_config = set(self.config.keys()) - set(self.checkers.keys())
         if diff_config:
             logger.warning(f"Configuration keys {diff_config} are not supported.")
-        config_update = {key: self.config[key] for key in self.checkers.keys() if key in self.checkers.keys()}
+        config_update = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
         for key in config_update:
             checker = self.checkers.get(key, None)
             if checker is None:
@@ -207,6 +207,7 @@ class ConfigParser:
         except FileNotFoundError:
             logger.error(f"Config file {config_file_path} not found."
                          f" The engine will be started with default parameters.")
+            config = None
         except yaml.YAMLError as e:
             logger.error(f"YAML error in file {config_file_path}: {e}")
             raise e
@@ -245,14 +246,14 @@ class ConfigParser:
 
         model_type = model_type.replace("-", "_")
 
-        if optimization_config_type is not None:
+        if optimization_config_type is None:
             logger.warning("Missing required arguments for the required configuration yaml file."
                     f"The engine will be started with the default parameters")
             self.args.engine_optimization_config = {}
             return self.args
 
         yaml_file_path = f"{model_type.lower()}_{optimization_config_type}.yaml"
-        config = self._config_yaml_file_loading(yaml_file_path)
+        config = self._config_yaml_file_loading(ROOT_DIR + yaml_file_path)
 
         if not self._is_config_valid(config):
             self.args.engine_optimization_config = {}
