@@ -3,17 +3,18 @@ optimal_engine_type: "vllm"
 vllm:
   dtype: "bfloat16"
 
-  tensor_parallel_size: 1
+  tensor_parallel_size: 4
   pipline_parallel_size: 1
+  distributed_executor_backend: "mp"
 
-  max_num_seqs: 64
-  max_model_len: 4096
-  max_num_batched_tokens: 4096
-  max_seq_len_to_capture: 4096
+  max_num_seqs: 48
+  max_model_len: 24576
+  max_num_batched_tokens: 24576
+  max_seq_len_to_capture: 24576
 
-  gpu_memory_utilization: 0.95
-  block_size: 8
-  swap_space: 0
+  gpu_memory_utilization: 0.9
+  block_size: 128
+  swap_space: 32
   cpu_offload_gb: 0
 
   scheduling_policy: "fcfs"
