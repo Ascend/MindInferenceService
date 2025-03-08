@@ -20,7 +20,7 @@ class ConfigChecker:
         :param max_value: The maximum value allowed.
         :return: True if the value is in the range, False otherwise.
         """
-        if not (type(value) == type(min_value) == type(max_value)) or (min_value > max_value):
+        if not (isinstance(value, type(min_value)) and isinstance(value, type(max_value))) or (min_value > max_value):
             logger.warning(f"{name} verification failed!")
         
         if value < min_value:
@@ -30,6 +30,7 @@ class ConfigChecker:
         else:
             return True
         return False
+
     @staticmethod
     def is_value_in_enum(name: str, value: Union[int, str, bool], valid_values: List[Union[int, str, bool]]):
         """

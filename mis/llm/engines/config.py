@@ -140,6 +140,8 @@ class AbsEngineConfigValidator(ABC):
     def __init__(self, config: Dict, checkers: Dict):
         """
         Initialize the AbsEngineConfigValidator class.
+        :param config: The configuration dictionary.
+        :param checkers: The checker dictionary OF selected engine.
         """
         self.config = config
         self.checkers = checkers
@@ -153,7 +155,6 @@ class AbsEngineConfigValidator(ABC):
         """
         Register an engine configuration validator.
         :param engine_type: Engine type.
-        :param validator_class: Engine configuration validator class.
         """
         def decorator(subclass):
             cls._engine_config_validation[engine_type] = subclass
@@ -169,7 +170,7 @@ class AbsEngineConfigValidator(ABC):
         """
         return cls._engine_config_validation.get(engine_type)
 
-    def filter_and_validate_config(self):
+    def filter_and_validate_config(self) -> Dict:
         """
         Filter and validate the configuration.
         :return: Right configuration.
@@ -184,10 +185,10 @@ class AbsEngineConfigValidator(ABC):
             elif "min" in checker and "max" in checker:
                 is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
             
-            if not is_valid:
+            if is_valid:
                 valid_config[key] = value
 
-        return self.config_update
+        return valid_config
 
 
 @AbsEngineConfigValidator.register("vllm")
@@ -255,6 +256,18 @@ class ConfigParser:
         
         return True
 
+    @staticmethod
+    def _config_attr_update(selected_engine_type: str, selected_engine_config: Dict) -> Dict:
+        """
+        Update the attributes of the selected engine.
+        :param selected_engine_type: The type of the selected engine.
+        :param selected_engine_config: The configuration of the selected engine.
+        :return: updated config dictionary. 
+        """
+        validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
+        validator = validator_class(selected_engine_config)
+        return validator.filter_and_validate_config()
+    
     def engine_config_loading(self) -> GlobalArgs:
         """
         Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
@@ -279,7 +292,8 @@ class ConfigParser:
             logger.warning(f"Configuration of engine {engine_type_selected} is empty.")
             return self.args
         
-        self.args.engine_optimization_config = self._config_attr_update(engine_type_selected, engine_optimization_config)
+        self.args.engine_optimization_config = self._config_attr_update(engine_type_selected, 
+                                                                        engine_optimization_config)
         return self.args
     
     def _check_all_args_valid(self):
@@ -299,15 +313,4 @@ class ConfigParser:
                 try:
                     ConfigChecker.check_string_input(attr, args_attr)
                 except Exception as e:
-                    raise Exception(f"{attr} in args is not a valid string: {e}")
-
-    def _config_attr_update(self, selected_engine_type: str, selected_engine_config: Dict) -> Dict:
-        """
-        Update the attributes of the selected engine.
-        :param selected_engine_type: The type of the selected engine.
-        :param selected_engine_config: The configuration of the selected engine.
-        :return: updated config dictionary. 
-        """
-        validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
-        validator = validator_class(selected_engine_config)
-        return validator.filter_and_validate_config()
+                    raise Exception(f"{attr} in args is not a valid string: {e}") from e
