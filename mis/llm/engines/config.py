@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Dict, Type
 
 import yaml
@@ -14,32 +14,32 @@ logger = init_logger(__name__)
 ROOT_DIR = "mis/llm/configs/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
 
-CONFIG_YAML_FILES_MAP = {"deepseek-r1-distill-qwen-1.5b": 
+CONFIG_YAML_FILES_MAP = {"DeepSeek-R1-Distill-Qwen-1.5B": 
                         {"default": "deepseek-r1-distill-qwen-1.5b-default.yaml",
                         "latency": "deepseek-r1-distill-qwen-1.5b-latency.yaml",
                         "throughput": "deepseek-r1-distill-qwen-1.5b-throughput.yaml"},
 
-                        "deepseek-r1-distill-qwen-7b": 
+                        "DeepSeek-R1-Distill-Qwen-7b": 
                         {"default": "deepseek-r1-distill-qwen-7b-default.yaml",
                         "latency": "deepseek-r1-distill-qwen-7b-latency.yaml",
                         "throughput": "deepseek-r1-distill-qwen-7b-throughput.yaml"},
 
-                        "deepseek-r1-distill-qwen-14b": 
+                        "DeepSeek-R1-Distill-Qwen-14b": 
                         {"default": "deepseek-r1-distill-qwen-14b-default.yaml",
                         "latency": "deepseek-r1-distill-qwen-14b-latency.yaml",
                         "throughput": "deepseek-r1-distill-qwen-14b-throughput.yaml"},
 
-                        "deepseek-r1-distill-qwen-32b":
+                        "DeepSeek-R1-Distill-Qwen-32b":
                         {"default": "deepseek-r1-distill-qwen-32b-default.yaml",
                         "latency": "deepseek-r1-distill-qwen-32b-latency.yaml",
                         "throughput": "deepseek-r1-distill-qwen-32b-throughput.yaml"},
 
-                        "deepseek-r1-distill-llama-8b":
+                        "DeepSeek-R1-Distill-Llama-8B":
                         {"default": "deepseek-r1-distill-llama-8b-default.yaml",
                         "latency": "deepseek-r1-distill-llama-8b-latency.yaml",
                         "throughput": "deepseek-r1-distill-llama-8b-throughput.yaml"},
 
-                        "deepseek-r1-distill-llama-70b":
+                        "DeepSeek-R1-Distill-Llama-70b":
                         {"default": "deepseek-r1-distill-llama-70b-default.yaml",
                         "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
                         "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
@@ -137,11 +137,16 @@ CHECKER_VLLM = {
 class AbsEngineConfigValidator(ABC):
     _engine_config_validation: Dict[str, Type["AbsEngineConfigValidator"]] = {}
 
-    def __init__(self, config):
+    def __init__(self, config: Dict, checkers: Dict):
         """
         Initialize the AbsEngineConfigValidator class.
         """
         self.config = config
+        self.checkers = checkers
+        diff_config = set(self.config.keys()) - set(self.checkers.keys())
+        if diff_config:
+            logger.warning(f"Configuration keys {diff_config} are not supported.")
+        self.config_update: Dict = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
     
     @classmethod
     def register(cls, engine_type: str):
@@ -164,13 +169,25 @@ class AbsEngineConfigValidator(ABC):
         """
         return cls._engine_config_validation.get(engine_type)
 
-    @abstractmethod
-    def validate_config(self):
+    def filter_and_validate_config(self):
         """
-        Verify the configuration parameters of the engine.
-        :return: Validation result.
+        Filter and validate the configuration.
+        :return: Right configuration.
         """
-        raise NotImplementedError("Subclass must implement this method.")
+        valid_config = {}
+        for key, value in self.config_update.items():
+            checker = self.checkers.get(key)
+
+            is_valid = True
+            if "valid_values" in checker:
+                is_valid = ConfigChecker.is_value_in_enum(key, value, checker.get("valid_values"))
+            elif "min" in checker and "max" in checker:
+                is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
+            
+            if not is_valid:
+                valid_config[key] = value
+
+        return self.config_update
 
 
 @AbsEngineConfigValidator.register("vllm")
@@ -184,28 +201,7 @@ class VLLMEngineConfigValidator(AbsEngineConfigValidator):
         vLLM Engine configuration validator initialization.
         :param config: Configuration parameters.
         """
-        super().__init__(config)
-        self.checkers = CHECKER_VLLM
-
-    def validate_config(self) -> bool:
-        """
-        Verify the configuration is valid or not.
-        :return: Validation result
-        """
-        diff_config = set(self.config.keys()) - set(self.checkers.keys())
-        if diff_config:
-            logger.warning(f"Configuration keys {diff_config} are not supported.")
-
-        config_update = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
-
-        for key in config_update:
-            checker = self.checkers.get(key)
-            value = config_update.get(key)
-            if "valid_values" in checker:
-                ConfigChecker.is_value_in_enum(key, value, checker.get("valid_values"))
-            elif "min" in checker and "max" in checker:
-                ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
-        return True
+        super().__init__(config, CHECKER_VLLM)
 
 
 class ConfigParser:
@@ -215,21 +211,27 @@ class ConfigParser:
         :param args: global args
         """
         self.args = args
+        self.args.engine_optimization_config = {}
+        
         self._check_all_args_valid()
+
+        self.model_type = self.args.model.split('/')[-1]
+        self.engine_type = self.args.engine_type
+        self.optimization_config_type = self.args.optimization_config_type
 
     @staticmethod
     def _config_yaml_file_loading(config_file_path: str) -> Dict:
         """
         Load config file.
         :params config_file_path: config path
-        :return: True if config file is loaded successfully, False otherwise.
+        :return: Parsed configuration dictionary if successful, None otherwise.
         """
         try:
             with open(config_file_path, "r") as file:
                 config = yaml.safe_load(file)
         except FileNotFoundError:
-            logger.error(f"Config file {config_file_path} not found."
-                         f" The engine will be started with default parameters.")
+            logger.warning(f"Config file {config_file_path} not found."
+                            " The engine will be started with default parameters.")
             config = None
         except yaml.YAMLError as e:
             logger.error(f"YAML error in file {config_file_path}: {e}")
@@ -251,9 +253,6 @@ class ConfigParser:
             logger.warning("The configuration from YANL file is not dictionary.")
             return False
         
-        engine_type_selected = config.get(OPTIMAL_ENGINE_TYPE, None)
-        if engine_type_selected is not None:
-            ConfigChecker.check_string_input("engine_type_selected", engine_type_selected)
         return True
 
     def engine_config_loading(self) -> GlobalArgs:
@@ -261,29 +260,26 @@ class ConfigParser:
         Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
         :return: Update global parameters
         """
-        self.args.engine_optimization_config = {}
-
-        model_type = self.args.model.split('/')[-1]
-        engine_type = self.args.engine_type
-        optimization_config_type = self.args.optimization_config_type
-
-        if optimization_config_type is None:
+        if self.optimization_config_type is None:
             logger.warning("Missing required arguments for the required configuration yaml file."
                     f"The engine will be started with the default parameters")
             return self.args
 
-        yaml_file = CONFIG_YAML_FILES_MAP[model_type][optimization_config_type]
+        yaml_file = CONFIG_YAML_FILES_MAP[self.model_type][self.optimization_config_type]
         config = self._config_yaml_file_loading(ROOT_DIR + yaml_file)
 
         if not self._is_config_valid(config):
             return self.args
         
-        engine_type_selected = engine_type if engine_type is not None else config.get(OPTIMAL_ENGINE_TYPE)
+        engine_type_selected = self.engine_type if self.engine_type is not None else \
+              config.get(OPTIMAL_ENGINE_TYPE) # engine_type default="vllm"
         engine_optimization_config = config.get(engine_type_selected, None)
 
-        if self._is_config_attr_valid(engine_type_selected, engine_optimization_config):
-            self.args.engine_optimization_config = engine_optimization_config
+        if engine_optimization_config is None:
+            logger.warning(f"Configuration of engine {engine_type_selected} is empty.")
+            return self.args
         
+        self.args.engine_optimization_config = self._config_attr_update(engine_type_selected, engine_optimization_config)
         return self.args
     
     def _check_all_args_valid(self):
@@ -300,23 +296,18 @@ class ConfigParser:
             # Verify the attribute character string.
             args_attr = getattr(self.args, attr)
             if args_attr is not None:
-                ConfigChecker.check_string_input(attr, args_attr)
+                try:
+                    ConfigChecker.check_string_input(attr, args_attr)
+                except Exception as e:
+                    raise Exception(f"{attr} in args is not a valid string: {e}")
 
-    def _is_config_attr_valid(self, selected_engine_type: str, selected_engine_config: Dict, ) -> bool:
+    def _config_attr_update(self, selected_engine_type: str, selected_engine_config: Dict) -> Dict:
         """
-        Check if the config attribute is valid. 
-        :param config: The config dictionary.
-        :param engine_type_selected: The engine type selected.
-        :return: True if the config attribute is valid, False otherwise.
+        Update the attributes of the selected engine.
+        :param selected_engine_type: The type of the selected engine.
+        :param selected_engine_config: The configuration of the selected engine.
+        :return: updated config dictionary. 
         """
-        if selected_engine_config is None:
-            logger.error(f"Configuration of engine {selected_engine_type} is empty.")
-            return False
-        
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
-        if validator_class is None:
-            logger.error(f"{selected_engine_type} engine config validator not implemented")
-            return False
-        
         validator = validator_class(selected_engine_config)
-        return validator.validate_config()
+        return validator.filter_and_validate_config()

@@ -10,7 +10,8 @@ logger = init_logger(__name__)
 
 class ConfigChecker:
     @staticmethod
-    def is_value_in_range(name: str, value: int, min_value: int, max_value: int = None):
+    def is_value_in_range(name: str, value: Union[int, float], 
+                          min_value: Union[int, float], max_value: Union[int, float]):
         """
         Check if the value is in the range.
         :param name: The name of the value.
