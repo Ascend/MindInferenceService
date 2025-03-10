@@ -68,8 +68,9 @@ llm:
     port: 8000
 
   # Additional volumes on the output Deployment definition.
+  # Please set real ip address
   volumes:
     - name: model
       nfs:
         path: /home/nfs/data/model
-        server: 10.169.68.79
+        server: <real_ip>
