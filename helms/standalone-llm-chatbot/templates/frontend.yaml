@@ -13,18 +13,18 @@ spec:
       labels:
         app: {{ .Values.frontend.appName }}
         fault-scheduling: grace       # Add this Labels, will reschedule pods in the event of chip failures.
-          {{- include "mis-llm.global.host-arch" . | nindent 8 }}
+          {{- include "standalone-llm-chatbot.global.host-arch" . | nindent 8 }}
     spec:
       schedulerName: volcano
       nodeSelector:
-        {{- include "mis-llm.global.host-arch" . | nindent 8 }}
+        {{- include "standalone-llm-chatbot.global.host-arch" . | nindent 8 }}
       containers:
       - image: {{ .Values.frontend.image.image }}
         imagePullPolicy: {{ .Values.frontend.image.imagePullPolicy }}
         name: {{ .Values.frontend.appName }}
         env:
         - name: OPENAI_API_BASE_URL
-          value: {{ include "mis-llm.frontend.apiURL" . }}
+          value: {{ include "standalone-llm-chatbot.frontend.apiURL" . }}
         - name: OPENAI_API_KEY
           value: {{ .Values.frontend.appName }}
         resources:

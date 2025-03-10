@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{- include "mis-llm.llm.serviceName" . | nindent 4 }}
+  name: {{- include "standalone-llm-chatbot.llm.serviceName" . | nindent 4 }}
   namespace: {{ .Values.global.namespace }}
 spec:
   type: {{ .Values.llm.service.type }}

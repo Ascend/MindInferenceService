@@ -1,7 +1,7 @@
 {{/*
 Define global host arch.
 */}}
-{{- define "mis-llm.global.host-arch" -}}
+{{- define "standalone-llm-chatbot.global.host-arch" -}}
 {{- if eq .Values.global.aiServer "800I A2" -}}
 host-arch: huawei-arm
 {{- end -}}
@@ -12,7 +12,7 @@ Create a default fully qualified job name for llm.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "mis-llm.llm.jobName" -}}
+{{- define "standalone-llm-chatbot.llm.jobName" -}}
 {{- printf "%s-%s" .Chart.Name .Values.llm.modelName | replace "." "p" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -21,14 +21,14 @@ Create a default fully qualified service name for llm.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "mis-llm.llm.serviceName" -}}
+{{- define "standalone-llm-chatbot.llm.serviceName" -}}
 {{- printf "%s-%s" .Chart.Name .Values.llm.modelName | replace "." "p" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels for llm.
 */}}
-{{- define "mis-llm.llm.labels" -}}
+{{- define "standalone-llm-chatbot.llm.labels" -}}
 {{- if eq .Values.global.aiServer "800I A2" -}}
 ring-controller.atlas: ascend-910b
 fault-scheduling: "force"
@@ -39,7 +39,7 @@ app: {{ .Values.llm.modelName }}
 {{/*
 Define accelerator for llm.
 */}}
-{{- define "mis-llm.llm.accelerator" -}}
+{{- define "standalone-llm-chatbot.llm.accelerator" -}}
 {{- if eq .Values.global.aiServer "800I A2" -}}
 huawei.com/Ascend910
 {{- end -}}
@@ -48,7 +48,7 @@ huawei.com/Ascend910
 {{/*
 Define resources for llm.
 */}}
-{{- define "mis-llm.llm.resources" -}}
+{{- define "standalone-llm-chatbot.llm.resources" -}}
 {{- if eq .Values.global.aiServer "800I A2" -}}
 {{- $accelerator := "huawei.com/Ascend910" }}
 limits:
@@ -61,16 +61,16 @@ requests:
 {{/*
 Define node selectors for llm.
 */}}
-{{- define "mis-llm.llm.nodeSelectors" -}}
+{{- define "standalone-llm-chatbot.llm.nodeSelectors" -}}
 {{- if eq .Values.global.aiServer "800I A2" -}}
 accelerator-type: module-910b-8
-{{ include "mis-llm.global.host-arch" . }}
+{{ include "standalone-llm-chatbot.global.host-arch" . }}
 {{- end -}}
 {{- end }}
 
 {{/*
 Define OPENAI_API_BASE_URL for frontend.
 */}}
-{{- define "mis-llm.frontend.apiURL" -}}
-http://{{ include "mis-llm.llm.serviceName" . }}.{{ .Values.global.namespace }}.svc.cluster.local:8000/openai/v1
+{{- define "standalone-llm-chatbot.frontend.apiURL" -}}
+http://{{ include "standalone-llm-chatbot.llm.serviceName" . }}.{{ .Values.global.namespace }}.svc.cluster.local:8000/openai/v1
 {{- end }}

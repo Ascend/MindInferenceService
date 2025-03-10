@@ -1,10 +1,10 @@
 apiVersion: batch.volcano.sh/v1alpha1
 kind: Job
 metadata:
-  name: {{ include "mis-llm.llm.jobName" . }}
+  name: {{ include "standalone-llm-chatbot.llm.jobName" . }}
   namespace: {{ .Values.global.namespace }}
   labels:
-    {{- include "mis-llm.llm.labels" . | nindent 4 }}
+    {{- include "standalone-llm-chatbot.llm.labels" . | nindent 4 }}
 spec:
   minAvailable: {{ .Values.llm.replicaCount }}
   schedulerName: volcano                # Use the Volcano scheduler to schedule jobs.
@@ -19,7 +19,7 @@ spec:
       template:
         metadata:
           labels:
-            {{- include "mis-llm.llm.labels" . | nindent 12 }}
+            {{- include "standalone-llm-chatbot.llm.labels" . | nindent 12 }}
         spec:
           imagePullSecrets:
             {{- toYaml .Values.llm.imagePullSecrets | nindent 12 }}
@@ -31,9 +31,9 @@ spec:
                 - name: ASCEND_VISIBLE_DEVICES   # ASCEND_VISIBLE_DEVICES env variable is used by ascend-docker-runtime when in the whole card scheduling scene with volcano scheduler. please delete it when in the static or dynamic vNPU scheduling scene or without volcano.
                   valueFrom:
                     fieldRef:
-                      fieldPath: metadata.annotations['{{ include "mis-llm.llm.accelerator" . }}'] # The value must be the same as resources.requests.
+                      fieldPath: metadata.annotations['{{ include "standalone-llm-chatbot.llm.accelerator" . }}'] # The value must be the same as resources.requests.
               resources:
-                {{- include "mis-llm.llm.resources" . | nindent 16 }}
+                {{- include "standalone-llm-chatbot.llm.resources" . | nindent 16 }}
               volumeMounts:
                 - name: localtime                # The container time must be the same as the host time.
                   mountPath: /etc/localtime
@@ -45,5 +45,5 @@ spec:
               hostPath:
                 path: /etc/localtime
           nodeSelector:
-            {{- include "mis-llm.llm.nodeSelectors" . | nindent 12 }}
+            {{- include "standalone-llm-chatbot.llm.nodeSelectors" . | nindent 12 }}
           restartPolicy: OnFailure
