@@ -54,7 +54,7 @@ Define resources for llm.
 limits:
   {{ $accelerator }}: {{ .Values.llm.acceleratorCards }}
 requests:
-  {{ $accelerator }}: {{.Values.llm.acceleratorCards }}
+  {{ $accelerator }}: {{ .Values.llm.acceleratorCards }}
 {{- end -}}
 {{- end }}
 
