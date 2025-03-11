@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{- include "standalone-llm-chatbot.llm.serviceName" . | nindent 4 }}
+  namespace: {{ .Values.global.namespace }}
+spec:
+  type: {{ .Values.llm.service.type }}
+  ports:
+    - name: {{ .Values.llm.service.modelName }}
+      port: {{ .Values.llm.service.port }}
+      targetPort: {{ .Values.llm.service.port }}
+      protocol: TCP
+  selector:
+    app: {{ .Values.llm.modelName }}

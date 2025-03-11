@@ -1,0 +1,49 @@
+apiVersion: batch.volcano.sh/v1alpha1
+kind: Job
+metadata:
+  name: {{ include "standalone-llm-chatbot.llm.jobName" . }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "standalone-llm-chatbot.llm.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.llm.replicaCount }}
+  schedulerName: volcano                # Use the Volcano scheduler to schedule jobs.
+  policies:
+    - event: PodEvicted
+      action: RestartJob
+  maxRetry: 3
+  queue: default
+  tasks:
+    - name: "default-test"
+      replicas: 1                         # The value of replicas is 1 in a single-node scenario, only set as 1 when infer task
+      template:
+        metadata:
+          labels:
+            {{- include "standalone-llm-chatbot.llm.labels" . | nindent 12 }}
+        spec:
+          imagePullSecrets:
+            {{- toYaml .Values.llm.imagePullSecrets | nindent 12 }}
+          containers:
+            - name: {{ .Values.llm.modelName | replace "." "p" }}
+              image: "{{ .Values.llm.image.repository }}/{{ .Values.llm.modelName}}:{{ .Values.llm.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.llm.image.pullPolicy }}
+              env:
+                - name: ASCEND_VISIBLE_DEVICES   # ASCEND_VISIBLE_DEVICES env variable is used by ascend-docker-runtime when in the whole card scheduling scene with volcano scheduler. please delete it when in the static or dynamic vNPU scheduling scene or without volcano.
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['{{ include "standalone-llm-chatbot.llm.accelerator" . }}'] # The value must be the same as resources.requests.
+              resources:
+                {{- include "standalone-llm-chatbot.llm.resources" . | nindent 16 }}
+              volumeMounts:
+                - name: localtime                # The container time must be the same as the host time.
+                  mountPath: /etc/localtime
+                - name: model
+                  mountPath: /opt/mis/.cache
+          volumes:
+            {{- toYaml .Values.llm.volumes | nindent 12 }}
+            - name: localtime
+              hostPath:
+                path: /etc/localtime
+          nodeSelector:
+            {{- include "standalone-llm-chatbot.llm.nodeSelectors" . | nindent 12 }}
+          restartPolicy: OnFailure
