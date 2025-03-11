@@ -247,11 +247,11 @@ class ConfigParser:
         :return: True if the config is valid, False otherwise.
         """
         if config is None:
-            logger.warning("The configuration from YANL file is empty.")
+            logger.warning("The configuration from YAML file is empty.")
             return False
         
         if not isinstance(config, dict):
-            logger.warning("The configuration from YANL file is not dictionary.")
+            logger.warning("The configuration from YAML file is not dictionary.")
             return False
         
         return True
