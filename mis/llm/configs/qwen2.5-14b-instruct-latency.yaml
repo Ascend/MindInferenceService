@@ -5,7 +5,7 @@ vllm:
   pipeline_parallel_size: 1
   distributed_executor_backend: mp
   max_num_seqs: 256
-  max_model_len: 12000
+  max_model_len: 16384
   max_num_batched_tokens: 16384
   max_seq_len_to_capture: 8192
   gpu_memory_utilization: 0.95

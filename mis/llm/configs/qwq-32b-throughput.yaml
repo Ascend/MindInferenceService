@@ -1,20 +1,19 @@
 optimal_engine_type: vllm
 vllm:
   dtype: bfloat16
-  tensor_parallel_size: 2
+  tensor_parallel_size: 4
   pipeline_parallel_size: 1
   distributed_executor_backend: mp
-  max_num_seqs: 256
-  max_model_len: 12000
-  max_num_batched_tokens: 16384
-  max_seq_len_to_capture: 8192
+  max_num_seqs: 64
+  max_model_len: 24576
+  max_num_batched_tokens: 24576
+  max_seq_len_to_capture: 24576
   gpu_memory_utilization: 0.95
-  block_size: 16
-  swap_space: 4
+  block_size: 128
+  swap_space: 32
   cpu_offload_gb: 0
-  scheduling_policy: priority
-  num_scheduler_steps: 1
-  disable_async_output_proc: true
+  scheduling_policy: fcfs
+  disable_async_output_proc: false
   multi_step_stream_outputs: true
   enable_chunked_prefill: false
   enable_prefix_caching: false
