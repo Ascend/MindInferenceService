@@ -4,9 +4,9 @@ vllm:
   tensor_parallel_size: 1
   pipeline_parallel_size: 1
   max_num_seqs: 256
-  max_model_len: 54000
-  max_num_batched_tokens: 54000
-  max_seq_len_to_capture: 54000
+  max_model_len: 32768
+  max_num_batched_tokens: 32768
+  max_seq_len_to_capture: 32768
   gpu_memory_utilization: 0.9
   block_size: 32
   swap_space: 0
