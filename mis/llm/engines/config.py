@@ -14,38 +14,39 @@ logger = init_logger(__name__)
 ROOT_DIR = "mis/llm/configs/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
 
-CONFIG_YAML_FILES_MAP = {"DeepSeek-R1-Distill-Qwen-1.5B": 
-                        {"default": "deepseek-r1-distill-qwen-1.5b-default.yaml",
-                        "latency": "deepseek-r1-distill-qwen-1.5b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-qwen-1.5b-throughput.yaml"},
+CONFIG_YAML_FILES_MAP = {
+    "DeepSeek-R1-Distill-Qwen-1.5B": {
+        "default": "deepseek-r1-distill-qwen-1.5b-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-7B": {
+        "default": "deepseek-r1-distill-qwen-7b-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-7b-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-7b-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-14B": {
+        "default": "deepseek-r1-distill-qwen-14b-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B": {
+        "default": "deepseek-r1-distill-qwen-32b-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-8B": {
+        "default": "deepseek-r1-distill-llama-8b-default.yaml",
+        "latency": "deepseek-r1-distill-llama-8b-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-8b-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B": {
+        "default": "deepseek-r1-distill-llama-70b-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
+    }
 
-                        "DeepSeek-R1-Distill-Qwen-7b": 
-                        {"default": "deepseek-r1-distill-qwen-7b-default.yaml",
-                        "latency": "deepseek-r1-distill-qwen-7b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-qwen-7b-throughput.yaml"},
 
-                        "DeepSeek-R1-Distill-Qwen-14b": 
-                        {"default": "deepseek-r1-distill-qwen-14b-default.yaml",
-                        "latency": "deepseek-r1-distill-qwen-14b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-qwen-14b-throughput.yaml"},
-
-                        "DeepSeek-R1-Distill-Qwen-32b":
-                        {"default": "deepseek-r1-distill-qwen-32b-default.yaml",
-                        "latency": "deepseek-r1-distill-qwen-32b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-qwen-32b-throughput.yaml"},
-
-                        "DeepSeek-R1-Distill-Llama-8B":
-                        {"default": "deepseek-r1-distill-llama-8b-default.yaml",
-                        "latency": "deepseek-r1-distill-llama-8b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-llama-8b-throughput.yaml"},
-
-                        "DeepSeek-R1-Distill-Llama-70b":
-                        {"default": "deepseek-r1-distill-llama-70b-default.yaml",
-                        "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
-                        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
-                        }
-
-                        
 CHECKER_VLLM = {
     "dtype": {
         "type": "str_in",
@@ -149,7 +150,7 @@ class AbsEngineConfigValidator(ABC):
         if diff_config:
             logger.warning(f"Configuration keys {diff_config} are not supported.")
         self.config_update: Dict = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
-    
+
     @classmethod
     def register(cls, engine_type: str):
         """
@@ -184,7 +185,7 @@ class AbsEngineConfigValidator(ABC):
                 is_valid = ConfigChecker.is_value_in_enum(key, value, checker.get("valid_values"))
             elif "min" in checker and "max" in checker:
                 is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
-            
+
             if is_valid:
                 valid_config[key] = value
 
@@ -213,7 +214,7 @@ class ConfigParser:
         """
         self.args = args
         self.args.engine_optimization_config = {}
-        
+
         self._check_all_args_valid()
 
         self.model_type = self.args.model.split('/')[-1]
@@ -238,7 +239,7 @@ class ConfigParser:
             logger.error(f"YAML error in file {config_file_path}: {e}")
             raise e
         return config
-    
+
     @staticmethod
     def _is_config_valid(config: Dict) -> bool:
         """
@@ -249,11 +250,11 @@ class ConfigParser:
         if config is None:
             logger.warning("The configuration from YAML file is empty.")
             return False
-        
+
         if not isinstance(config, dict):
             logger.warning("The configuration from YAML file is not dictionary.")
             return False
-        
+
         return True
 
     @staticmethod
@@ -267,7 +268,7 @@ class ConfigParser:
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
         validator = validator_class(selected_engine_config)
         return validator.filter_and_validate_config()
-    
+
     def engine_config_loading(self) -> GlobalArgs:
         """
         Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
@@ -283,7 +284,7 @@ class ConfigParser:
 
         if not self._is_config_valid(config):
             return self.args
-        
+
         engine_type_selected = self.engine_type if self.engine_type is not None else \
               config.get(OPTIMAL_ENGINE_TYPE) # engine_type default="vllm"
         engine_optimization_config = config.get(engine_type_selected, None)
@@ -291,11 +292,11 @@ class ConfigParser:
         if engine_optimization_config is None:
             logger.warning(f"Configuration of engine {engine_type_selected} is empty.")
             return self.args
-        
-        self.args.engine_optimization_config = self._config_attr_update(engine_type_selected, 
+
+        self.args.engine_optimization_config = self._config_attr_update(engine_type_selected,
                                                                         engine_optimization_config)
         return self.args
-    
+
     def _check_all_args_valid(self):
         """
         Check all args are valid. If not, raise ValueError
@@ -304,7 +305,7 @@ class ConfigParser:
         if not isinstance(self.args, GlobalArgs):
             logger.error("args must be an instance of GlobalArgs")
             raise TypeError("args must be an instance of GlobalArgs")
-    
+
         required_attributes = ["engine_type", "optimization_config_type"]
         for attr in required_attributes:
             # Verify the attribute character string.
