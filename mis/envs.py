@@ -5,13 +5,7 @@ import ssl
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 from mis.utils.env_checker import EnvChecker
-
-MIS_ENGINE_TYPES = ["vllm"]
-MIS_SERVICE_TYPES = ["openai"]
-MIS_OPTIMIZATION_CONFIG_TYPES = ["default", "throughput", "latency"]
-MIS_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-UVICORN_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"]
-SSL_CERT_REQS_TYPES = [ssl.CERT_NONE, ssl.CERT_OPTIONAL, ssl.CERT_REQUIRED]
+import mis.constants as constants
 
 if TYPE_CHECKING:
     MIS_CACHE_PATH: str = "/opt/mis/.cache"
@@ -43,7 +37,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
 
     "MIS_MODEL": lambda: "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
-    "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", MIS_ENGINE_TYPES),
+    "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_SERVED_MODEL_NAME": lambda: _get_str_from_env("MIS_SERVED_MODEL_NAME", None),
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),
@@ -56,14 +50,14 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_SSL_CA_CERT": lambda: _get_file_from_env("MIS_SSL_CA_CERT", None),
     "MIS_SSL_CERT_REQS": lambda: _get_ssl_cert_reqs(),
     "MIS_FORCE_DOWNLOAD_MODEL": lambda: _get_bool_from_env("MIS_FORCE_DOWNLOAD_MODEL", False),
-    "MIS_LOG_LEVEL": lambda: _get_str_from_env("MIS_LOG_LEVEL", "INFO", MIS_LOG_LEVELS),
+    "MIS_LOG_LEVEL": lambda: _get_str_from_env("MIS_LOG_LEVEL", "INFO", constants.MIS_LOG_LEVELS),
     "MIS_MAX_LOG_LEN": lambda: _get_int_from_env("MIS_MAX_LOG_LEN", None),
     "MIS_DISABLE_LOG_REQUESTS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_REQUESTS", False),
     "MIS_DISABLE_LOG_STATS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_STATS", False),
     "MIS_API_KEY": lambda: _get_str_from_env("MIS_API_KEY", None),
     "MIS_DISABLE_FASTAPI_DOCS": lambda: _get_bool_from_env("MIS_DISABLE_FASTAPI_DOCS", False),
 
-    "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", UVICORN_LOG_LEVELS),
+    "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", constants.UVICORN_LOG_LEVELS),
 }
 
 
@@ -114,11 +108,11 @@ def _get_ip_address_from_env(name: str, default: Optional[str] = None) -> Option
 
 
 def _get_optimization_config():
-    return _get_str_from_env("MIS_OPTIMIZATION_CONFIG_TYPE", "default", MIS_OPTIMIZATION_CONFIG_TYPES)
+    return _get_str_from_env("MIS_OPTIMIZATION_CONFIG_TYPE", "default", constants.MIS_OPTIMIZATION_CONFIG_TYPES)
 
 
 def _get_ssl_cert_reqs():
-    return _get_int_from_env("MIS_SSL_CERT_REQS", ssl.CERT_NONE, valid_values=SSL_CERT_REQS_TYPES)
+    return _get_int_from_env("MIS_SSL_CERT_REQS", ssl.CERT_NONE, valid_values=constants.SSL_CERT_REQS_TYPES)
 
 
 def __getattr__(name):
