@@ -103,6 +103,88 @@ CONFIG_YAML_FILES_MAP = {
         "latency": "qwq-32b-latency.yaml",
         "throughput": "qwq-32b-throughput.yaml"
     },
+
+"DeepSeek-R1-Distill-Qwen-14B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-14b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-32b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-llama-70b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-quantized.w8a8-throughput.yaml"
+    },
+    "Llama-3.3-70B-Instruct-quantized.w8a8": {
+        "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
+        "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-14b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-14b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-32b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-32b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-72b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-72b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "QwQ-32B-quantized.w8a8": {
+        "default": "qwq-32b-quantized.w8a8-default.yaml",
+        "latency": "qwq-32b-quantized.w8a8-latency.yaml",
+        "throughput": "qwq-32b-quantized.w8a8-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama--AWQ": {
+        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
+    },
+    "Llama-3.3-70B-Instruct-AWQ": {
+        "default": "llama-3.3-70b-instruct-awq-default.yaml",
+        "latency": "llama-3.3-70b-instruct-awq-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct-AWQ": {
+        "default": "qwen2.5-14b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct-AWQ": {
+        "default": "qwen2.5-32b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-32b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct-AWQ": {
+        "default": "qwen2.5-72b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
+    },
+    "QwQ-32B-AWQ": {
+        "default": "qwq-32b-awq-default.yaml",
+        "latency": "qwq-32b-awq-latency.yaml",
+        "throughput": "qwq-32b-awq-throughput.yaml"
+    },
 }
 
 
@@ -338,7 +420,7 @@ class ConfigParser:
                     f"The engine will be started with the default parameters")
             return self.args
 
-        yaml_file = CONFIG_YAML_FILES_MAP[self.model_type][self.optimization_config_type]
+        yaml_file = CONFIG_YAML_FILES_MAP.get(self.model_type).get(self.optimization_config_type)
         config = self._config_yaml_file_loading(ROOT_DIR + yaml_file)
 
         if not self._is_config_valid(config):
