@@ -35,3 +35,6 @@ class GlobalArgs(BaseModel):
 
     # generated params
     engine_optimization_config: dict = {}
+
+
+ARGS: GlobalArgs = GlobalArgs()

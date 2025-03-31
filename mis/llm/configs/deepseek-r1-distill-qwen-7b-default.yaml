@@ -20,4 +20,6 @@ vllm:
 
   enforce_eager: true
 
-mindie:
+mindie-service:
+  tensor_parallel_size: 1
+  max_model_len: 16384

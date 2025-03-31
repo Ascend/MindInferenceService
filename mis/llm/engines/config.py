@@ -44,8 +44,7 @@ CONFIG_YAML_FILES_MAP = {
         "default": "deepseek-r1-distill-llama-70b-default.yaml",
         "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
         "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
-    }
-
+}
 
 CHECKER_VLLM = {
     "dtype": {
@@ -95,7 +94,7 @@ CHECKER_VLLM = {
     },
     "swap_space": {
         "type": "int",
-        "min":0,
+        "min": 0,
         "max": 1024,
     },
     "cpu_offload_gb": {
@@ -131,6 +130,10 @@ CHECKER_VLLM = {
     "enforce_eager": {
         "type": "bool",
         "valid_values": [True, False]
+    },
+    "distributed_executor_backend": {
+        "type": "str_in",
+        "valid_values": ["ray", "mp"]
     }
 }
 
@@ -157,9 +160,11 @@ class AbsEngineConfigValidator(ABC):
         Register an engine configuration validator.
         :param engine_type: Engine type.
         """
+
         def decorator(subclass):
             cls._engine_config_validation[engine_type] = subclass
             return subclass
+
         return decorator
 
     @classmethod
@@ -206,6 +211,20 @@ class VLLMEngineConfigValidator(AbsEngineConfigValidator):
         super().__init__(config, CHECKER_VLLM)
 
 
+@AbsEngineConfigValidator.register("mindie-service")
+class VLLMEngineConfigValidator(AbsEngineConfigValidator):
+    """
+    MindIE-Service engine configuration validator.
+    """
+
+    def __init__(self, config: Dict):
+        """
+        MindIE-Service Engine configuration validator initialization.
+        :param config: Configuration parameters.
+        """
+        super().__init__(config, CHECKER_VLLM)
+
+
 class ConfigParser:
     def __init__(self, args: GlobalArgs):
         """
@@ -233,7 +252,7 @@ class ConfigParser:
                 config = yaml.safe_load(file)
         except FileNotFoundError:
             logger.warning(f"Config file {config_file_path} not found."
-                            " The engine will be started with default parameters.")
+                           " The engine will be started with default parameters.")
             config = None
         except yaml.YAMLError as e:
             logger.error(f"YAML error in file {config_file_path}: {e}")
@@ -276,7 +295,7 @@ class ConfigParser:
         """
         if self.optimization_config_type is None:
             logger.warning("Missing required arguments for the required configuration yaml file."
-                    f"The engine will be started with the default parameters")
+                           f"The engine will be started with the default parameters")
             return self.args
 
         yaml_file = CONFIG_YAML_FILES_MAP[self.model_type][self.optimization_config_type]
@@ -286,7 +305,7 @@ class ConfigParser:
             return self.args
 
         engine_type_selected = self.engine_type if self.engine_type is not None else \
-              config.get(OPTIMAL_ENGINE_TYPE) # engine_type default="vllm"
+            config.get(OPTIMAL_ENGINE_TYPE)  # engine_type default="vllm"
         engine_optimization_config = config.get(engine_type_selected, None)
 
         if engine_optimization_config is None:
