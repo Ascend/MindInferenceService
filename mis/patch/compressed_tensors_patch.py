@@ -5,11 +5,11 @@ from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import torch
 from compressed_tensors.config import (CompressionFormat,
-                                       SparsityCompressionConfig,
-                                       SparsityStructure)
+                                             SparsityCompressionConfig,
+                                             SparsityStructure)
 from compressed_tensors.quantization import (QuantizationArgs,
-                                             QuantizationStrategy,
-                                             QuantizationType)
+                                                   QuantizationStrategy,
+                                                   QuantizationType)
 from pydantic import BaseModel
 
 from vllm.logger import init_logger
