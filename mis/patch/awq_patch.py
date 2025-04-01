@@ -93,7 +93,7 @@ class AWQConfig(QuantizationConfig):
 
     @classmethod
     def override_quantization_method(cls, hf_quant_cfg, user_quant) -> Optional[str]:
-        if torch_npu.is_available():
+        if torch.npu.is_available():
             return QUANTIZATION_TYPE
         return None
 
