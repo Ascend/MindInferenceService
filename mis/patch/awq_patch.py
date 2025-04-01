@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 import torch
 
 from vllm import _custom_ops as ops
+from vllm.logger import init_logger
 from vllm.model_executor.layers.linear import (LinearBase, LinearMethodBase,
                                                UnquantizedLinearMethod)
 from vllm.model_executor.layers.quantization import register_quantization_config
@@ -14,9 +15,11 @@ from vllm.model_executor.parameter import (GroupQuantScaleParameter,
                                            PackedvLLMParameter)
 
 
+logger = init_logger(__name__)
+
 STORAGE_BITS_NPU = 8
 STORAGE_BITS_GPU = 32
-REVERSE_SWQ_PACK_ORDER = [0,4,1,5,2,6,3,7]
+REVERSE_AWQ_PACK_ORDER = [0, 4, 1, 5, 2, 6, 3, 7]
 QUANTIZATION_TYPE = "ascend"
 INT4_LENGTH = 4
 INT8_LENGTH = 8
@@ -47,10 +50,11 @@ class AWQConfig(QuantizationConfig):
             raise ValueError(
                 "Currently, only 4-bit weight quantization is supported for "
                 f"AWQ, but got {self.weight_bits} bits.")
-        if self.group_size <= 0:
-            raise ValueError("group_size should be greater than 0")
+        if self.group_size == 0:
+            logger.error("group_size should not be 0")
+            raise ValueError("group_size should not be 0")
         
-        self.pack_factor =  STORAGE_BITS_NPU // self.weight_bits
+        self.pack_factor = STORAGE_BITS_NPU // self.weight_bits
         
     def __repr__(self) -> str:
         return (f"AscendAWQConfig(weight_bits={self.weight_bits}, "
@@ -116,6 +120,7 @@ class AWQLinearMethod(LinearMethodBase):
         self.quant_config = quant_config
         self.group_size = self.quant_config.group_size if self.quant.group_size != -1 else 0
         self.shifts_unpack = torch.arange(0, STORAGE_BITS_GPU, self.quant_config.weight_bits)[None, None, :]
+        self.shifts_pack = torch.arange(0, STORAGE_BITS_NPU, self.quant_config.weight_bits)[None, None, :]
         self.gpu_pack_factor = STORAGE_BITS_GPU // self.quant_config.weight_bits
         self.npu_pack_factor = STORAGE_BITS_NPU // self.quant_config.weight_bits
         self.real_weight_loader = None
@@ -141,9 +146,9 @@ class AWQLinearMethod(LinearMethodBase):
         self.weight_loader = extra_weight_attrs.get("weight_loader")
 
         if self.quant_config.group_size != -1:
-            scale_abd_zero_size = input_size_per_partition // self.quant_config.group_size
+            scale_and_zero_size = input_size_per_partition // self.quant_config.group_size
         else:
-            scale_abd_zero_size = 1
+            scale_and_zero_size = 1
 
         qweight = PackedvLLMParameter(
             data=torch.empty(
@@ -159,7 +164,7 @@ class AWQLinearMethod(LinearMethodBase):
 
         qzeros = PackedvLLMParameter(
             data=torch.empty(
-                scale_abd_zero_size,
+                scale_and_zero_size,
                 output_size_per_partition,
                 dtype=params_dtype,
             ),
@@ -170,7 +175,7 @@ class AWQLinearMethod(LinearMethodBase):
             weight_loader=self._qzeros_weight_loader)
 
         scales = GroupQuantScaleParameter(data=torch.empty(
-            scale_abd_zero_size,
+            scale_and_zero_size,
             output_size_per_partition,
             dtype=params_dtype,
         ),
@@ -199,7 +204,7 @@ class AWQLinearMethod(LinearMethodBase):
         imatrix = torch.bitwise_right_shift(qmatrix[:, :, None],
                                             self.shifts_unpack).view(qmatrix.shape[0], -1)
 
-        imatrix = imatrix.to(torch.int32) & 0x0F
+        imatrix = imatrix.to(torch.int8) & 0x0F
         return imatrix
 
     def _repack_to_npu_weight(self, qweight):
@@ -207,18 +212,18 @@ class AWQLinearMethod(LinearMethodBase):
 
         iweights = self._unpack(qweight)
 
-        iweights = iweights.view(-1, self.gpu_pack_factor)[:, REVERSE_SWQ_PACK_ORDER].view(iweights.shape)
+        iweights = iweights.view(-1, self.gpu_pack_factor)[:, REVERSE_AWQ_PACK_ORDER].view(iweights.shape)
         iweights = iweights.view(-1, iweights.shape[1] // self.npu_pack_factor, self.npu_pack_factor)
 
         if self.shifts_pack.device != qweight.device:
-            self.shifts_unpack = self.shifts_pack.to(iweights.device)
+            self.shifts_pack = self.shifts_pack.to(iweights.device)
         qweight = torch.bitwise_left_shift(iweights, self.shifts_pack).sum(dim=-1)
         qweight = qweight.to(torch.int8)
         return qweight
 
     def _repack_to_npu_zeros(self, qzeros):
         izeros = self._unpack(qzeros)
-        izeros = izeros.view(-1, self.gpu_pack_factor)[:, REVERSE_SWQ_PACK_ORDER].view(izeros.shape)
+        izeros = izeros.view(-1, self.gpu_pack_factor)[:, REVERSE_AWQ_PACK_ORDER].view(izeros.shape)
         return -(izeros.to(torch.float16) - 8)
 
     def _qweight_weight_loader(self, *args, **kwargs) -> None:

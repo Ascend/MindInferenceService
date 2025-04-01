@@ -89,8 +89,7 @@ class CompressedTensorsConfig(QuantizationConfig):
         # Check if the layer is skipped for quantization.
         # TODO (@robertgshaw2): support module names
         if should_ignore_layer(prefix,
-                               ignore=self.ignore,
-                               fused_mapping=self.packed_modules_mapping):
+                               ignore=self.ignore):
             return UnquantizedLinearMethod()
         if isinstance(layer, LinearBase):
             scheme = self.get_scheme(layer=layer, layer_name=prefix)
@@ -392,51 +391,51 @@ class CompressedTensorsConfig(QuantizationConfig):
 
         # Will be empty for models with only sparsity
         weight_quant = input_quant = None
+        sparsity_scheme: Optional[SparsityCompressionConfig] = None
         if self.target_scheme_map:
             matched_target = find_matched_target(
                 layer_name=layer_name,
                 module=layer,
-                targets=self.target_scheme_map.keys(),
-                fused_mapping=self.packed_modules_mapping)
+                targets=self.target_scheme_map.keys())
 
             scheme_dict = self.target_scheme_map[matched_target]
             weight_quant = scheme_dict.get("weights")
             input_quant = scheme_dict.get("input_activations")
 
-        # Find the sparsity scheme of the layer
-        # assume that fused layers inerhit first component's sparsity scheme
-        sparsity_targets = (self.sparsity_scheme_map.keys() -
-                            set(self.sparsity_ignore_list))
-        sparsity_scheme: Optional[SparsityCompressionConfig] = None
-        with suppress(ValueError):
-            matched_target = find_matched_target(
-                layer_name=layer_name,
-                module=layer,
-                targets=sparsity_targets,
-                fused_mapping=self.packed_modules_mapping)
-            sparsity_scheme = self.sparsity_scheme_map[matched_target]
+        if self.sparsity_scheme_map:
+            is_ignored = False
+            with suppress(ValueError):
+                is_ignored = find_matched_target(
+                    layer_name=layer_name,
+                    module=layer,
+                    targets=self.sparsity_ignore_list)
+
+            # if the layer is in the sparsity ignore list,
+            # we should not apply any sparsity scheme
+
+            if not is_ignored:
+                matched_target = find_matched_target(
+                    layer_name=layer_name,
+                    module=layer,
+                    targets=self.sparsity_scheme_map.keys())
+                sparsity_scheme = self.sparsity_scheme_map.get(matched_target)
 
         if self.supports_cutlass_24(weight_quant=weight_quant,
                                     input_quant=input_quant,
                                     sparsity_scheme=sparsity_scheme):
+            # FIXME(tlrmchlsmth): layers using W16A16 CUTLASS 2:4 sparse kernels
+            # currently produce bad output in some cases
+            if weight_quant is None:
+                logger.warning_once(
+                    "CompressedTensors24 scheme is disabled for the w16a16 "
+                    "case. Falling back to UnquantizedLinearMethod")
+                return None
             # Have a valid sparsity scheme
             # Validate layer is supported by Cutlass 2:4 Kernel
-            model_compression_config = (None if sparsity_scheme is None
-                                        or sparsity_scheme.format == "dense"
-                                        else self.config)
-
-            scheme = CompressedTensors24(
-                quantized=weight_quant is not None or input_quant is not None,
-                weight_quant=weight_quant,
-                input_quant=input_quant,
-                model_compression_config=model_compression_config,
-            )
-        elif weight_quant is None:
-            logger.warning_once("Acceleration for non-quantized schemes is "
-                                "not supported by Compressed Tensors. "
-                                "Falling back to UnquantizedLinearMethod")
-            return None
-
+            scheme = CompressedTensors24(quantized=weight_quant is not None
+                                                   or input_quant is not None,
+                                         weight_quant=weight_quant,
+                                         input_quant=input_quant)
         else:
             # Find the quant_scheme
             scheme = self._get_scheme_from_parts(  # type: ignore
@@ -481,26 +480,15 @@ class CompressedTensorsConfig(QuantizationConfig):
             - Weight only quantization is not-supported
             - Supported weight quantization strategies are TENSOR and CHANNEL
             - Supported input quantization strategies are TENSOR and TOKEN
-            - Only 8 bit quantization is supported 
+            - Only 8 bit quantization is supported
 
         :return: True if the layer is supported by the Cutlass 2:4 Kernel
             False otherwise
         """
-        if sparsity_scheme is None:
-            return False
-
-        is_valid_sparsity_structure: bool = (
-            sparsity_scheme.sparsity_structure ==
-            SparsityStructure.TWO_FOUR.value)
-
-        valid_compressors = {
-            CompressionFormat.dense.value,
-            CompressionFormat.sparse_24_bitmask.value
-        }
-
-        is_valid_sparsity = (is_valid_sparsity_structure
-                             and sparsity_scheme.format in valid_compressors)
-
+        is_valid_sparsity = (sparsity_scheme is not None
+                             and sparsity_scheme.sparsity_structure
+                             == SparsityStructure.TWO_FOUR.value
+                             and sparsity_scheme.format == "dense")
         if not is_valid_sparsity:
             return False
 
@@ -530,7 +518,6 @@ class CompressedTensorsConfig(QuantizationConfig):
             return False
 
         return weight_quant.num_bits == input_quant.num_bits == 8
-
 
 class CompressedTensorsLinearMethod(LinearMethodBase):
 
@@ -575,7 +562,6 @@ class CompressedTensorsLinearMethod(LinearMethodBase):
         if scheme is None:
             raise ValueError("A scheme must be defined for each layer")
         return scheme.apply_weights(layer, x, bias=bias)
-
 
 class CompressedTensorsKVCacheMethod(BaseKVCacheMethod):
     """

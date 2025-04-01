@@ -98,12 +98,12 @@ class CompressedTensorsW8A8Int8(CompressedTensorsScheme):
         weight = layer.weight
         layer.weight = Parameter(weight.t().contiguous(), requires_grad=False)
 
-        if_fused = len(self.logical_widths) > 1
-        if if_fused and self.strategy == QuantizationStrategy.TENSOR:
+        is_fused = len(self.logical_widths) > 1
+        if is_fused and self.strategy == QuantizationStrategy.TENSOR:
             ws_channel = convert_to_channelwise(layer.weight_scale, self.logical_widths)
             layer.weight_scale = Parameter(ws_channel, requires_grad=False)
         else:
-            layer.weight_scale = Parameter(layer.weight_scale, requires_grad=False)
+            layer.weight_scale = Parameter(layer.weight_scale.data, requires_grad=False)
 
         if self.is_static_input_scheme:
             layer.input_scale = Parameter(layer.input_scale.max(), requires_grad=False)
