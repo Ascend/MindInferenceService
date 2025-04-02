@@ -1,15 +1,13 @@
-# SPDX-License-Identifier: Apache-2.0
-
 from contextlib import suppress
 from typing import Any, Dict, List, Literal, Optional, Tuple, cast
 
 import torch
 from compressed_tensors.config import (CompressionFormat,
-                                             SparsityCompressionConfig,
-                                             SparsityStructure)
+                                       SparsityCompressionConfig,
+                                       SparsityStructure)
 from compressed_tensors.quantization import (QuantizationArgs,
-                                                   QuantizationStrategy,
-                                                   QuantizationType)
+                                             QuantizationStrategy,
+                                             QuantizationType)
 from pydantic import BaseModel
 
 from vllm.logger import init_logger
@@ -54,7 +52,6 @@ class CompressedTensorsConfig(QuantizationConfig):
         kv_cache_scheme: Optional[Dict[str, Any]] = None,
         config: Optional[Dict[str, Any]] = None,
     ):
-        super().__init__()
         self.ignore = ignore
         self.quant_format = quant_format
         # Map from [target -> scheme]
@@ -88,8 +85,7 @@ class CompressedTensorsConfig(QuantizationConfig):
 
         # Check if the layer is skipped for quantization.
         # TODO (@robertgshaw2): support module names
-        if should_ignore_layer(prefix,
-                               ignore=self.ignore):
+        if should_ignore_layer(prefix, ignore=self.ignore):
             return UnquantizedLinearMethod()
         if isinstance(layer, LinearBase):
             scheme = self.get_scheme(layer=layer, layer_name=prefix)
@@ -433,7 +429,7 @@ class CompressedTensorsConfig(QuantizationConfig):
             # Have a valid sparsity scheme
             # Validate layer is supported by Cutlass 2:4 Kernel
             scheme = CompressedTensors24(quantized=weight_quant is not None
-                                                   or input_quant is not None,
+                                         or input_quant is not None,
                                          weight_quant=weight_quant,
                                          input_quant=input_quant)
         else:
@@ -480,7 +476,7 @@ class CompressedTensorsConfig(QuantizationConfig):
             - Weight only quantization is not-supported
             - Supported weight quantization strategies are TENSOR and CHANNEL
             - Supported input quantization strategies are TENSOR and TOKEN
-            - Only 8 bit quantization is supported
+            - Only 8 bit quantization is supported 
 
         :return: True if the layer is supported by the Cutlass 2:4 Kernel
             False otherwise
@@ -518,6 +514,7 @@ class CompressedTensorsConfig(QuantizationConfig):
             return False
 
         return weight_quant.num_bits == input_quant.num_bits == 8
+
 
 class CompressedTensorsLinearMethod(LinearMethodBase):
 
@@ -562,6 +559,7 @@ class CompressedTensorsLinearMethod(LinearMethodBase):
         if scheme is None:
             raise ValueError("A scheme must be defined for each layer")
         return scheme.apply_weights(layer, x, bias=bias)
+
 
 class CompressedTensorsKVCacheMethod(BaseKVCacheMethod):
     """

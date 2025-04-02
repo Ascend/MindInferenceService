@@ -84,11 +84,11 @@ class AttentionMaskBuilder:
         return self.attn_mask_cache[:max_seq_len, :max_seq_len].contiguous()
 
     def get_decode_attn_mask(
-            self,
-            input_lengths: torch.tensor,
-            max_s: int,
-            dtype: torch.dtype,
-            device: torch.device,
+        self,
+        input_lengths: torch.tensor,
+        max_s: int,
+        dtype: torch.dtype,
+        device: torch.device,
     ):
         self.update_attn_cache(max_s, dtype, device)
         return (self.attn_mask_cache.index_select(
@@ -115,18 +115,18 @@ class AscendAttentionBackend(AttentionBackend):
 
     @staticmethod
     def get_kv_cache_shape(
-            num_blocks: int,
-            block_size: int,
-            num_kv_heads: int,
-            head_size: int,
+        num_blocks: int,
+        block_size: int,
+        num_kv_heads: int,
+        head_size: int,
     ) -> Tuple[int, ...]:
         return (2, num_blocks, block_size, num_kv_heads * head_size)
 
     @staticmethod
     def swap_blocks(
-            src_kv_cache: List[torch.Tensor],
-            dst_kv_cache: List[torch.Tensor],
-            src_to_dst: torch.Tensor,
+        src_kv_cache: List[torch.Tensor],
+        dst_kv_cache: List[torch.Tensor],
+        src_to_dst: torch.Tensor,
     ) -> None:
         src_key_cache, src_value_cache = src_kv_cache[0], src_kv_cache[1]
         dst_key_cache, dst_value_cache = dst_kv_cache[0], dst_kv_cache[1]
@@ -140,8 +140,8 @@ class AscendAttentionBackend(AttentionBackend):
 
     @staticmethod
     def copy_blocks(
-            kv_caches: List[torch.Tensor],
-            src_to_dists: torch.Tensor,
+        kv_caches: List[torch.Tensor],
+        src_to_dists: torch.Tensor,
     ) -> None:
         src_indices = src_to_dists[:, 0]
         dst_indices = src_to_dists[:, 1]
@@ -169,10 +169,10 @@ class AscendMLAAttentionBackend(AscendAttentionBackend):
 
     @staticmethod
     def get_kv_cache_shape(
-            num_blocks: int,
-            block_size: int,
-            num_kv_heads: int,
-            head_size: int,
+        num_blocks: int,
+        block_size: int,
+        num_kv_heads: int,
+        head_size: int,
     ) -> Tuple[int, ...]:
         return (1, num_blocks, block_size, num_kv_heads * head_size)
 
@@ -293,7 +293,7 @@ class AscendMetadata(AttentionMetadata):
         slot_mapping = (None if self.slot_mapping is None else
                         self.slot_mapping[self.num_prefill_tokens:])
         seq_lens = (None if self.seq_lens is None else
-                    self.seq_lens[self.num_prefills:])
+                               self.seq_lens[self.num_prefills:])
         block_tables = (None if self.block_tables is None else
                         self.block_tables[self.num_prefills:])
 
@@ -320,6 +320,7 @@ class AscendMetadata(AttentionMetadata):
 
 
 class AscendMetadataBuilder(CommonMetadataBuilder[AscendMetadata]):
+
     _metadata_cls = AscendMetadata
     _attn_mask_builder = None  # noqa
 
@@ -347,10 +348,10 @@ class AscendMetadataBuilder(CommonMetadataBuilder[AscendMetadata]):
 
         for (seq_id, token_len, seq_len, curr_seq_len, query_len, context_len,
              curr_sliding_window_block) in zip(
-            inter_data.seq_ids, [len(t) for t in inter_data.input_tokens],
-            inter_data.orig_seq_lens, inter_data.seq_lens,
-            inter_data.query_lens, inter_data.context_lens,
-            inter_data.curr_sliding_window_blocks):
+                 inter_data.seq_ids, [len(t) for t in inter_data.input_tokens],
+                 inter_data.orig_seq_lens, inter_data.seq_lens,
+                 inter_data.query_lens, inter_data.context_lens,
+                 inter_data.curr_sliding_window_blocks):
             self.context_lens.append(context_len)
             if is_prompt:
                 self.num_prefills += 1
@@ -383,7 +384,7 @@ class AscendMetadataBuilder(CommonMetadataBuilder[AscendMetadata]):
                     block_table = block_tables[seq_id]
                 else:
                     block_table = block_tables[seq_id][
-                                  -curr_sliding_window_block:]
+                        -curr_sliding_window_block:]
             self.block_tables.append(block_table)
 
             # Compute slot mapping.
@@ -403,9 +404,9 @@ class AscendMetadataBuilder(CommonMetadataBuilder[AscendMetadata]):
             )
 
     def build(
-            self,
-            seq_lens: List[int],
-            query_lens: List[int],
+        self,
+        seq_lens: List[int],
+        query_lens: List[int],
     ):
         """Build attention metadata with on-device tensors.
 
@@ -468,17 +469,17 @@ class AscendMetadataBuilder(CommonMetadataBuilder[AscendMetadata]):
 class AscendAttentionBackendImpl(AttentionImpl):
 
     def __init__(
-            self,
-            num_heads: int,
-            head_size: int,
-            scale: float,
-            num_kv_heads: int,
-            alibi_slopes: Optional[List[float]],
-            sliding_window: Optional[int],
-            kv_cache_dtype: str,
-            blocksparse_params: Optional[Dict[str, Any]] = None,
-            logits_soft_cap: Optional[float] = None,
-            attn_type: str = AttentionType.DECODER,
+        self,
+        num_heads: int,
+        head_size: int,
+        scale: float,
+        num_kv_heads: int,
+        alibi_slopes: Optional[List[float]],
+        sliding_window: Optional[int],
+        kv_cache_dtype: str,
+        blocksparse_params: Optional[Dict[str, Any]] = None,
+        logits_soft_cap: Optional[float] = None,
+        attn_type: str = AttentionType.DECODER,
     ) -> None:
         self.num_heads = num_heads
         self.head_size = head_size
@@ -499,15 +500,15 @@ class AscendAttentionBackendImpl(AttentionImpl):
         self.seq_len_cpu_tensor = None
 
     def forward(
-            self,
-            layer: AttentionLayer,
-            query: torch.Tensor,
-            key: torch.Tensor,
-            value: torch.Tensor,
-            kv_cache: List[torch.Tensor],
-            attn_metadata: AscendMetadata,
-            attn_type: str = AttentionType.DECODER,
-            output: Optional[torch.Tensor] = None,
+        self,
+        layer: AttentionLayer,
+        query: torch.Tensor,
+        key: torch.Tensor,
+        value: torch.Tensor,
+        kv_cache: List[torch.Tensor],
+        attn_metadata: AscendMetadata,
+        attn_type: str = AttentionType.DECODER,
+        output: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         """Forward pass with Ascend attention.
         Args:

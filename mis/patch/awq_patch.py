@@ -39,7 +39,6 @@ class AWQConfig(QuantizationConfig):
         zero_point: bool,
         modules_to_not_convert: Optional[List[str]] = None,
     ) -> None:
-        super().__init__()
         self.weight_bits = weight_bits
         self.group_size = group_size
         self.zero_point = zero_point
@@ -67,7 +66,7 @@ class AWQConfig(QuantizationConfig):
 
     @staticmethod
     def get_supported_act_dtypes() -> List[torch.dtype]:
-        return [torch.float16, torch.bfloat16]
+        return [torch.bfloat16]
 
     @classmethod
     def get_min_capability(cls) -> int:
