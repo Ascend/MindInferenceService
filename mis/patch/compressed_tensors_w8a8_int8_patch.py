@@ -40,7 +40,7 @@ class CompressedTensorsW8A8Int8(CompressedTensorsScheme):
         if not isinstance(layer, torch.nn.Module):
             logger.error("layer must be an instance of torch.nn.Module")
             raise TypeError("layer must be an instance of torch.nn.Module")
-        if not hasattr(layer, "qweight") or not hasattr(layer, "weight_scale"):
+        if not hasattr(layer, "qweight") and not hasattr(layer, "weight_scale"):
             logger.error("layer must have qweight or weight_scale attributes")
             raise AttributeError("layer must have qweight or weight_scale attributes")
         if not isinstance(x, torch.Tensor):

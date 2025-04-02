@@ -1,0 +1,285 @@
+--- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/awq.py	2025-04-02 11:34:13.000000000 +0000
++++ /opt/mis/mis/patch/awq_patch.py	2025-04-02 11:54:50.498816026 +0000
+@@ -1,16 +1,31 @@
+ from typing import Any, Dict, List, Optional
+ 
+ import torch
++import torch_npu
+ 
+ from vllm import _custom_ops as ops
++from vllm.logger import init_logger
+ from vllm.model_executor.layers.linear import (LinearBase, LinearMethodBase,
+                                                UnquantizedLinearMethod)
++from vllm.model_executor.layers.quantization import register_quantization_config
+ from vllm.model_executor.layers.quantization.base_config import (
+     QuantizationConfig)
+ from vllm.model_executor.parameter import (GroupQuantScaleParameter,
+                                            PackedvLLMParameter)
+ 
+ 
++logger = init_logger(__name__)
++
++STORAGE_BITS_NPU = 8
++STORAGE_BITS_GPU = 32
++REVERSE_AWQ_PACK_ORDER = [0, 4, 1, 5, 2, 6, 3, 7]
++QUANTIZATION_TYPE = "ascend"
++INT4_LENGTH = 4
++INT8_LENGTH = 8
++INT32_LENGTH = 32
++
++
++@register_quantization_config(QUANTIZATION_TYPE)
+ class AWQConfig(QuantizationConfig):
+     """Config class for AWQ.
+ 
+@@ -33,19 +48,25 @@
+             raise ValueError(
+                 "Currently, only 4-bit weight quantization is supported for "
+                 f"AWQ, but got {self.weight_bits} bits.")
+-        self.pack_factor = 32 // self.weight_bits
+-
++        if self.group_size == 0:
++            logger.error("group_size should not be 0")
++            raise ValueError("group_size should not be 0")
++        
++        self.pack_factor = STORAGE_BITS_NPU // self.weight_bits
++        
+     def __repr__(self) -> str:
+-        return (f"AWQConfig(weight_bits={self.weight_bits}, "
++        return (f"AscendAWQConfig(weight_bits={self.weight_bits}, "
+                 f"group_size={self.group_size}, "
+                 f"zero_point={self.zero_point}, "
+                 f"modules_to_not_convert={self.modules_to_not_convert})")
+ 
+-    def get_name(self) -> str:
+-        return "awq"
++    @staticmethod
++    def get_name() -> str:
++        return QUANTIZATION_TYPE
+ 
+-    def get_supported_act_dtypes(self) -> List[torch.dtype]:
+-        return [torch.half]
++    @staticmethod
++    def get_supported_act_dtypes() -> List[torch.dtype]:
++        return [torch.bfloat16]
+ 
+     @classmethod
+     def get_min_capability(cls) -> int:
+@@ -65,9 +86,13 @@
+         weight_bits = cls.get_from_keys(config, ["w_bit", "bits"])
+         group_size = cls.get_from_keys(config, ["q_group_size", "group_size"])
+         zero_point = cls.get_from_keys(config, ["zero_point"])
+-        modules_to_not_convert = cls.get_from_keys_or(
+-            config, ["modules_to_not_convert"], None)
+-        return cls(weight_bits, group_size, zero_point, modules_to_not_convert)
++        return cls(weight_bits, group_size, zero_point)
++
++    @classmethod
++    def override_quantization_method(cls, hf_quant_cfg, user_quant) -> Optional[str]:
++        if torch.npu.is_available():
++            return QUANTIZATION_TYPE
++        return None
+ 
+     def get_quant_method(self, layer: torch.nn.Module,
+                          prefix: str) -> Optional["LinearMethodBase"]:
+@@ -91,6 +116,57 @@
+ 
+     def __init__(self, quant_config: AWQConfig):
+         self.quant_config = quant_config
++        self.group_size = self.quant_config.group_size if self.quant_config.group_size != -1 else 0
++        self.shifts_unpack = torch.arange(0, STORAGE_BITS_GPU, self.quant_config.weight_bits)[None, None, :]
++        self.shifts_pack = torch.arange(0, STORAGE_BITS_NPU, self.quant_config.weight_bits)[None, None, :]
++        self.gpu_pack_factor = STORAGE_BITS_GPU // self.quant_config.weight_bits
++        self.npu_pack_factor = STORAGE_BITS_NPU // self.quant_config.weight_bits
++        self.weight_loader = None
++
++    def process_weights_after_loading(self, layer: torch.nn.Module):
++        if not isinstance(layer, torch.nn.Module):
++            logger.error("layer must be an instance of torch.nn.Module")
++            raise TypeError("layer must be an instance of torch.nn.Module")
++        qweight = layer.qweight.data
++        iweights = self._unpack_int8(qweight)
++        shifts = torch.arange(0, INT32_LENGTH, INT4_LENGTH, device=iweights.device)
++        iweights = iweights.view(-1, iweights.shape[1] // INT8_LENGTH, INT8_LENGTH)
++        iweights = torch.bitwise_left_shift(iweights, shifts[None, None, :]).sum(dim=-1)
++        iweights = iweights.to(torch.int32)
++        layer.qweight.data = iweights
++
++    def apply(self, layer: torch.nn.Module, x: torch.Tensor, bias: Optional[torch.Tensor]=None) -> torch.Tensor:
++        if not isinstance(layer, torch.nn.Module):
++            logger.error("layer must be an instance of torch.nn.Module")
++            raise TypeError("layer must be an instance of torch.nn.Module")
++        if not hasattr(layer, "qweight") or not hasattr(layer, "scales") or not hasattr(layer, "qzeros"):
++            logger.error("layer must have qweight, scales, qzeros attributes")
++            raise AttributeError("layer must have qweight, scales, qzeros attributes")
++        if not isinstance(x, torch.Tensor):
++            logger.error("x must be an instance of torch.Tensor")
++            raise TypeError("x must be an instance of torch.Tensor")
++        if bias is not None and not isinstance(bias, torch.Tensor):
++            logger.error("bias must be an instance of torch.Tensor")
++            raise TypeError("bias must be an instance of torch.Tensor")
++
++        qweight = layer.qweight
++        scales = layer.scales
++        qzeros = layer.qzeros
++        if len(qweight.shape) != 2:
++            logger.error("qweight must have shape [in_feature, out_feature]")
++            raise ValueError("qweight must have shape [in_feature, out_feature]")
++
++        in_feature, out_feature = qweight.shape
++        size_out = x.size()[: -1] + (out_feature * 8,)
++        x = x.view(-1, in_feature)
++        if bias is not None and bias.dtype == torch.bfloat16:
++            out = torch_npu.npu_weight_quant_batchmatmul(x, qweight, scales, qzeros,
++                                                         antiquant_group_size=self.group_size)
++            out += bias
++        else:
++            out = torch_npu.npu_weight_quant_batchmatmul(x, qweight, scales, qzeros,
++                                                         antiquant_group_size=self.group_size)
++        return out.view(size_out)
+ 
+     def create_weights(self, layer: torch.nn.Module,
+                        input_size_per_partition: int,
+@@ -110,72 +186,99 @@
+                 "weight shape. This can be caused by too large "
+                 "tensor parallel size.")
+ 
+-        weight_loader = extra_weight_attrs.get("weight_loader")
++        self.weight_loader = extra_weight_attrs.get("weight_loader")
++
++        if self.quant_config.group_size != -1:
++            scale_and_zero_size = input_size_per_partition // self.quant_config.group_size
++        else:
++            scale_and_zero_size = 1
++
+         qweight = PackedvLLMParameter(
+             data=torch.empty(
+                 input_size_per_partition,
+                 output_size_per_partition // self.quant_config.pack_factor,
+-                dtype=torch.int32,
++                dtype=torch.int8,
+             ),
+             input_dim=0,
+             output_dim=1,
+             packed_dim=1,
+             packed_factor=self.quant_config.pack_factor,
+-            weight_loader=weight_loader)
++            weight_loader=self._qweight_weight_loader)
+ 
+         qzeros = PackedvLLMParameter(
+             data=torch.empty(
+-                input_size_per_partition // self.quant_config.group_size,
+-                output_size_per_partition // self.quant_config.pack_factor,
+-                dtype=torch.int32,
++                scale_and_zero_size,
++                output_size_per_partition,
++                dtype=params_dtype,
+             ),
+             input_dim=0,
+             output_dim=1,
+-            packed_dim=1,
++            packed_dim=0,
+             packed_factor=self.quant_config.pack_factor,
+-            weight_loader=weight_loader)
++            weight_loader=self._qzeros_weight_loader)
+ 
+         scales = GroupQuantScaleParameter(data=torch.empty(
+-            input_size_per_partition // self.quant_config.group_size,
++            scale_and_zero_size,
+             output_size_per_partition,
+             dtype=params_dtype,
+         ),
+-                                          input_dim=0,
+-                                          output_dim=1,
+-                                          weight_loader=weight_loader)
++            input_dim=0,
++            output_dim=1,
++            weight_loader=self.weight_loader)
+ 
+         layer.register_parameter("qweight", qweight)
+         layer.register_parameter("qzeros", qzeros)
+         layer.register_parameter("scales", scales)
+ 
+-    def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
+-        layer.qweight = torch.nn.Parameter(layer.qweight.data,
+-                                           requires_grad=False)
+-        layer.qzeros = torch.nn.Parameter(layer.qzeros.data,
+-                                          requires_grad=False)
+-        layer.scales = torch.nn.Parameter(layer.scales.data,
+-                                          requires_grad=False)
+-
+-    def apply(self,
+-              layer: torch.nn.Module,
+-              x: torch.Tensor,
+-              bias: Optional[torch.Tensor] = None) -> torch.Tensor:
+-        qweight = layer.qweight
+-        scales = layer.scales
+-        qzeros = layer.qzeros
+-        pack_factor = self.quant_config.pack_factor
+-        out_shape = (x.shape[:-1] + (qweight.shape[-1] * pack_factor, ))
+-        reshaped_x = x.reshape(-1, x.shape[-1])
+-
+-        # num_tokens >= threshold
+-        FP16_MATMUL_HEURISTIC_CONDITION = x.shape[:-1].numel() >= 256
+-
+-        if FP16_MATMUL_HEURISTIC_CONDITION:
+-            out = ops.awq_dequantize(qweight, scales, qzeros, 0, 0, 0)
+-            out = torch.matmul(reshaped_x, out)
+-        else:
+-            out = ops.awq_gemm(reshaped_x, qweight, scales, qzeros,
+-                               pack_factor)
+-        if bias is not None:
+-            out.add_(bias)
+-        return out.reshape(out_shape)
++    def _unpack_int8(self, qmatrix: torch.Tensor):
++        shifts_unpack = torch.arange(0, INT8_LENGTH, self.quant_config.weight_bits)[None, None, :]
++        if shifts_unpack.device != qmatrix.device:
++            shifts_unpack = shifts_unpack.to(qmatrix.device)
++
++        imatrix = torch.bitwise_right_shift(qmatrix[:, :, None],
++                                            shifts_unpack).view(qmatrix.shape[0], -1)
++        imatrix = imatrix.to(torch.int32) & 0x0F
++        return imatrix
++
++    def _unpack(self, qmatrix: torch.Tensor):
++        if self.shifts_unpack.device != qmatrix.device:
++            self.shifts_unpack = self.shifts_unpack.to(qmatrix.device)
++
++        imatrix = torch.bitwise_right_shift(qmatrix[:, :, None],
++                                            self.shifts_unpack).view(qmatrix.shape[0], -1)
++
++        imatrix = imatrix.to(torch.int8) & 0x0F
++        return imatrix
++
++    def _repack_to_npu_weight(self, qweight):
++        qweight = torch.bitwise_xor(qweight, 0x88888888)
++
++        iweights = self._unpack(qweight)
++
++        iweights = iweights.view(-1, self.gpu_pack_factor)[:, REVERSE_AWQ_PACK_ORDER].view(iweights.shape)
++        iweights = iweights.view(-1, iweights.shape[1] // self.npu_pack_factor, self.npu_pack_factor)
++
++        if self.shifts_pack.device != qweight.device:
++            self.shifts_pack = self.shifts_pack.to(iweights.device)
++        qweight = torch.bitwise_left_shift(iweights, self.shifts_pack).sum(dim=-1)
++        qweight = qweight.to(torch.int8)
++        return qweight
++
++    def _repack_to_npu_zeros(self, qzeros):
++        izeros = self._unpack(qzeros)
++        izeros = izeros.view(-1, self.gpu_pack_factor)[:, REVERSE_AWQ_PACK_ORDER].view(izeros.shape)
++        return -(izeros.to(torch.float16) - 8)
++
++    def _qweight_weight_loader(self, *args, **kwargs) -> None:
++        args_list = list(args)
++        weight_loader = self.weight_loader
++        if args_list[1].dtype == torch.int32:
++            args_list[1] = self._repack_to_npu_weight(args_list[1])
++        weight_loader(*args_list, **kwargs)
++
++    def _qzeros_weight_loader(self, *args, **kwargs) -> None:
++        args_list = list(args)
++        weight_loader = self.weight_loader
++        if args_list[1].dtype == torch.int32:
++            args_list[1] = self._repack_to_npu_zeros(args_list[1])
++        weight_loader(*args_list, **kwargs)

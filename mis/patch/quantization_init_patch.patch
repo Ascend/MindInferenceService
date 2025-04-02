@@ -1,0 +1,29 @@
+--- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/__init__.py	2025-04-02 11:34:13.000000000 +0000
++++ /opt/mis/mis/patch/quantization_init_patch.py	2025-04-02 11:54:50.490815996 +0000
+@@ -1,8 +1,11 @@
+ from typing import Dict, List, Type
+ 
++from vllm.logger import init_logger
+ from vllm.model_executor.layers.quantization.base_config import (
+     QuantizationConfig)
+ 
++logger = init_logger(__name__)
++
+ QUANTIZATION_METHODS: List[str] = [
+     "aqlm",
+     "awq",
+@@ -57,9 +60,12 @@
+     """  # noqa: E501
+ 
+     def _wrapper(quant_config_cls):
++        if not issubclass(quant_config_cls, QuantizationConfig):
++            raise ValueError("The quantization config must be a subclass of `QuantizationConfig`.")
+         if quantization in QUANTIZATION_METHODS:
+-            raise ValueError(
+-                f"The quantization method `{quantization}` is already exists.")
++            logger.info(f"The ascend adapter based on '{quant_config_cls.__module__.rsplit('.', 1)[-1]}' "
++                        f"quantization is not loaded because an existing adapter is already exists.")
++            return quant_config_cls
+         if not issubclass(quant_config_cls, QuantizationConfig):
+             raise ValueError("The quantization config must be a subclass of "
+                              "`QuantizationConfig`.")
