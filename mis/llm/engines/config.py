@@ -43,7 +43,189 @@ CONFIG_YAML_FILES_MAP = {
     "DeepSeek-R1-Distill-Llama-70B": {
         "default": "deepseek-r1-distill-llama-70b-default.yaml",
         "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
+        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"
+    },
+
+    "Llama-3.2-1B-Instruct": {
+        "default": "llama-3.2-1b-instruct-default.yaml",
+        "latency": "llama-3.2-1b-instruct-latency.yaml",
+        "throughput": "llama-3.2-1b-instruct-throughput.yaml"
+    },
+    "Llama-3.2-3B-Instruct": {
+        "default": "llama-3.2-3b-instruct-default.yaml",
+        "latency": "llama-3.2-3b-instruct-latency.yaml",
+        "throughput": "llama-3.2-3b-instruct-throughput.yaml"
+    },
+    "Llama-3.3-70B-Instruct": {
+        "default": "llama-3.3-70b-instruct-default.yaml",
+        "latency": "llama-3.3-70b-instruct-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-throughput.yaml"
+    },
+
+    "Qwen2.5-0.5B-Instruct": {
+        "default": "qwen2.5-0.5b-instruct-default.yaml",
+        "latency": "qwen2.5-0.5b-instruct-latency.yaml",
+        "throughput": "qwen2.5-0.5b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-1.5B-Instruct": {
+        "default": "qwen2.5-1.5b-instruct-default.yaml",
+        "latency": "qwen2.5-1.5b-instruct-latency.yaml",
+        "throughput": "qwen2.5-1.5b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct": {
+        "default": "qwen2.5-14b-instruct-default.yaml",
+        "latency": "qwen2.5-14b-instruct-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-7B-Instruct": {
+        "default": "qwen2.5-7b-instruct-default.yaml",
+        "latency": "qwen2.5-7b-instruct-latency.yaml",
+        "throughput": "qwen2.5-7b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct": {
+        "default": "qwen2.5-32b-instruct-default.yaml",
+        "latency": "qwen2.5-32b-instruct-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct": {
+        "default": "qwen2.5-72b-instruct-default.yaml",
+        "latency": "qwen2.5-72b-instruct-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-throughput.yaml"
+    },
+
+    "QwQ-32B": {
+        "default": "qwq-32b-default.yaml",
+        "latency": "qwq-32b-latency.yaml",
+        "throughput": "qwq-32b-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-1.5B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-14B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-14b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-32b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-llama-70b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-quantized.w8a8-throughput.yaml"
+    },
+
+    "Llama-3.3-70B-Instruct-quantized.w8a8": {
+        "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
+        "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-quantized.w8a8-throughput.yaml"
+    },
+
+    "Qwen2.5-1.5B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-1.5b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-1.5b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-1.5b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-14b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-14b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-14B-quantized.w8a8": {
+        "default": "qwen2.5-14b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-14b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-32b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-32b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct-quantized.w8a8": {
+        "default": "qwen2.5-72b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-72b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "Qwen2.5-72B-quantized.w8a8": {
+        "default": "qwen2.5-72b-instruct-quantized.w8a8-default.yaml",
+        "latency": "qwen2.5-72b-instruct-quantized.w8a8-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-quantized.w8a8-throughput.yaml"
+    },
+    "QwQ-32B-quantized.w8a8": {
+        "default": "qwq-32b-quantized.w8a8-default.yaml",
+        "latency": "qwq-32b-quantized.w8a8-latency.yaml",
+        "throughput": "qwq-32b-quantized.w8a8-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-1.5B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-1.5b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-awq-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-AWQ": {
+        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
+    },
+
+    "Llama-3.3-70B-Instruct-AWQ": {
+        "default": "llama-3.3-70b-instruct-awq-default.yaml",
+        "latency": "llama-3.3-70b-instruct-awq-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-awq-throughput.yaml"
+    },
+
+    "Qwen2.5-1.5B-Instruct-AWQ": {
+        "default": "qwen2.5-1.5b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-1.5b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-1.5b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct-AWQ": {
+        "default": "qwen2.5-14b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-14B-AWQ": {
+        "default": "qwen2.5-14b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct-AWQ": {
+        "default": "qwen2.5-32b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-32b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct-AWQ": {
+        "default": "qwen2.5-72b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-72B-AWQ": {
+        "default": "qwen2.5-72b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
+    },
+    "QwQ-32B-AWQ": {
+        "default": "qwq-32b-awq-default.yaml",
+        "latency": "qwq-32b-awq-latency.yaml",
+        "throughput": "qwq-32b-awq-throughput.yaml"
+    },
 }
 
 CHECKER_VLLM = {
@@ -134,6 +316,10 @@ CHECKER_VLLM = {
     "distributed_executor_backend": {
         "type": "str_in",
         "valid_values": ["ray", "mp"]
+    },
+    "quantization": {
+        "type": "str_in",
+        "valid_values": ["awq", "compressed-tensors"]
     }
 }
 

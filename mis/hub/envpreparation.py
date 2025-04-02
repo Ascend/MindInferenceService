@@ -220,5 +220,4 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
     if resolve_env:
         if args.engine_type in ENGINE_ENVS.keys():
             ENGINE_ENVS[args.engine_type]()
-
     return args
