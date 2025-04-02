@@ -14,4 +14,6 @@ vllm:
   cpu_offload_gb: 0
   scheduling_policy: fcfs
   enforce_eager: true
+  quantization: awq
+
 mindie: {}
