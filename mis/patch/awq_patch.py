@@ -1,5 +1,3 @@
-#
-#
 from typing import Any, Dict, List, Optional
 
 import torch
@@ -119,28 +117,27 @@ class AWQLinearMethod(LinearMethodBase):
 
     def __init__(self, quant_config: AWQConfig):
         self.quant_config = quant_config
-        self.group_size = self.quant_config.group_size if self.quant.group_size != -1 else 0
+        self.group_size = self.quant_config.group_size if self.quant_config.group_size != -1 else 0
         self.shifts_unpack = torch.arange(0, STORAGE_BITS_GPU, self.quant_config.weight_bits)[None, None, :]
         self.shifts_pack = torch.arange(0, STORAGE_BITS_NPU, self.quant_config.weight_bits)[None, None, :]
         self.gpu_pack_factor = STORAGE_BITS_GPU // self.quant_config.weight_bits
         self.npu_pack_factor = STORAGE_BITS_NPU // self.quant_config.weight_bits
-        self.real_weight_loader = None
+        self.weight_loader = None
 
-    def process_weights_after_laoding(self, layer: torch.nn.Module):
-        if not isinstance(layer, torch.nn.Linear):
+    def process_weights_after_loading(self, layer: torch.nn.Module):
+        if not isinstance(layer, torch.nn.Module):
             logger.error("layer must be an instance of torch.nn.Module")
             raise TypeError("layer must be an instance of torch.nn.Module")
         qweight = layer.qweight.data
         iweights = self._unpack_int8(qweight)
         shifts = torch.arange(0, INT32_LENGTH, INT4_LENGTH, device=iweights.device)
-        pack_num = INT8_LENGTH
-        iweights = iweights.view(-1, iweights.shape[1] // pack_num, pack_num)
+        iweights = iweights.view(-1, iweights.shape[1] // INT8_LENGTH, INT8_LENGTH)
         iweights = torch.bitwise_left_shift(iweights, shifts[None, None, :]).sum(dim=-1)
         iweights = iweights.to(torch.int32)
         layer.qweight.data = iweights
 
     def apply(self, layer: torch.nn.Module, x: torch.Tensor, bias: Optional[torch.Tensor]=None) -> torch.Tensor:
-        if not isinstance(layer, torch.nn.Linear):
+        if not isinstance(layer, torch.nn.Module):
             logger.error("layer must be an instance of torch.nn.Module")
             raise TypeError("layer must be an instance of torch.nn.Module")
         if not hasattr(layer, "qweight") or not hasattr(layer, "scales") or not hasattr(layer, "qzeros"):
@@ -161,7 +158,7 @@ class AWQLinearMethod(LinearMethodBase):
             raise ValueError("qweight must have shape [in_feature, out_feature]")
 
         in_feature, out_feature = qweight.shape
-        size_out = x.size()[:-1] + (out_feature * 8,)
+        size_out = x.size()[: -1] + (out_feature * 8,)
         x = x.view(-1, in_feature)
         if bias is not None and bias.dtype == torch.bfloat16:
             out = torch_npu.npu_weight_quant_batchmatmul(x, qweight, scales, qzeros,
@@ -275,14 +272,14 @@ class AWQLinearMethod(LinearMethodBase):
 
     def _qweight_weight_loader(self, *args, **kwargs) -> None:
         args_list = list(args)
-        weight_loader = self.real_weight_loader
+        weight_loader = self.weight_loader
         if args_list[1].dtype == torch.int32:
             args_list[1] = self._repack_to_npu_weight(args_list[1])
         weight_loader(*args_list, **kwargs)
 
     def _qzeros_weight_loader(self, *args, **kwargs) -> None:
         args_list = list(args)
-        weight_loader = self.real_weight_loader
+        weight_loader = self.weight_loader
         if args_list[1].dtype == torch.int32:
             args_list[1] = self._repack_to_npu_zeros(args_list[1])
         weight_loader(*args_list, **kwargs)
