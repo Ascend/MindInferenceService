@@ -37,6 +37,18 @@ class CompressedTensorsW8A8Int8(CompressedTensorsScheme):
     @staticmethod
     def apply_weights(layer: torch.nn.Module, x: torch.Tensor,
                       bias: Optional[torch.Tensor]) -> torch.Tensor:
+        if not isinstance(layer, torch.nn.Module):
+            logger.error("layer must be an instance of torch.nn.Module")
+            raise TypeError("layer must be an instance of torch.nn.Module")
+        if not hasattr(layer, "qweight") or not hasattr(layer, "weight_scale"):
+            logger.error("layer must have qweight or weight_scale attributes")
+            raise AttributeError("layer must have qweight or weight_scale attributes")
+        if not isinstance(x, torch.Tensor):
+            logger.error("x must be an instance of torch.Tensor")
+            raise TypeError("x must be an instance of torch.Tensor")
+        if bias is not None and not isinstance(bias, torch.Tensor):
+            logger.error("bias must be an instance of torch.Tensor")
+            raise TypeError("bias must be an instance of torch.Tensor")
 
         act_dtype = x.dtype
         ori_shape = x.shape
