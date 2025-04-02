@@ -126,6 +126,52 @@ class AWQLinearMethod(LinearMethodBase):
         self.npu_pack_factor = STORAGE_BITS_NPU // self.quant_config.weight_bits
         self.real_weight_loader = None
 
+    def process_weights_after_laoding(self, layer: torch.nn.Module):
+        if not isinstance(layer, torch.nn.Linear):
+            logger.error("layer must be an instance of torch.nn.Module")
+            raise TypeError("layer must be an instance of torch.nn.Module")
+        qweight = layer.qweight.data
+        iweights = self._unpack_int8(qweight)
+        shifts = torch.arange(0, INT32_LENGTH, INT4_LENGTH, device=iweights.device)
+        pack_num = INT8_LENGTH
+        iweights = iweights.view(-1, iweights.shape[1] // pack_num, pack_num)
+        iweights = torch.bitwise_left_shift(iweights, shifts[None, None, :]).sum(dim=-1)
+        iweights = iweights.to(torch.int32)
+        layer.qweight.data = iweights
+
+    def apply(self, layer: torch.nn.Module, x: torch.Tensor, bias: Optional[torch.Tensor]=None) -> torch.Tensor:
+        if not isinstance(layer, torch.nn.Linear):
+            logger.error("layer must be an instance of torch.nn.Module")
+            raise TypeError("layer must be an instance of torch.nn.Module")
+        if not hasattr(layer, "qweight") or not hasattr(layer, "scales") or not hasattr(layer, "qzeros"):
+            logger.error("layer must have qweight, scales, qzeros attributes")
+            raise AttributeError("layer must have qweight, scales, qzeros attributes")
+        if not isinstance(x, torch.Tensor):
+            logger.error("x must be an instance of torch.Tensor")
+            raise TypeError("x must be an instance of torch.Tensor")
+        if bias is not None and not isinstance(bias, torch.Tensor):
+            logger.error("bias must be an instance of torch.Tensor")
+            raise TypeError("bias must be an instance of torch.Tensor")
+
+        qweight = layer.qweight
+        scales = layer.scales
+        qzeros = layer.qzeros
+        if len(qweight.shape) != 2:
+            logger.error("qweight must have shape [in_feature, out_feature]")
+            raise ValueError("qweight must have shape [in_feature, out_feature]")
+
+        in_feature, out_feature = qweight.shape
+        size_out = x.size()[:-1] + (out_feature * 8,)
+        x = x.view(-1, in_feature)
+        if bias is not None and bias.dtype == torch.bfloat16:
+            out = torch_npu.npu_weight_quant_batchmatmul(x, qweight, scales, qzeros,
+                                                         antiquant_group_size=self.group_size)
+            out += bias
+        else:
+            out = torch_npu.npu_weight_quant_batchmatmul(x, qweight, scales, qzeros,
+                                                         antiquant_group_size=self.group_size)
+        return out.view(size_out)
+
     def create_weights(self, layer: torch.nn.Module,
                        input_size_per_partition: int,
                        output_partition_sizes: List[int], input_size: int,

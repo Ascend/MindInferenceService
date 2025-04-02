@@ -1,7 +1,10 @@
 from typing import Dict, List, Type
 
+from vllm.logger import init_logger
 from vllm.model_executor.layers.quantization.base_config import (
     QuantizationConfig)
+
+logger = init_logger(__name__)
 
 QUANTIZATION_METHODS: List[str] = [
     "aqlm",
@@ -57,9 +60,12 @@ def register_quantization_config(quantization: str):
     """  # noqa: E501
 
     def _wrapper(quant_config_cls):
+        if not issubclass(quant_config_cls, QuantizationConfig):
+            raise ValueError("The quantization config must be a subclass of `QuantizationConfig`.")
         if quantization in QUANTIZATION_METHODS:
-            raise ValueError(
-                f"The quantization method `{quantization}` is already exists.")
+            logger.info(f"The ascend adapter based on '{quant_config_cls.__module__.rsplit('.', 1)[-1]}' "
+                        f"quantization is not loaded because an existing adapter is already exists.")
+            return quant_config_cls
         if not issubclass(quant_config_cls, QuantizationConfig):
             raise ValueError("The quantization config must be a subclass of "
                              "`QuantizationConfig`.")
@@ -77,14 +83,12 @@ def get_quantization_config(quantization: str) -> Type[QuantizationConfig]:
     # lazy import to avoid triggering `torch.compile` too early
     from vllm.model_executor.layers.quantization.quark.quark import QuarkConfig
 
-    if quantization == "awq":
-        from .aqlm import AQLMConfig
+    from .aqlm import AQLMConfig
     from .awq import AWQConfig
     from .awq_marlin import AWQMarlinConfig
     from .bitsandbytes import BitsAndBytesConfig
-    if quantization == "compressed_tensors":
-        from .compressed_tensors.compressed_tensors import (  # noqa: E501
-            CompressedTensorsConfig)
+    from .compressed_tensors.compressed_tensors import (  # noqa: E501
+        CompressedTensorsConfig)
     from .deepspeedfp import DeepSpeedFPConfig
     from .experts_int8 import ExpertsInt8Config
     from .fbgemm_fp8 import FBGEMMFp8Config
