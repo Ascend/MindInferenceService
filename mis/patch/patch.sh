@@ -14,9 +14,9 @@ sed -i 's/\r$//' /opt/mis/mis/patch/register_patch.py
 diff -u /opt/vllm-ascend/vllm-ascend/vllm_ascend/__init__.py /opt/mis/mis/patch/register_patch.py > /opt/mis/mis/patch/register_patch.patch
 apply_patch "/opt/vllm-ascend/vllm-ascend/vllm_ascend/__init__.py" "/opt/mis/mis/patch/register_patch.patch"
 
-sed -i 's/\r$//' /opt/mis/mis/patch/attention_forward.py
-diff -u  /opt/vllm-ascend/vllm-ascend/vllm_ascend/attention.py /opt/mis/mis/patch/attention_patch.py > /opt/mis/mis/patch/attention_forward.patch
-apply_patch "/opt/vllm-ascend/vllm-ascend/vllm_ascend/attention.py" "/opt/mis/mis/patch/attention_forward.patch"
+sed -i 's/\r$//' /opt/mis/mis/patch/attention_forward_patch.py
+diff -u  /opt/vllm-ascend/vllm-ascend/vllm_ascend/attention.py /opt/mis/mis/patch/attention_forward_patch.py > /opt/mis/mis/patch/attention_forward_patch.patch
+apply_patch "/opt/vllm-ascend/vllm-ascend/vllm_ascend/attention.py" "/opt/mis/mis/patch/attention_forward_patch.patch"
 
 sed -i 's/\r$//' /opt/mis/mis/patch/compressed_tensors_patch.py
 diff -u /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors.py /opt/mis/mis/patch/compressed_tensors_patch.py > /opt/mis/mis/patch/compressed_tensors_patch.patch
@@ -31,5 +31,5 @@ diff -u /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/awq.py /op
 apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/awq.py" "/opt/mis/mis/patch/awq_patch.patch"
 
 sed -i 's/\r$//' /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.py
-diff -u /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors_w8a8_int8.py /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.py > /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.patch
-apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors_w8a8_int8.py" "/opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.patch"
+diff -u /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.py > /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py" "/opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.patch"
