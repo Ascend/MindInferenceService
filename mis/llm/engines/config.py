@@ -46,6 +46,64 @@ CONFIG_YAML_FILES_MAP = {
         "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"
     },
 
+    "Llama-3.2-1B-Instruct": {
+        "default": "llama-3.2-1b-instruct-default.yaml",
+        "latency": "llama-3.2-1b-instruct-latency.yaml",
+        "throughput": "llama-3.2-1b-instruct-throughput.yaml"
+    },
+    "Llama-3.2-3B-Instruct": {
+        "default": "llama-3.2-3b-instruct-default.yaml",
+        "latency": "llama-3.2-3b-instruct-latency.yaml",
+        "throughput": "llama-3.2-3b-instruct-throughput.yaml"
+    },
+    "Llama-3.3-70B-Instruct": {
+        "default": "llama-3.3-70b-instruct-default.yaml",
+        "latency": "llama-3.3-70b-instruct-latency.yaml",
+        "throughput": "llama-3.3-70b-instruct-throughput.yaml"
+    },
+
+    "Qwen2.5-0.5B-Instruct": {
+        "default": "qwen2.5-0.5b-instruct-default.yaml",
+        "latency": "qwen2.5-0.5b-instruct-latency.yaml",
+        "throughput": "qwen2.5-0.5b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-1.5B-Instruct": {
+        "default": "qwen2.5-1.5b-instruct-default.yaml",
+        "latency": "qwen2.5-1.5b-instruct-latency.yaml",
+        "throughput": "qwen2.5-1.5b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-3B-Instruct": {
+        "default": "qwen2.5-3b-instruct-default.yaml",
+        "latency": "qwen2.5-3b-instruct-latency.yaml",
+        "throughput": "qwen2.5-3b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-7B-Instruct": {
+        "default": "qwen2.5-7b-instruct-default.yaml",
+        "latency": "qwen2.5-7b-instruct-latency.yaml",
+        "throughput": "qwen2.5-7b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-14B-Instruct": {
+        "default": "qwen2.5-14b-instruct-default.yaml",
+        "latency": "qwen2.5-14b-instruct-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-32B-Instruct": {
+        "default": "qwen2.5-32b-instruct-default.yaml",
+        "latency": "qwen2.5-32b-instruct-latency.yaml",
+        "throughput": "qwen2.5-32b-instruct-throughput.yaml"
+    },
+    "Qwen2.5-72B-Instruct": {
+        "default": "qwen2.5-72b-instruct-default.yaml",
+        "latency": "qwen2.5-72b-instruct-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-throughput.yaml"
+    },
+
+    "QwQ-32B": {
+        "default": "qwq-32b-default.yaml",
+        "latency": "qwq-32b-latency.yaml",
+        "throughput": "qwq-32b-throughput.yaml"
+    },
+    
     "Llama-3.1-70B-Instruct-quantized.w8a8": {
         "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
         "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
