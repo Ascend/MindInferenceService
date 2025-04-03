@@ -12,12 +12,10 @@
  QUANTIZATION_METHODS: List[str] = [
      "aqlm",
      "awq",
-@@ -57,9 +60,12 @@
+@@ -57,9 +60,10 @@
      """  # noqa: E501
  
      def _wrapper(quant_config_cls):
-+        if not issubclass(quant_config_cls, QuantizationConfig):
-+            raise ValueError("The quantization config must be a subclass of `QuantizationConfig`.")
          if quantization in QUANTIZATION_METHODS:
 -            raise ValueError(
 -                f"The quantization method `{quantization}` is already exists.")
