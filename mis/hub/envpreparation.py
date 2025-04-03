@@ -220,14 +220,5 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
     if resolve_env:
         if args.engine_type in ENGINE_ENVS.keys():
             ENGINE_ENVS[args.engine_type]()
-    else:
-        quantization = args.engine_optimization_config.get("quantization") \
-            if hasattr(args, "engine_optimization_config") else None
-        if quantization is not None and quantization == "awq":
-            from vllm.model_executor.layers.quantization.awq import AWQConfig
-            logger.info("Ascend AWQ (Torch NPU) registered")
-        elif quantization is not None and quantization == "compressed-tensors":
-            from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors import (
-                CompressedTensorsConfig)
-            logger.info("Ascend Compressed-Tensors (Torch NPU) registered")
+
     return args

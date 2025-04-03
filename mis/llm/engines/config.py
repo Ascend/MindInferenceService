@@ -217,10 +217,6 @@ CHECKER_VLLM = {
     "distributed_executor_backend": {
         "type": "str_in",
         "valid_values": ["ray", "mp"]
-    },
-    "quantization": {
-        "type": "str_in",
-        "valid_values": ["awq", "compressed-tensors"]
     }
 }
 
