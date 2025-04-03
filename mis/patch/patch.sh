@@ -1,3 +1,5 @@
+#!/bin/bash
+
 apply_patch() {
   local file="$1"
   local patch_file="$2"
