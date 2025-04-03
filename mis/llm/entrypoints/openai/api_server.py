@@ -66,27 +66,6 @@ async def create_chat_completions(request: MISChatCompletionRequest,
     return StreamingResponse(content=generator, media_type="text/event-stream")
 
 
-def register_openai_app(
-        app: FastAPI,
-        args: GlobalArgs
-):
-    app.include_router(router)
-
-    if args.api_key is not None:
-        token = args.api_key
-
-        @app.middleware("http")
-        async def authentication(request: Request, call_next):
-            if request.method == "OPTIONS":
-                return await call_next(request)
-            url_path = request.url.path
-            if not url_path.startswith("/openai/v1"):
-                return await call_next(request)
-            if request.headers.get("Authorization") != "Bearer " + token:
-                return JSONResponse(content={"error": "Unauthorized"},
-                                    status_code=401)
-
-
 async def init_openai_app_state(
         engine_client: EngineClient,
         model_config: ModelConfig,

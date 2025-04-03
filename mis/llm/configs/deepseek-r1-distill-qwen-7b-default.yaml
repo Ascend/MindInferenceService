@@ -13,4 +13,11 @@ vllm:
   cpu_offload_gb: 0
   scheduling_policy: fcfs
   enforce_eager: true
+<<<<<<< HEAD
 mindie: {}
+=======
+
+mindie-service:
+  tensor_parallel_size: 1
+  max_model_len: 16384
+>>>>>>> upstream/master

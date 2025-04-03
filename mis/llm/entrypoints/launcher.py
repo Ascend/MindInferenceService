@@ -5,23 +5,25 @@ import re
 import signal
 import sys
 from contextlib import asynccontextmanager
-from typing import Optional
 from http import HTTPStatus
+from typing import Optional
 
 import uvloop
-from fastapi import FastAPI
+from fastapi import FastAPI, APIRouter
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.requests import Request
 from starlette.routing import Mount
+from vllm.config import ModelConfig
+from vllm.entrypoints.launcher import serve_http
 from vllm.entrypoints.openai.api_server import lifespan, create_server_socket
 from vllm.entrypoints.openai.protocol import ErrorResponse
-from vllm.entrypoints.launcher import serve_http
 from vllm.utils import set_ulimit
 
+from mis.args import ARGS, GlobalArgs
 from mis.engine_factory import AutoEngine, EngineClient
-from mis.logger import init_logger
-from mis.args import GlobalArgs
 from mis.hub.envpreparation import environment_preparation
+from mis.logger import init_logger
 
 logger = init_logger(__name__)
 
@@ -80,6 +82,39 @@ def build_app(args: GlobalArgs) -> FastAPI:
     return app
 
 
+def register_openai_app(app: FastAPI,
+                        args: GlobalArgs,
+                        router: APIRouter):
+    app.include_router(router)
+
+    if args.api_key is not None:
+        token = args.api_key
+
+        @app.middleware("http")
+        async def authentication(request: Request, call_next):
+            if request.method == "OPTIONS":
+                return await call_next(request)
+            url_path = request.url.path
+            if not url_path.startswith("/openai/v1"):
+                return await call_next(request)
+            if request.headers.get("Authorization") != "Bearer " + token:
+                return JSONResponse(content={"error": "Unauthorized"},
+                                    status_code=401)
+
+
+async def init_app_state(engine_client: EngineClient, model_config: ModelConfig, app, args: GlobalArgs):
+    if args.engine_type in ["vllm"]:
+        from mis.llm.entrypoints.openai.api_server import router, init_openai_app_state
+        register_openai_app(app, args, router)
+        await init_openai_app_state(engine_client, model_config, app.state, args)
+    elif args.engine_type in ["mindie-service"]:
+        from mis.llm.entrypoints.openai.mindie.api_server import router, init_mindie_app_state
+        register_openai_app(app, args, router)
+        await init_mindie_app_state(engine_client, model_config, app.state, args)
+    else:
+        raise ValueError("Available EngineType is in [vllm, mindie-service]")
+
+
 async def run_server(args: GlobalArgs):
     logger.info("MIS API server")
     logger.info("args: %s", args)
@@ -102,9 +137,7 @@ async def run_server(args: GlobalArgs):
 
         model_config = await engine_client.get_model_config()
 
-        from mis.llm.entrypoints.openai.api_server import register_openai_app, init_openai_app_state
-        register_openai_app(app, args)
-        await init_openai_app_state(engine_client, model_config, app.state, args)
+        await init_app_state(engine_client, model_config, app, args)
 
         shutdown_task = await serve_http(
             app,
@@ -125,7 +158,5 @@ async def run_server(args: GlobalArgs):
 
 
 if __name__ == "__main__":
-    args = GlobalArgs()
-    args = environment_preparation(args)
-
-    uvloop.run(run_server(args))
+    ARGS = environment_preparation(ARGS)
+    uvloop.run(run_server(ARGS))
