@@ -19,4 +19,6 @@ vllm:
   enable_chunked_prefill: false
   enable_prefix_caching: false
   enforce_eager: true
+  quantization: compressed-tensors
+
 mindie: {}
