@@ -43,7 +43,6 @@ CONFIG_YAML_FILES_MAP = {
     "DeepSeek-R1-Distill-Llama-70B": {
         "default": "deepseek-r1-distill-llama-70b-default.yaml",
         "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
-<<<<<<< HEAD
         "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"
     },
 
@@ -105,11 +104,6 @@ CONFIG_YAML_FILES_MAP = {
         "throughput": "qwq-32b-throughput.yaml"
     },
 }
-
-=======
-        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"},
-}
->>>>>>> upstream/master
 
 CHECKER_VLLM = {
     "dtype": {
