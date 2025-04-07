@@ -149,7 +149,7 @@ class MindIEServiceChat:
             if MindIEServiceChat._field_exist_and_is_dict(choice, "delta") and \
                     MindIEServiceChat._field_exist(choice["delta"], "role"):
                 del choice["delta"]["role"]
-            return f"data: {json.dumps(line_obj, ensure_ascii=False, separators=(',', ':'))}", creatred
+            return f"data: {json.dumps(line_obj, ensure_ascii=False, separators=(',', ':'))}", created
 
     async def chat_completions_stream_generator(self, request: MISChatCompletionRequest):
         try:
@@ -166,7 +166,7 @@ class MindIEServiceChat:
                     await asyncio.sleep(0)
                     new_line, created = self._process_stream_line(line, id, created=created, first_line=first_line)
                     first_line = False
-                    yield f"{line}\n"
+                    yield f"{new_line}\n"
         except asyncio.CancelledError:
             logger.warning(f"request:{request.request_id} is cancelled")
             raise
