@@ -124,27 +124,6 @@ CONFIG_YAML_FILES_MAP = {
         "latency": "deepseek-r1-distill-llama-70b-quantized.w8a8-latency.yaml",
         "throughput": "deepseek-r1-distill-llama-70b-quantized.w8a8-throughput.yaml"
     },
-
-    "DeepSeek-R1-Distill-Qwen-1.5B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-1.5b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-1.5b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-1.5b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Llama-70B-AWQ": {
-        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
-    },
     
     "Llama-3.1-70B-Instruct-quantized.w8a8": {
         "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
@@ -156,7 +135,8 @@ CONFIG_YAML_FILES_MAP = {
         "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
         "throughput": "llama-3.3-70b-instruct-quantized.w8a8-throughput.yaml"
     },
-    "Qwen2.5-1.5B-quantized.w8a8": {
+
+    "Qwen2.5-1.5B-Instruct-quantized.w8a8": {
         "default": "qwen2.5-1.5b-instruct-quantized.w8a8-default.yaml",
         "latency": "qwen2.5-1.5b-instruct-quantized.w8a8-latency.yaml",
         "throughput": "qwen2.5-1.5b-instruct-quantized.w8a8-throughput.yaml"
@@ -192,6 +172,26 @@ CONFIG_YAML_FILES_MAP = {
         "throughput": "qwq-32b-quantized.w8a8-throughput.yaml"
     },
 
+    "DeepSeek-R1-Distill-Qwen-1.5B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-1.5b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-AWQ": {
+        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
+    },
     "Llama-3.1-70B-Instruct-AWQ": {
         "default": "llama-3.3-70b-instruct-awq-default.yaml",
         "latency": "llama-3.3-70b-instruct-awq-latency.yaml",
@@ -207,6 +207,11 @@ CONFIG_YAML_FILES_MAP = {
         "latency": "qwen2.5-1.5b-instruct-awq-latency.yaml",
         "throughput": "qwen2.5-1.5b-instruct-awq-throughput.yaml"
     },
+    "Qwen2.5-14B-AWQ": {
+        "default": "qwen2.5-14b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
+    },
     "Qwen2.5-14B-Instruct-AWQ": {
         "default": "qwen2.5-14b-instruct-awq-default.yaml",
         "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
@@ -216,6 +221,11 @@ CONFIG_YAML_FILES_MAP = {
         "default": "qwen2.5-32b-instruct-awq-default.yaml",
         "latency": "qwen2.5-32b-instruct-awq-latency.yaml",
         "throughput": "qwen2.5-32b-instruct-awq-throughput.yaml"
+    },
+    "Qwen2.5-72B-AWQ": {
+        "default": "qwen2.5-72b-instruct-awq-default.yaml",
+        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
+        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
     },
     "Qwen2.5-72B-Instruct-AWQ": {
         "default": "qwen2.5-72b-instruct-awq-default.yaml",
@@ -317,6 +327,10 @@ CHECKER_VLLM = {
     "distributed_executor_backend": {
         "type": "str_in",
         "valid_values": ["ray", "mp"]
+    },
+    "quantization": {
+        "type": "str_in",
+        "valid_values": ["awq", "compressed-tensors"]
     }
 }
 

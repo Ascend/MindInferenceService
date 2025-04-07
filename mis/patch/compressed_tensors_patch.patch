@@ -1,0 +1,60 @@
+--- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors.py	2025-04-02 11:34:13.000000000 +0000
++++ /opt/mis/mis/patch/compressed_tensors_patch.py	2025-04-02 11:54:50.486815981 +0000
+@@ -14,6 +14,7 @@
+ from vllm.model_executor.layers.fused_moe import FusedMoE
+ from vllm.model_executor.layers.linear import (LinearBase, LinearMethodBase,
+                                                UnquantizedLinearMethod)
++from vllm.model_executor.layers.quantization import register_quantization_config
+ from vllm.model_executor.layers.quantization.base_config import (  # noqa: E501
+     QuantizationConfig, QuantizeMethodBase)
+ from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors_moe import (  # noqa: E501
+@@ -35,8 +36,10 @@
+ 
+ SPARSITY_CONFIG_NAME: Literal["sparsity_config"] = "sparsity_config"
+ QUANTIZATION_SCHEME_MAP_TYPE = Dict[str, Optional[Dict[str, QuantizationArgs]]]
++QUANTIZATION_TYPE = "ascend"
+ 
+ 
++@register_quantization_config(QUANTIZATION_TYPE)
+ class CompressedTensorsConfig(QuantizationConfig):
+ 
+     def __init__(
+@@ -49,7 +52,6 @@
+         kv_cache_scheme: Optional[Dict[str, Any]] = None,
+         config: Optional[Dict[str, Any]] = None,
+     ):
+-
+         self.ignore = ignore
+         self.quant_format = quant_format
+         # Map from [target -> scheme]
+@@ -59,6 +61,8 @@
+         self.sparsity_ignore_list = sparsity_ignore_list
+         self.config = config
+ 
++    def __repr__(self) -> str:
++        return "AscendQuantConfigCompressedTensor: \n" + super().__repr__()
+     def get_linear_method(self) -> "CompressedTensorsLinearMethod":
+         return CompressedTensorsLinearMethod(self)
+ 
+@@ -70,7 +74,7 @@
+         return 70
+ 
+     def get_name(self) -> str:
+-        return "compressed_tensors"
++        return QUANTIZATION_TYPE
+ 
+     def get_quant_method(
+         self,
+@@ -96,6 +100,12 @@
+         return None
+ 
+     @classmethod
++    def override_quantization_method(cls, hf_quant_cfg, user_quant) -> Optional[str]:
++        if torch_npu.is_available():
++            return QUANTIZATION_TYPE
++        return None
++
++    @classmethod
+     def from_config(cls, config: Dict[str, Any]) -> "CompressedTensorsConfig":
+         ignore: List[str] = cast(List[str], config.get("ignore", []))
+         quant_format = cast(str, config.get("format"))
