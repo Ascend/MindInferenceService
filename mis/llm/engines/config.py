@@ -103,6 +103,48 @@ CONFIG_YAML_FILES_MAP = {
         "latency": "qwq-32b-latency.yaml",
         "throughput": "qwq-32b-throughput.yaml"
     },
+
+    "DeepSeek-R1-Distill-Qwen-1.5B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-14B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-14b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-qwen-32b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-quantized.w8a8-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-quantized.w8a8": {
+        "default": "deepseek-r1-distill-llama-70b-quantized.w8a8-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-quantized.w8a8-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-quantized.w8a8-throughput.yaml"
+    },
+
+    "DeepSeek-R1-Distill-Qwen-1.5B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-1.5b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-1.5b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-1.5b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
+        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
+    },
+    "DeepSeek-R1-Distill-Llama-70B-AWQ": {
+        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
+        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
+        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
+    },
     
     "Llama-3.1-70B-Instruct-quantized.w8a8": {
         "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
@@ -439,7 +481,7 @@ class ConfigParser:
                            f"The engine will be started with the default parameters")
             return self.args
 
-        yaml_file = CONFIG_YAML_FILES_MAP[self.model_type][self.optimization_config_type]
+        yaml_file = CONFIG_YAML_FILES_MAP.get(self.model_type).get(self.optimization_config_type)
         config = self._config_yaml_file_loading(ROOT_DIR + yaml_file)
 
         if not self._is_config_valid(config):
