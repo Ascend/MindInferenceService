@@ -34,6 +34,8 @@ class Downloader(abc.ABC):
         # if no file in this dir or force download model
         if not any(abs_model_path.iterdir()) or envs.MIS_FORCE_DOWNLOAD_MODEL:
             cls._download(raw_model, str(abs_model_path))
+        else:
+            logger.info(f"Found model weight cached in path {abs_model_path}, local model weight will be used")
 
         return str(abs_model_path)
 
@@ -59,6 +61,7 @@ class ModelerDownloader(Downloader):
                 force_download=envs.MIS_FORCE_DOWNLOAD_MODEL,
             )
 
+            logger.info(f"Downloading model finished, use model weight from {cache_dir}")
             return cache_dir
         except ImportError as e:
             raise ImportError("Please install openmind_hub for model download.") from e

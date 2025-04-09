@@ -1,6 +1,10 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import json
+from typing import AsyncGenerator
+
 from fastapi import APIRouter, Request, FastAPI
+from pydantic import ValidationError
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.datastructures import State
 from vllm.entrypoints.openai.api_server import base, chat, models
@@ -8,6 +12,7 @@ from vllm.entrypoints.openai.serving_models import BaseModelPath, OpenAIServingM
 from vllm.entrypoints.openai.serving_tokenization import OpenAIServingTokenization
 from vllm.entrypoints.openai.protocol import (
     ChatCompletionResponse,
+    ChatCompletionStreamResponse,
     ErrorResponse,
 )
 from vllm.entrypoints.logger import RequestLogger
@@ -46,6 +51,44 @@ async def show_available_models(raw_request: Request):
     return JSONResponse(content=models_.model_dump())
 
 
+def align_non_streaming_response(generator: ChatCompletionResponse):
+    """
+    remove stop_reason in vllm response to ensure consistent behavior with MindIE-Service
+    """
+    for choice in generator.choices:
+        del choice.stop_reason
+
+
+async def align_streaming_response(generator: AsyncGenerator[str, None]):
+    """
+    remove stop_reason in vllm stream response to ensure consistent behavior with MindIE-Service
+    """
+    async for content in generator:
+        if "stop_reason" in content:
+            try:
+                content_dict = json.loads(content[len("data: "):])
+            except json.JSONDecodeError:
+                yield content
+                continue
+
+            if not isinstance(content_dict, dict):
+                yield content
+                continue
+
+            try:
+                content_obj = ChatCompletionStreamResponse(**content_dict)
+            except ValidationError:
+                yield content
+                continue
+
+            for choice in content_obj.choices:
+                del choice.stop_reason
+
+            yield f"data: {content_obj.model_dump_json(exclude_unset=True)}\n\n"
+        else:
+            yield content
+
+
 @router.post("/openai/v1/chat/completions")
 @with_cancellation
 async def create_chat_completions(request: MISChatCompletionRequest,
@@ -61,8 +104,10 @@ async def create_chat_completions(request: MISChatCompletionRequest,
                             status_code=generator.code)
 
     elif isinstance(generator, ChatCompletionResponse):
+        align_non_streaming_response(generator)
         return JSONResponse(content=generator.model_dump())
 
+    generator = align_streaming_response(generator)
     return StreamingResponse(content=generator, media_type="text/event-stream")
 
 
