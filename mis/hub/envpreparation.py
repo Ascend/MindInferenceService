@@ -206,15 +206,15 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
             - model-preferred-config-resolve
             - set environment variables if needed
     """
+    # preferred config
+    configparser = ConfigParser(args)
+    args = configparser.engine_config_loading()
+
     if args.served_model_name is None:
         args.served_model_name = args.model
 
     # download model
     args.model = ModelerDownloader.get_model_path(args.model)
-
-    # preferred config
-    configparser = ConfigParser(args)
-    args = configparser.engine_config_loading()
 
     # source envs in main process
     if resolve_env:

@@ -4,7 +4,17 @@ import ssl
 
 MIS_ENGINE_TYPES = ["vllm", "mindie-service"]
 
-MIS_OPTIMIZATION_CONFIG_TYPES = ["default", "throughput", "latency"]
+MIS_OPTIMIZATION_CONFIG_TYPES = [
+    "atlas800ia2-32gb-bf16-vllm-default",
+    "atlas800ia2-32gb-bf16-vllm-throughput",
+    "atlas800ia2-32gb-bf16-vllm-latency",
+    "atlas800ia2-32gb-int8-cts-vllm-default",
+    "atlas800ia2-32gb-int8-cts-vllm-throughput",
+    "atlas800ia2-32gb-int8-cts-vllm-latency",
+    "atlas800ia2-32gb-int4-awq-vllm-default",
+    "atlas800ia2-32gb-int4-awq-vllm-throughput",
+    "atlas800ia2-32gb-int4-awq-vllm-latency",
+                                 ]
 
 MIS_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 

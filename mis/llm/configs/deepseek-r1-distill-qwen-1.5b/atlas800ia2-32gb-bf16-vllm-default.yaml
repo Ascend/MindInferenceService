@@ -1,0 +1,13 @@
+vllm:
+  dtype: bfloat16
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.9
+  block_size: 32
+  swap_space: 0
+  cpu_offload_gb: 0
+  scheduling_policy: fcfs
+  enforce_eager: true
+engine_type: vllm
+model: MindSDK/DeepSeek-R1-Distill-Qwen-1.5B

@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 from abc import ABC
+import os
 from typing import Dict, Type
 
 import yaml
@@ -13,231 +14,6 @@ logger = init_logger(__name__)
 
 ROOT_DIR = "mis/llm/configs/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
-
-CONFIG_YAML_FILES_MAP = {
-    "DeepSeek-R1-Distill-Qwen-1.5B": {
-        "default": "deepseek-r1-distill-qwen-1.5b-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-1.5b-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-1.5b-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-7B": {
-        "default": "deepseek-r1-distill-qwen-7b-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-7b-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-7b-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-14B": {
-        "default": "deepseek-r1-distill-qwen-14b-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-14b-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-14b-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-32B": {
-        "default": "deepseek-r1-distill-qwen-32b-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-32b-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-32b-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Llama-8B": {
-        "default": "deepseek-r1-distill-llama-8b-default.yaml",
-        "latency": "deepseek-r1-distill-llama-8b-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-8b-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Llama-70B": {
-        "default": "deepseek-r1-distill-llama-70b-default.yaml",
-        "latency": "deepseek-r1-distill-llama-70b-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-70b-throughput.yaml"
-    },
-
-    "Llama-3.2-1B-Instruct": {
-        "default": "llama-3.2-1b-instruct-default.yaml",
-        "latency": "llama-3.2-1b-instruct-latency.yaml",
-        "throughput": "llama-3.2-1b-instruct-throughput.yaml"
-    },
-    "Llama-3.2-3B-Instruct": {
-        "default": "llama-3.2-3b-instruct-default.yaml",
-        "latency": "llama-3.2-3b-instruct-latency.yaml",
-        "throughput": "llama-3.2-3b-instruct-throughput.yaml"
-    },
-    "Llama-3.3-70B-Instruct": {
-        "default": "llama-3.3-70b-instruct-default.yaml",
-        "latency": "llama-3.3-70b-instruct-latency.yaml",
-        "throughput": "llama-3.3-70b-instruct-throughput.yaml"
-    },
-
-    "Qwen2.5-0.5B-Instruct": {
-        "default": "qwen2.5-0.5b-instruct-default.yaml",
-        "latency": "qwen2.5-0.5b-instruct-latency.yaml",
-        "throughput": "qwen2.5-0.5b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-1.5B-Instruct": {
-        "default": "qwen2.5-1.5b-instruct-default.yaml",
-        "latency": "qwen2.5-1.5b-instruct-latency.yaml",
-        "throughput": "qwen2.5-1.5b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-3B-Instruct": {
-        "default": "qwen2.5-3b-instruct-default.yaml",
-        "latency": "qwen2.5-3b-instruct-latency.yaml",
-        "throughput": "qwen2.5-3b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-7B-Instruct": {
-        "default": "qwen2.5-7b-instruct-default.yaml",
-        "latency": "qwen2.5-7b-instruct-latency.yaml",
-        "throughput": "qwen2.5-7b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-14B-Instruct": {
-        "default": "qwen2.5-14b-instruct-default.yaml",
-        "latency": "qwen2.5-14b-instruct-latency.yaml",
-        "throughput": "qwen2.5-14b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-32B-Instruct": {
-        "default": "qwen2.5-32b-instruct-default.yaml",
-        "latency": "qwen2.5-32b-instruct-latency.yaml",
-        "throughput": "qwen2.5-32b-instruct-throughput.yaml"
-    },
-    "Qwen2.5-72B-Instruct": {
-        "default": "qwen2.5-72b-instruct-default.yaml",
-        "latency": "qwen2.5-72b-instruct-latency.yaml",
-        "throughput": "qwen2.5-72b-instruct-throughput.yaml"
-    },
-
-    "QwQ-32B": {
-        "default": "qwq-32b-default.yaml",
-        "latency": "qwq-32b-latency.yaml",
-        "throughput": "qwq-32b-throughput.yaml"
-    },
-
-    "DeepSeek-R1-Distill-Qwen-1.5B-quantized.w8a8": {
-        "default": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-1.5b-quantized.w8a8-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-14B-quantized.w8a8": {
-        "default": "deepseek-r1-distill-qwen-14b-quantized.w8a8-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-14b-quantized.w8a8-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-14b-quantized.w8a8-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-32B-quantized.w8a8": {
-        "default": "deepseek-r1-distill-qwen-32b-quantized.w8a8-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-32b-quantized.w8a8-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-32b-quantized.w8a8-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Llama-70B-quantized.w8a8": {
-        "default": "deepseek-r1-distill-llama-70b-quantized.w8a8-default.yaml",
-        "latency": "deepseek-r1-distill-llama-70b-quantized.w8a8-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-70b-quantized.w8a8-throughput.yaml"
-    },
-    
-    "Llama-3.1-70B-Instruct-quantized.w8a8": {
-        "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
-        "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "llama-3.3-70b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Llama-3.3-70B-Instruct-quantized.w8a8": {
-        "default": "llama-3.3-70b-instruct-quantized.w8a8-default.yaml",
-        "latency": "llama-3.3-70b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "llama-3.3-70b-instruct-quantized.w8a8-throughput.yaml"
-    },
-
-    "Qwen2.5-1.5B-Instruct-quantized.w8a8": {
-        "default": "qwen2.5-1.5b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-1.5b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-1.5b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Qwen2.5-14B-quantized.w8a8": {
-        "default": "qwen2.5-14b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-14b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-14b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Qwen2.5-14B-Instruct-quantized.w8a8": {
-        "default": "qwen2.5-14b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-14b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-14b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Qwen2.5-32B-Instruct-quantized.w8a8": {
-        "default": "qwen2.5-32b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-32b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-32b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Qwen2.5-72B-quantized.w8a8": {
-        "default": "qwen2.5-72b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-72b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-72b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "Qwen2.5-72B-Instruct-quantized.w8a8": {
-        "default": "qwen2.5-72b-instruct-quantized.w8a8-default.yaml",
-        "latency": "qwen2.5-72b-instruct-quantized.w8a8-latency.yaml",
-        "throughput": "qwen2.5-72b-instruct-quantized.w8a8-throughput.yaml"
-    },
-    "QwQ-32B-quantized.w8a8": {
-        "default": "qwq-32b-quantized.w8a8-default.yaml",
-        "latency": "qwq-32b-quantized.w8a8-latency.yaml",
-        "throughput": "qwq-32b-quantized.w8a8-throughput.yaml"
-    },
-
-    "DeepSeek-R1-Distill-Qwen-1.5B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-1.5b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-1.5b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-1.5b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-14B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-14b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-14b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-14b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Qwen-32B-AWQ": {
-        "default": "deepseek-r1-distill-qwen-32b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-qwen-32b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-qwen-32b-awq-throughput.yaml"
-    },
-    "DeepSeek-R1-Distill-Llama-70B-AWQ": {
-        "default": "deepseek-r1-distill-llama-70b-awq-default.yaml",
-        "latency": "deepseek-r1-distill-llama-70b-awq-latency.yaml",
-        "throughput": "deepseek-r1-distill-llama-70b-awq-throughput.yaml"
-    },
-    "Llama-3.1-70B-Instruct-AWQ": {
-        "default": "llama-3.3-70b-instruct-awq-default.yaml",
-        "latency": "llama-3.3-70b-instruct-awq-latency.yaml",
-        "throughput": "llama-3.3-70b-instruct-awq-throughput.yaml"
-    },
-    "Llama-3.3-70B-Instruct-AWQ": {
-        "default": "llama-3.3-70b-instruct-awq-default.yaml",
-        "latency": "llama-3.3-70b-instruct-awq-latency.yaml",
-        "throughput": "llama-3.3-70b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-1.5B-Instruct-AWQ": {
-        "default": "qwen2.5-1.5b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-1.5b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-1.5b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-14B-AWQ": {
-        "default": "qwen2.5-14b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-14B-Instruct-AWQ": {
-        "default": "qwen2.5-14b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-14b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-14b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-32B-Instruct-AWQ": {
-        "default": "qwen2.5-32b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-32b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-32b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-72B-AWQ": {
-        "default": "qwen2.5-72b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
-    },
-    "Qwen2.5-72B-Instruct-AWQ": {
-        "default": "qwen2.5-72b-instruct-awq-default.yaml",
-        "latency": "qwen2.5-72b-instruct-awq-latency.yaml",
-        "throughput": "qwen2.5-72b-instruct-awq-throughput.yaml"
-    },
-    "QwQ-32B-AWQ": {
-        "default": "qwq-32b-awq-default.yaml",
-        "latency": "qwq-32b-awq-latency.yaml",
-        "throughput": "qwq-32b-awq-throughput.yaml"
-    },
-}
 
 CHECKER_VLLM = {
     "dtype": {
@@ -348,7 +124,8 @@ class AbsEngineConfigValidator(ABC):
         self.checkers = checkers
         diff_config = set(self.config.keys()) - set(self.checkers.keys())
         if diff_config:
-            logger.warning(f"Configuration keys {diff_config} are not supported.")
+            # Check if the backend configuration keywords for inference are updated with the version
+            logger.debug(f"Configuration keys {diff_config} are not supported. ")
         self.config_update: Dict = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
 
     @classmethod
@@ -448,30 +225,14 @@ class ConfigParser:
             with open(config_file_path, "r") as file:
                 config = yaml.safe_load(file)
         except FileNotFoundError:
-            logger.warning(f"Config file {config_file_path} not found."
-                           " The engine will be started with default parameters.")
+            logger.debug(f"Config file {config_file_path} not found. "
+                           "The engine will be started with default parameters. ")
             config = None
         except yaml.YAMLError as e:
-            logger.error(f"YAML error in file {config_file_path}: {e}")
+            logger.error(f"The configuration file {config_file_path} is invalid : {e}, "
+                         f"please check the integrity of the file. ")
             raise e
         return config
-
-    @staticmethod
-    def _is_config_valid(config: Dict) -> bool:
-        """
-        Checks if the config is valid.
-        :param config: Config to check.
-        :return: True if the config is valid, False otherwise.
-        """
-        if config is None:
-            logger.warning("The configuration from YAML file is empty.")
-            return False
-
-        if not isinstance(config, dict):
-            logger.warning("The configuration from YAML file is not dictionary.")
-            return False
-
-        return True
 
     @staticmethod
     def _config_attr_update(selected_engine_type: str, selected_engine_config: Dict) -> Dict:
@@ -482,7 +243,7 @@ class ConfigParser:
         :return: updated config dictionary. 
         """
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
-        validator = validator_class(selected_engine_config)
+        validator = validator_class(selected_engine_config.get(selected_engine_type))
         return validator.filter_and_validate_config()
 
     def engine_config_loading(self) -> GlobalArgs:
@@ -491,27 +252,56 @@ class ConfigParser:
         :return: Update global parameters
         """
         if self.optimization_config_type is None:
-            logger.warning("Missing required arguments for the required configuration yaml file."
-                           f"The engine will be started with the default parameters")
+            logger.warning("The environment variable MIS_OPTIMIZATION_CONFIG_TYPE is missed. "
+                           "Please check if the environment variables is valid. "
+                           f"The engine will be started with the default parameters. ")
             return self.args
 
-        yaml_file = CONFIG_YAML_FILES_MAP.get(self.model_type).get(self.optimization_config_type)
-        config = self._config_yaml_file_loading(ROOT_DIR + yaml_file)
+        model_folder_path = os.path.join(ROOT_DIR, self.model_type.lower())
 
-        if not self._is_config_valid(config):
+        if not os.path.exists(model_folder_path):
+            logger.debug(f"Model folder {model_folder_path} does not exist. "
+                           f"The engine will be started with the default parameters. ")
             return self.args
 
-        engine_type_selected = self.engine_type if self.engine_type is not None else \
-            config.get(OPTIMAL_ENGINE_TYPE)  # engine_type default="vllm"
-        engine_optimization_config = config.get(engine_type_selected, None)
+        engine_optimization_config = None
+        filename_list = os.listdir(model_folder_path)
+        if self.optimization_config_type + ".yaml" in filename_list:
+            config_file_path = os.path.join(model_folder_path, self.optimization_config_type + ".yaml")
+            engine_optimization_config = self._config_yaml_file_loading(config_file_path)
 
-        if engine_optimization_config is None:
-            logger.warning(f"Configuration of engine {engine_type_selected} is empty.")
+        if not self._is_config_valid(engine_optimization_config):
             return self.args
 
+        engine_type_selected = engine_optimization_config.get("engine_type")
         self.args.engine_optimization_config = self._config_attr_update(engine_type_selected,
                                                                         engine_optimization_config)
+
+        self.args.model = engine_optimization_config.get("model")
         return self.args
+
+    def _is_config_valid(self, config: Dict) -> bool:
+        """
+        Checks if the config is valid.
+        :param config: Config to check.
+        :return: True if the config is valid, False otherwise.
+        """
+        if config is None or not isinstance(config, dict):
+            logger.debug(f"The YAML config file for {self.model_type} ({self.optimization_config_type}) is invalid. "
+                         f"The engine will be started with the default parameters. ")
+            return False
+
+        if config.get("engine_type") is None or config.get("model") is None:
+            logger.debug(f"Please check if keywords engine_type and model in "
+                         f"{self.model_type} ({self.optimization_config_type}) YAML is complete. "
+                         f"The engine will be started with the default parameters. ")
+            return False
+
+        if config.get(config.get("engine_type")) is None:
+            logger.debug(f"Config of engine type {config.get('engine_type')} is required. "
+                           f"The engine will be started with the default parameters. ")
+            return False
+        return True
 
     def _check_all_args_valid(self):
         """

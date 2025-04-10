@@ -1,0 +1,23 @@
+vllm:
+  dtype: bfloat16
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  distributed_executor_backend: mp
+  max_num_seqs: 256
+  max_model_len: 16384
+  max_num_batched_tokens: 16384
+  max_seq_len_to_capture: 8192
+  gpu_memory_utilization: 0.95
+  block_size: 16
+  swap_space: 4
+  cpu_offload_gb: 0
+  scheduling_policy: priority
+  num_scheduler_steps: 1
+  disable_async_output_proc: true
+  multi_step_stream_outputs: true
+  enable_chunked_prefill: false
+  enable_prefix_caching: false
+  enforce_eager: true
+  quantization: compressed-tensors
+engine_type: vllm
+model: MindSDK/Qwen2.5-14B-Instruct-quantized.w8a8

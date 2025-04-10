@@ -1,0 +1,17 @@
+vllm:
+  dtype: bfloat16
+  tensor_parallel_size: 2
+  pipeline_parallel_size: 1
+  distributed_executor_backend: mp
+  max_num_seqs: 128
+  max_model_len: 16384
+  max_num_batched_tokens: 16384
+  max_seq_len_to_capture: 16384
+  gpu_memory_utilization: 0.9
+  block_size: 32
+  swap_space: 4
+  cpu_offload_gb: 0
+  scheduling_policy: fcfs
+  enforce_eager: true
+engine_type: vllm
+model: MindSDK/Qwen2.5-14B-Instruct

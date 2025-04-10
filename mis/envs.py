@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     MIS_SERVED_MODEL_NAME: Optional[str] = None
     MIS_MAX_MODEL_LEN: Optional[int] = None
     MIS_ENABLE_KV_CACHE_REUSE: bool = False
-    MIS_OPTIMIZATION_CONFIG_TYPE: str = "default"
+    MIS_OPTIMIZATION_CONFIG_TYPE: str = "atlas800ia2-32gb-bf16-vllm-default"
 
     MIS_HOST: Optional[str] = None
     MIS_PORT: int = 8000
@@ -108,7 +108,8 @@ def _get_ip_address_from_env(name: str, default: Optional[str] = None) -> Option
 
 
 def _get_optimization_config():
-    return _get_str_from_env("MIS_OPTIMIZATION_CONFIG_TYPE", "default", constants.MIS_OPTIMIZATION_CONFIG_TYPES)
+    return _get_str_from_env("MIS_OPTIMIZATION_CONFIG_TYPE", "atlas800ia2-32gb-bf16-vllm-default",
+                             constants.MIS_OPTIMIZATION_CONFIG_TYPES)
 
 
 def _get_ssl_cert_reqs():
