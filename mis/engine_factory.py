@@ -3,8 +3,8 @@
 from vllm.engine.protocol import EngineClient
 
 from mis import constants
-from mis.logger import init_logger
 from mis.args import GlobalArgs
+from mis.logger import init_logger
 
 _LOCAL_LOGGING_INTERVAL_SEC = 5
 

@@ -12,7 +12,7 @@ from mis.utils.utils import ConfigChecker
 
 logger = init_logger(__name__)
 
-ROOT_DIR = "mis/llm/configs/"
+ROOT_DIR = "configs/llm/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
 
 CHECKER_VLLM = {
@@ -106,7 +106,7 @@ CHECKER_VLLM = {
     },
     "quantization": {
         "type": "str_in",
-        "valid_values": ["awq", "compressed-tensors"]
+        "valid_values": ["awq", "compressed-tensors", "ms-model-slim"]
     }
 }
 
@@ -278,6 +278,7 @@ class ConfigParser:
                                                                         engine_optimization_config)
 
         self.args.model = engine_optimization_config.get("model")
+        self.args.engine_type = engine_type_selected
         return self.args
 
     def _is_config_valid(self, config: Dict) -> bool:

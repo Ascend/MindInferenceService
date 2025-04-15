@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     MIS_CACHE_PATH: str = "/opt/mis/.cache"
 
     MIS_MODEL: str = "MindSDK/DeepSeek-R1-Distill-Qwen-7B"
-    MIS_ENGINE_TYPE: str = "vllm"
     MIS_SERVED_MODEL_NAME: Optional[str] = None
     MIS_MAX_MODEL_LEN: Optional[int] = None
     MIS_ENABLE_KV_CACHE_REUSE: bool = False
@@ -35,9 +34,7 @@ if TYPE_CHECKING:
 
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
-
     "MIS_MODEL": lambda: "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
-    "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_SERVED_MODEL_NAME": lambda: _get_str_from_env("MIS_SERVED_MODEL_NAME", None),
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),

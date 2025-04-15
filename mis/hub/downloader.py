@@ -6,6 +6,7 @@ from pathlib import Path
 
 import mis.envs as envs
 from mis.logger import init_logger
+from mis.utils.utils import _set_config_perm
 
 logger = init_logger(__name__)
 
@@ -34,6 +35,7 @@ class Downloader(abc.ABC):
         # if no file in this dir or force download model
         if not any(abs_model_path.iterdir()) or envs.MIS_FORCE_DOWNLOAD_MODEL:
             cls._download(raw_model, str(abs_model_path))
+            _set_config_perm(str(abs_model_path), mode=0o750)
         else:
             logger.info(f"Found model weight cached in path {abs_model_path}, local model weight will be used")
 

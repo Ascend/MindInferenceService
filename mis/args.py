@@ -12,7 +12,7 @@ class GlobalArgs(BaseModel):
     cache_path: str = envs.MIS_CACHE_PATH
 
     model: str = envs.MIS_MODEL
-    engine_type: str = envs.MIS_ENGINE_TYPE
+    engine_type: str = "vllm"
     served_model_name: Optional[str] = envs.MIS_SERVED_MODEL_NAME
     max_model_len: Optional[int] = envs.MIS_MAX_MODEL_LEN
     enable_prefix_caching: bool = envs.MIS_ENABLE_KV_CACHE_REUSE

@@ -195,7 +195,7 @@ class MindIEServiceEngine(EngineClient):
             "interNodeKmcKsfStandby": "tools/pmt/standby/ksfb",
             "ModelDeployConfig": {
                 "maxSeqLen": self.mindie_args.vllm_config.model_config.max_model_len,
-                "maxInputTokenLen": self.mindie_args.vllm_config.model_config.max_model_len,
+                "maxInputTokenLen": self.mindie_args.vllm_config.model_config.max_seq_len_to_capture,
                 "truncation": False,
                 "ModelConfig": [{"modelInstanceType": "Standard",
                                  "modelName": self.mindie_args.vllm_config.model_config.served_model_name,
@@ -209,20 +209,21 @@ class MindIEServiceEngine(EngineClient):
             "ScheduleConfig": {
                 "templateType": "Standard",
                 "templateName": "Standard_LLM",
-                "cacheBlockSize": 128,
-                "maxPrefillBatchSize": 50,
-                "maxPrefillTokens": self.mindie_args.vllm_config.model_config.max_model_len,
+                "cacheBlockSize": self.mindie_args.vllm_config.cache_config.block_size,
+                "maxPrefillBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs // 2,
+                "maxPrefillTokens": self.mindie_args.vllm_config.scheduler_config.max_num_batched_tokens,
                 "prefillTimeMsPerReq": 150,
-                "prefillPolicyType": 0,
+                "prefillPolicyType":
+                    2 if self.mindie_args.vllm_config.scheduler_config.policy == "priority" else 0,
 
                 "decodeTimeMsPerReq": 50,
                 "decodePolicyType": 0,
 
-                "maxBatchSize": 200,
+                "maxBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs,
                 "maxIterTimes": self.mindie_args.vllm_config.model_config.max_model_len,
-                "maxPreemptCount": 0,
                 "supportSelectBatch": False,
                 "maxQueueDelayMicroseconds": 5000,
+                "maxPreemptCount": 1 if hasattr(self.mindie_args.vllm_config.cache_config, "swap_space") else 0
             },
         }
 

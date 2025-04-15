@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import ipaddress
+import re
 from pathlib import Path
 
 MAX_PATH_LEN = 128

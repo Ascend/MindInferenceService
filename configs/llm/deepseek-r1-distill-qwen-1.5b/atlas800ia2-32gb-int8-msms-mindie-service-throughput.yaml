@@ -1,0 +1,11 @@
+mindie-service:
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  max_num_seqs: 64
+  gpu_memory_utilization: 0.95
+  block_size: 128
+  swap_space: 0
+  scheduling_policy: fcfs
+  quantization: ms-model-slim
+engine_type: mindie-service
+model: MindSDK/DeepSeek-R1-Distill-Qwen-1.5B-w8a8

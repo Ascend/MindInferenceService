@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import os
 import re
 from typing import List, Union
 
@@ -71,3 +72,35 @@ class ConfigChecker:
                           "other than '-', '/'")
             raise ValueError(f"The parameter args.{name} cannot contain special characters "
                               "other than '-', '/'")
+
+
+def _log_and_raise(logger_: logger, error_message: str, exception_class) -> None:
+    logger_.error(error_message)
+    raise exception_class(error_message)
+
+
+def _set_config_perm(model_path: str, mode: int = 0o750) -> None:
+    """Model config permission setting for MindIE-Service Backend
+    :param: model_path: model path
+    """
+    if not isinstance(model_path, str):
+        _log_and_raise(logger,
+                       f"Invalid model_path type: {type(model_path)}, only str is supported.",
+                       ValueError)
+
+    config_path = os.path.join(model_path, "config.json")
+    try:
+        if not os.path.exists(config_path):
+            _log_and_raise(logger,
+                           f"Model config file does not exist, "
+                           f"please check the integrity of the model repository",
+                           FileNotFoundError)
+
+        os.chmod(config_path, mode)
+    except PermissionError as e:
+        _log_and_raise(logger, f"Failed to set the permission of the model config file: {e}",
+                       PermissionError)
+    except Exception as e:
+        _log_and_raise(logger,
+                       f"An error occurred while setting the permission of the model config file: {e}",
+                      Exception)

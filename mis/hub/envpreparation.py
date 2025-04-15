@@ -230,4 +230,6 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
             from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors import (
                 CompressedTensorsConfig)
             logger.info("Ascend Compressed-Tensors (Torch NPU) registered")
+        elif quantization is not None and quantization == "ms-model-slim":
+            from vllm_ascend.quantization.quant_config import AscendQuantConfig
     return args
