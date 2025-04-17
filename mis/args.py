@@ -16,7 +16,7 @@ class GlobalArgs(BaseModel):
     served_model_name: Optional[str] = envs.MIS_SERVED_MODEL_NAME
     max_model_len: Optional[int] = envs.MIS_MAX_MODEL_LEN
     enable_prefix_caching: bool = envs.MIS_ENABLE_KV_CACHE_REUSE
-    optimization_config_type: str = envs.MIS_OPTIMIZATION_CONFIG_TYPE
+    mis_config: str = envs.MIS_CONFIG
 
     host: Optional[str] = envs.MIS_HOST
     port: int = envs.MIS_PORT

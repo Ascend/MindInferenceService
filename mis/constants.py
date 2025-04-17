@@ -4,7 +4,7 @@ import ssl
 
 MIS_ENGINE_TYPES = ["vllm", "mindie-service"]
 
-MIS_OPTIMIZATION_CONFIG_TYPES = [
+MIS_CONFIGS = [
     "atlas800ia2-32gb-bf16-vllm-default",
     "atlas800ia2-32gb-bf16-mindie-service-default",
     "atlas800ia2-32gb-bf16-vllm-throughput",

@@ -212,7 +212,7 @@ class ConfigParser:
 
         self.model_type = self.args.model.split('/')[-1]
         self.engine_type = self.args.engine_type
-        self.optimization_config_type = self.args.optimization_config_type
+        self.mis_config = self.args.mis_config
 
     @staticmethod
     def _config_yaml_file_loading(config_file_path: str) -> Dict:
@@ -251,8 +251,8 @@ class ConfigParser:
         Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
         :return: Update global parameters
         """
-        if self.optimization_config_type is None:
-            logger.warning("The environment variable MIS_OPTIMIZATION_CONFIG_TYPE is missed. "
+        if self.mis_config is None:
+            logger.warning("The environment variable MIS_CONFIG is missed. "
                            "Please check if the environment variables is valid. "
                            f"The engine will be started with the default parameters. ")
             return self.args
@@ -266,8 +266,8 @@ class ConfigParser:
 
         engine_optimization_config = None
         filename_list = os.listdir(model_folder_path)
-        if self.optimization_config_type + ".yaml" in filename_list:
-            config_file_path = os.path.join(model_folder_path, self.optimization_config_type + ".yaml")
+        if self.mis_config + ".yaml" in filename_list:
+            config_file_path = os.path.join(model_folder_path, self.mis_config + ".yaml")
             engine_optimization_config = self._config_yaml_file_loading(config_file_path)
 
         if not self._is_config_valid(engine_optimization_config):
@@ -288,13 +288,13 @@ class ConfigParser:
         :return: True if the config is valid, False otherwise.
         """
         if config is None or not isinstance(config, dict):
-            logger.debug(f"The YAML config file for {self.model_type} ({self.optimization_config_type}) is invalid. "
+            logger.debug(f"The YAML config file for {self.model_type} ({self.mis_config}) is invalid. "
                          f"The engine will be started with the default parameters. ")
             return False
 
         if config.get("engine_type") is None or config.get("model") is None:
             logger.debug(f"Please check if keywords engine_type and model in "
-                         f"{self.model_type} ({self.optimization_config_type}) YAML is complete. "
+                         f"{self.model_type} ({self.mis_config}) YAML is complete. "
                          f"The engine will be started with the default parameters. ")
             return False
 
@@ -313,7 +313,7 @@ class ConfigParser:
             logger.error("args must be an instance of GlobalArgs")
             raise TypeError("args must be an instance of GlobalArgs")
 
-        required_attributes = ["engine_type", "optimization_config_type"]
+        required_attributes = ["engine_type", "mis_config"]
         for attr in required_attributes:
             # Verify the attribute character string.
             args_attr = getattr(self.args, attr)
