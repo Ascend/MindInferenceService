@@ -1,0 +1,3 @@
+resources:
+- bases/apps.ascend.com_misservices.yaml
+- bases/apps.ascend.com_mismodels.yaml

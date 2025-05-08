@@ -1,3 +1,6 @@
+#!/bin/bash
+# Copyright 2025 Huawei Technologies Co., Ltd.
+
 workdir=$(
   cd $(dirname $0) || exit
   pwd
