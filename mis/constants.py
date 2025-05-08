@@ -20,13 +20,13 @@ MIS_CONFIGS = [
     "atlas800ia2-32gb-int4-awq-vllm-default",
     "atlas800ia2-32gb-int4-awq-vllm-throughput",
     "atlas800ia2-32gb-int4-awq-vllm-latency",
-                                 ]
+]
 
 MIS_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 UVICORN_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"]
 
-SSL_CERT_REQS_TYPES = [ssl.CERT_NONE, ssl.CERT_OPTIONAL, ssl.CERT_REQUIRED]
+SSL_CERT_REQS_TYPES = [int(ssl.CERT_NONE), int(ssl.CERT_OPTIONAL), int(ssl.CERT_REQUIRED)]
 
 ASCEND_PATH = "/usr/local/Ascend"
 

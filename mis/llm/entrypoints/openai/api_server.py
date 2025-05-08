@@ -16,7 +16,6 @@ from vllm.entrypoints.openai.protocol import (
     ErrorResponse,
 )
 from vllm.entrypoints.logger import RequestLogger
-from vllm.entrypoints.utils import with_cancellation
 from vllm.config import ModelConfig
 
 from mis.engine_factory import EngineClient
@@ -90,9 +89,7 @@ async def align_streaming_response(generator: AsyncGenerator[str, None]):
 
 
 @router.post("/openai/v1/chat/completions")
-@with_cancellation
-async def create_chat_completions(request: MISChatCompletionRequest,
-                                  raw_request: Request):
+async def create_chat_completions(request: MISChatCompletionRequest, raw_request: Request):
     handler = chat(raw_request)
     if handler is None:
         return base(raw_request).create_error_response(message="The model does not support Chat Completions API")

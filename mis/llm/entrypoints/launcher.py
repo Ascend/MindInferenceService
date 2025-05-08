@@ -157,6 +157,10 @@ async def run_server(args: GlobalArgs):
     sock.close()
 
 
+def main():
+    args = environment_preparation(ARGS)
+    uvloop.run(run_server(args))
+
+
 if __name__ == "__main__":
-    ARGS = environment_preparation(ARGS)
-    uvloop.run(run_server(ARGS))
+    main()

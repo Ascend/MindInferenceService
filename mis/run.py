@@ -6,13 +6,18 @@ import subprocess
 from mis.args import ARGS
 from mis.hub.envpreparation import environment_preparation
 
-if __name__ == "__main__":
+
+def main():
     environment_preparation(ARGS, True)
     process = None
     try:
-        process = subprocess.Popen(["/usr/bin/python3", "-m", "mis.llm.entrypoints.launcher"])
+        process = subprocess.Popen(["/usr/local/bin/mis_launcher"])
         process.wait()
     except KeyboardInterrupt:
         if process:
             process.send_signal(signal.SIGINT)
             process.wait()
+
+
+if __name__ == "__main__":
+    main()
