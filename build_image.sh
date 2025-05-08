@@ -71,15 +71,13 @@ function build_model_image() {
   cd $workdir || exit
   docker_build_dir=$workdir/dockerfiles/llm/model/build
   mkdir -p "$docker_build_dir"
+  rm -rf "$docker_build_dir"/*
 
-  cp -r "$workdir"/mis "$docker_build_dir"
-  cp -r "$workdir"/setup.py "$docker_build_dir"
+  cp -r "$workdir"/mis*.whl "$docker_build_dir"
+  cp -r "$workdir"/configs "$docker_build_dir"
+  cp -r "$workdir"/patch "$docker_build_dir"
 
   cd $workdir/dockerfiles/llm/model || exit
-
-  raw_model_name="\"MIS_MODEL\": lambda: \"MindSDK/DeepSeek-R1-Distill-Qwen-7B\""
-  new_model_name="\"MIS_MODEL\": lambda: \"MindSDK/${model_name}\""
-  sed -i "s|${raw_model_name}|${new_model_name}|g" build/mis/envs.py
 
   docker build --build-arg BASE_IMAGE=$llm_base_image --build-arg MODEL="$model_name" -t "$model_name_lower":"$version" . || exit
 }

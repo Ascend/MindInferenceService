@@ -8,6 +8,18 @@ workdir=$(
   pwd
 )
 
+function compile_mis() {
+  cd $workdir
+  python3.10 setup.py bdist_wheel
+
+  mkdir -p $workdir/output/mis
+  rm -rf $workdir/output/mis/*
+  # 输出whl包，模型配置config和量化补丁patch
+  cp dist/* $workdir/output/mis/
+  cp -r configs $workdir/output/mis/
+  cp -r patch $workdir/output/mis/
+}
+
 function compile_mis_operator() {
   # pre build controller-gen
   cd $workdir/mis-operator
@@ -31,4 +43,5 @@ function compile_mis_operator() {
   cp -r $workdir/mis-operator/Dockerfile $workdir/output/mis-operator/
 }
 
+compile_mis
 compile_mis_operator

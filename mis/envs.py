@@ -10,7 +10,7 @@ import mis.constants as constants
 if TYPE_CHECKING:
     MIS_CACHE_PATH: str = "/opt/mis/.cache"
 
-    MIS_MODEL: str = "MindSDK/DeepSeek-R1-Distill-Qwen-7B"
+    MIS_MODEL: str = "DeepSeek-R1-Distill-Qwen-7B"
     MIS_SERVED_MODEL_NAME: Optional[str] = None
     MIS_MAX_MODEL_LEN: Optional[int] = None
     MIS_ENABLE_KV_CACHE_REUSE: bool = False
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
-    "MIS_MODEL": lambda: "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+    "MIS_MODEL": lambda: _get_str_from_env("MIS_MODEL", "DeepSeek-R1-Distill-Qwen-7B"),
     "MIS_SERVED_MODEL_NAME": lambda: _get_str_from_env("MIS_SERVED_MODEL_NAME", None),
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),
@@ -110,7 +110,7 @@ def _get_optimization_config():
 
 
 def _get_ssl_cert_reqs():
-    return _get_int_from_env("MIS_SSL_CERT_REQS", ssl.CERT_NONE, valid_values=constants.SSL_CERT_REQS_TYPES)
+    return _get_int_from_env("MIS_SSL_CERT_REQS", int(ssl.CERT_NONE), valid_values=constants.SSL_CERT_REQS_TYPES)
 
 
 def __getattr__(name):

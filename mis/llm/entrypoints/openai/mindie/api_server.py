@@ -14,7 +14,6 @@ from starlette.datastructures import State
 from starlette.responses import JSONResponse, StreamingResponse
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
-from vllm.entrypoints.utils import with_cancellation
 from vllm.entrypoints.openai.protocol import ErrorResponse, ChatCompletionResponse, ChatCompletionStreamResponse
 from vllm.entrypoints.openai.serving_models import OpenAIServingModels, BaseModelPath
 
@@ -37,7 +36,6 @@ async def show_available_models(raw_request: Request):
 
 
 @router.post("/openai/v1/chat/completions")
-@with_cancellation
 async def create_chat_completion(request: MISChatCompletionRequest,
                                  raw_request: Request):
     handler = raw_request.app.state.mindie_chat
@@ -106,18 +104,18 @@ class MindIEServiceChat:
             line_str, created = MindIEServiceChat._process_first_line(line_obj, role=data.get("role", ""))
             response_list.append(line_str)
         else:
-            line_obj.created = created
+            line_obj.created = int(created)
 
         # when mindie-service api response changed, modify here to assemble response for consistent with vllm
         line_obj.choices[0].delta.content = data.get("content", "")
         line_obj.choices[0].finish_reason = data.get("finish_reason", "")
-        response_list.append(f"data :{line_obj.model_dump_json(exclude_unset=True)}")
+        response_list.append(f"data: {line_obj.model_dump_json(exclude_unset=True)}")
         del line_obj.choices[0].delta.content
 
         if data.get("usage") is not None and include_usage:
             line_obj.usage = data.get("usage")
             line_obj.choices = []
-            response_list.append(f"data :{line_obj.model_dump_json(exclude_unset=True)}")
+            response_list.append(f"data: {line_obj.model_dump_json(exclude_unset=True)}")
 
         return "\n\n".join(response_list), created
 
@@ -146,14 +144,14 @@ class MindIEServiceChat:
         return True, {"usage": usage, "role": role, "content": content, "finish_reason": finish_reason}
 
     @staticmethod
-    def _process_first_line(line_obj: ChatCompletionStreamResponse, role):
-        created = line_obj.created
+    def _process_first_line(line_obj: ChatCompletionStreamResponse, role) -> (str, str):
+        created = str(line_obj.created)
 
         choice = line_obj.choices[0]
 
         choice.delta.role = role
         choice.delta.content = ""
-        line_str = f"data :{line_obj.model_dump_json(exclude_unset=True)}"
+        line_str = f"data: {line_obj.model_dump_json(exclude_unset=True)}"
         del choice.delta.role
         del choice.delta.content
 
@@ -183,7 +181,7 @@ class MindIEServiceChat:
                     raise Exception("MindIE Service response error")
                 res_id = self._gen_random_id()
                 first_line = True
-                created = None
+                created = ""
                 for line in r.iter_lines():
                     await asyncio.sleep(0)
                     new_line, created = self._process_stream_line(
