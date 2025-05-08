@@ -1,0 +1,8 @@
+namespace: mis
+
+namePrefix: mis-operator-
+
+resources:
+- ../crd
+- ../rbac
+- ../manager
