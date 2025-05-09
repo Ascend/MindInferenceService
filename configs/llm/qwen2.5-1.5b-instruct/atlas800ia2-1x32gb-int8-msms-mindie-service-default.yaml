@@ -1,0 +1,11 @@
+mindie-service:
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  max_num_seqs: 128
+  gpu_memory_utilization: 0.9
+  block_size: 32
+  swap_space: 0
+  scheduling_policy: fcfs
+  quantization: ms-model-slim
+engine_type: mindie-service
+model: MindSDK/Qwen2.5-1.5B-Instruct-w8a8
