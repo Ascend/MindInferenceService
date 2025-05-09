@@ -270,7 +270,7 @@ class ConfigParser:
             config_file_path = os.path.join(model_folder_path, self.mis_config + ".yaml")
             engine_optimization_config = self._config_yaml_file_loading(config_file_path)
 
-        if not self._is_config_valid(engine_optimization_config):
+        if not engine_optimization_config or not self._is_config_valid(engine_optimization_config):
             return self.args
 
         engine_type_selected = engine_optimization_config.get("engine_type")

@@ -105,8 +105,7 @@ def _get_ip_address_from_env(name: str, default: Optional[str] = None) -> Option
 
 
 def _get_optimization_config():
-    return _get_str_from_env("MIS_CONFIG", "atlas800ia2-32gb-bf16-vllm-default",
-                             constants.MIS_CONFIGS)
+    return _get_str_from_env("MIS_CONFIG", "atlas800ia2-1x32gb-bf16-vllm-default", valid_values=None)
 
 
 def _get_ssl_cert_reqs():
