@@ -26,12 +26,23 @@ logger = init_logger(__name__)
 
 router = APIRouter()
 
+# we only need vLLM /openai/v1/models return `id` `created` `object` `owned_by` `max_model_len`,
+# so del `root` `parent` `permission`
+MIS_MODEL_REMOVE_FIELDS = [
+    "root", "parent", "permission"
+]
+
 
 @router.get("/openai/v1/models")
 async def show_available_models(raw_request: Request):
     handler = raw_request.app.state.mindie_models
 
     models_ = await handler.show_available_models()
+    for model_ in models_.data:
+        for field in MIS_MODEL_REMOVE_FIELDS:
+            if hasattr(model_, field):
+                delattr(model_, field)
+
     return JSONResponse(content=models_.model_dump())
 
 
