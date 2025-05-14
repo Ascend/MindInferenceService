@@ -11,6 +11,7 @@ workdir=$(
 function compile_mis() {
   cd $workdir
   python3.10 setup.py bdist_wheel
+  python3.11 setup.py bdist_wheel
 
   mkdir -p $workdir/output/mis
   rm -rf $workdir/output/mis/*
