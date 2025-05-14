@@ -12,7 +12,7 @@ class GlobalArgs(BaseModel):
     cache_path: str = envs.MIS_CACHE_PATH
 
     model: str = envs.MIS_MODEL
-    engine_type: str = "vllm"
+    engine_type: str = envs.MIS_ENGINE_TYPE
     served_model_name: Optional[str] = envs.MIS_SERVED_MODEL_NAME
     max_model_len: Optional[int] = envs.MIS_MAX_MODEL_LEN
     enable_prefix_caching: bool = envs.MIS_ENABLE_KV_CACHE_REUSE
@@ -20,6 +20,7 @@ class GlobalArgs(BaseModel):
 
     host: Optional[str] = envs.MIS_HOST
     port: int = envs.MIS_PORT
+    inner_port: int = envs.MIS_INNER_PORT
     ssl_keyfile: Optional[str] = envs.MIS_SSL_KEYFILE
     ssl_certfile: Optional[str] = envs.MIS_SSL_CERTFILE
     ssl_ca_certs: Optional[str] = envs.MIS_SSL_CA_CERT

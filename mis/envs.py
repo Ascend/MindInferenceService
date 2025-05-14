@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     MIS_CACHE_PATH: str = "/opt/mis/.cache"
 
     MIS_MODEL: str = "DeepSeek-R1-Distill-Qwen-7B"
+    MIS_ENGINE_TYPE: str = "vllm"
     MIS_SERVED_MODEL_NAME: Optional[str] = None
     MIS_MAX_MODEL_LEN: Optional[int] = None
     MIS_ENABLE_KV_CACHE_REUSE: bool = False
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
 
     MIS_HOST: Optional[str] = None
     MIS_PORT: int = 8000
+    MIS_INNER_PORT = 9090
     MIS_SSL_KEYFILE: Optional[str] = None
     MIS_SSL_CERTFILE: Optional[str] = None
     MIS_SSL_CA_CERT: Optional[str] = None
@@ -35,6 +37,7 @@ if TYPE_CHECKING:
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
     "MIS_MODEL": lambda: _get_str_from_env("MIS_MODEL", "DeepSeek-R1-Distill-Qwen-7B"),
+    "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_SERVED_MODEL_NAME": lambda: _get_str_from_env("MIS_SERVED_MODEL_NAME", None),
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),
@@ -42,6 +45,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
 
     "MIS_HOST": lambda: _get_ip_address_from_env("MIS_HOST", None),
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),
+    "MIS_INNER_PORT": lambda: _get_int_from_env("MIS_INNER_PORT", 9090, 1024, 65535),
     "MIS_SSL_KEYFILE": lambda: _get_file_from_env("MIS_SSL_KEYFILE", None),
     "MIS_SSL_CERTFILE": lambda: _get_file_from_env("MIS_SSL_CERTFILE", None),
     "MIS_SSL_CA_CERT": lambda: _get_file_from_env("MIS_SSL_CA_CERT", None),
@@ -61,7 +65,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
 def _get_bool_from_env(name: str, default: Optional[bool]) -> Optional[bool]:
     if name not in os.environ:
         return default
-    return os.environ[name] == "1"
+    return os.environ[name].lower() in ["true", "1"]
 
 
 def _get_int_from_env(name: str, default: Optional[int],

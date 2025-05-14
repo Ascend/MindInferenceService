@@ -1,10 +1,20 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-from vllm.engine.protocol import EngineClient
+import os
+from os import path
+from loguru import logger
+
+try:
+    from vllm.engine.protocol import EngineClient
+except Exception as e:
+    logger.warning("import vllm failed")
 
 from mis import constants
-from mis.args import GlobalArgs
 from mis.logger import init_logger
+from mis.args import GlobalArgs
+
+from mis.emb.engines.tei.engine import TEIServiceEngine, TEIServiceArgs
+from mis.emb.engines.clip.engine import ClipServiceArgs, ClipServiceEngine
 
 _LOCAL_LOGGING_INTERVAL_SEC = 5
 
@@ -13,14 +23,23 @@ logger = init_logger(__name__)
 
 class AutoEngine:
 
+    def __init__(self):
+        pass
+
     @staticmethod
-    def from_config(args: GlobalArgs) -> EngineClient:
+    def from_config(args: GlobalArgs):
         if args.engine_type == "vllm":
             logger.info("Using vllm backend")
             return VLLMEngine.from_args(args)
         elif args.engine_type == "mindie-service":
             logger.info("Using mindie-service backend")
             return MindIESvcEngine.from_args(args)
+        elif args.engine_type == "tei-service":
+            logger.info("Using tei-service backend")
+            return TEISvcEngine.from_args(args)
+        elif args.engine_type == "clip-service":
+            logger.info("Using clip-service backend")
+            return ClipSvcEngine.from_args(args)
         else:
             raise NotImplementedError(f"Model Engine for '{args.engine_type}' is not implemented,"
                                       f"available types are {constants.MIS_ENGINE_TYPES}.")
@@ -28,8 +47,11 @@ class AutoEngine:
 
 class VLLMEngine:
 
+    def __init__(self):
+        pass
+
     @staticmethod
-    def from_args(args: GlobalArgs) -> EngineClient:
+    def from_args(args: GlobalArgs):
         from mis.llm.engines.vllm.engine import AsyncEngineArgs, AsyncLLMEngine
 
         engine_args = AsyncEngineArgs(model=args.model,
@@ -63,8 +85,11 @@ class VLLMEngine:
 
 class MindIESvcEngine:
 
+    def __init__(self):
+        pass
+
     @staticmethod
-    def from_args(args: GlobalArgs) -> EngineClient:
+    def from_args(args: GlobalArgs):
         from mis.llm.engines.vllm.engine import AsyncEngineArgs
         from mis.llm.engines.mindie.engine import MindIEServiceEngine, MindIEServiceArgs
 
@@ -77,3 +102,30 @@ class MindIESvcEngine:
 
         mindie_args = MindIEServiceArgs(engine_config, args.host or "0.0.0.0")
         return MindIEServiceEngine(mindie_args)
+
+
+class TEISvcEngine:
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def from_args(args: GlobalArgs):
+        model_path = path.join(args.cache_path, args.model)
+
+        tei_args = TEIServiceArgs(model_path, args.inner_port)
+
+        return TEIServiceEngine(tei_args)
+
+
+class ClipSvcEngine:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def from_args(args: GlobalArgs):
+        current_work_dir = os.path.dirname(__file__)
+        config_path = path.join(current_work_dir, "config.yaml")
+        clip_args = ClipServiceArgs(config_path, args.inner_port)
+
+        return ClipServiceEngine(clip_args)

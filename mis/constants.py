@@ -2,7 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import ssl
 
-MIS_ENGINE_TYPES = ["vllm", "mindie-service"]
+MIS_ENGINE_TYPES = ["vllm", "mindie-service", "tei-service", "clip-service"]
 
 MIS_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 

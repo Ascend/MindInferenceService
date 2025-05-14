@@ -54,7 +54,7 @@ def get_extensions():
     extensions = []
 
     for mod in Path("mis").glob("**/*.py"):
-        if mod.is_file() and mod.stem != "__init__":
+        if mod.is_file():
             new_pkg = str(mod.parent).replace("/", ".")
             extensions.extend([Extension(f"{new_pkg}.{mod.stem}", [str(mod)])])
 
@@ -68,14 +68,13 @@ setup(
     license="Apache 2.0",
     description="MindSDK Inference Server",
     ext_modules=cythonize(get_extensions()),
-    python_requires=">=3.10, <3.11",
-    install_requires=[
-        "openmind_hub"
-    ],
+    python_requires=">=3.10, <3.12",
     entry_points={
         "console_scripts": [
             "mis_run=mis.run:main",
-            "mis_launcher=mis.llm.entrypoints.launcher:main"
+            "mis_launcher=mis.llm.entrypoints.launcher:main",
+            "mis_tei=mis.emb.entrypoints.tei.launcher:main",
+            "mis_clip=mis.emb.entrypoints.clip.launcher:main"
         ]
     }
 )
