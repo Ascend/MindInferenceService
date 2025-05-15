@@ -24,3 +24,6 @@ MINDIE_SERVICE_CONFIG_PATH = f"{MINDIE_SERVICE_PATH}/conf/config.json"
 MINDIE_LLM_PATH = f"{MINDIE_PATH}/mindie-llm"
 
 MINDIE_ATB_PATH = f"{ASCEND_PATH}/atb"
+
+# if True, use vllm 0.7.1, else use vllm 0.8.5
+MIS_VLM_ENABLE = False

@@ -32,6 +32,11 @@ if TYPE_CHECKING:
     MIS_API_KEY: Optional[str] = None
     MIS_DISABLE_FASTAPI_DOCS: bool = False
 
+    MIS_ALLOWED_LOCAL_MEDIA_PATH: str = "/opt"
+    MIS_LIMIT_IMAGE_PER_PROMPT: int = 0
+    MIS_LIMIT_VIDEO_PER_PROMPT: int = 0
+    MIS_LIMIT_AUDIO_PER_PROMPT: int = 0
+
     UVICORN_LOG_LEVEL: str = "info"
 
 environment_variables: Dict[str, Callable[[], Any]] = {
@@ -57,6 +62,11 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_DISABLE_LOG_STATS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_STATS", False),
     "MIS_API_KEY": lambda: _get_str_from_env("MIS_API_KEY", None),
     "MIS_DISABLE_FASTAPI_DOCS": lambda: _get_bool_from_env("MIS_DISABLE_FASTAPI_DOCS", False),
+
+    "MIS_ALLOWED_LOCAL_MEDIA_PATH": lambda: _get_str_from_env("MIS_ALLOWED_LOCAL_MEDIA_PATH", "/opt"),
+    "MIS_LIMIT_IMAGE_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_IMAGE_PER_PROMPT", 0, 0, 10),
+    "MIS_LIMIT_VIDEO_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_VIDEO_PER_PROMPT", 0, 0, 10),
+    "MIS_LIMIT_AUDIO_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_AUDIO_PER_PROMPT", 0, 0, 10),
 
     "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", constants.UVICORN_LOG_LEVELS),
 }

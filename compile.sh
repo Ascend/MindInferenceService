@@ -10,13 +10,26 @@ workdir=$(
 
 function compile_mis() {
   cd $workdir
-  python3.10 setup.py bdist_wheel
-  python3.11 setup.py bdist_wheel
-
   mkdir -p $workdir/output/mis
   rm -rf $workdir/output/mis/*
-  # 输出whl包，模型配置config和量化补丁patch
-  cp dist/* $workdir/output/mis/
+  mkdir $workdir/output/mis/llm
+  mkdir $workdir/output/mis/vlm
+
+  # 编译tei需要的whl包
+  python3.11 setup.py bdist_wheel
+  mv dist/* $workdir/output/mis/
+
+  # 修改常量MIS_VLM_ENABLE=False
+  sed -i 's/^MIS_VLM_ENABLE.*/MIS_VLM_ENABLE = False/' mis/constants.py
+  python3.10 setup.py bdist_wheel
+  mv dist/* $workdir/output/mis/llm
+
+  # 修改常量MIS_VLM_ENABLE=True
+  sed -i 's/^MIS_VLM_ENABLE.*/MIS_VLM_ENABLE = True/' mis/constants.py
+  python3.10 setup.py bdist_wheel
+  mv dist/* $workdir/output/mis/vlm
+
+  # 输出模型配置config和量化补丁patch
   cp -r configs $workdir/output/mis/
   cp -r patch $workdir/output/mis/
 }

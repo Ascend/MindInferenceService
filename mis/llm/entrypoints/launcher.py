@@ -15,13 +15,15 @@ from fastapi.responses import JSONResponse
 from starlette.requests import Request
 from starlette.routing import Mount
 from vllm.config import ModelConfig
+from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.launcher import serve_http
 from vllm.entrypoints.openai.api_server import lifespan, create_server_socket
 from vllm.entrypoints.openai.protocol import ErrorResponse
 from vllm.utils import set_ulimit
 
+from mis import constants
 from mis.args import ARGS, GlobalArgs
-from mis.engine_factory import AutoEngine, EngineClient
+from mis.engine_factory import AutoEngine
 from mis.hub.envpreparation import environment_preparation
 from mis.logger import init_logger
 
@@ -139,18 +141,33 @@ async def run_server(args: GlobalArgs):
 
         await init_app_state(engine_client, model_config, app, args)
 
-        shutdown_task = await serve_http(
-            app,
-            host=args.host,
-            port=args.port,
-            log_level=args.uvicorn_log_level,
-            timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
-            ssl_keyfile=args.ssl_keyfile,
-            ssl_certfile=args.ssl_certfile,
-            ssl_ca_certs=args.ssl_ca_certs,
-            ssl_cert_reqs=args.ssl_cert_reqs,
-            fd=sock.fileno() if sys.platform.startswith("darwin") else None
-        )
+        if constants.MIS_VLM_ENABLE:
+            shutdown_task = await serve_http(
+                app,
+                host=args.host,
+                port=args.port,
+                sock=sock,
+                log_level=args.uvicorn_log_level,
+                timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
+                ssl_keyfile=args.ssl_keyfile,
+                ssl_certfile=args.ssl_certfile,
+                ssl_ca_certs=args.ssl_ca_certs,
+                ssl_cert_reqs=args.ssl_cert_reqs,
+                fd=sock.fileno() if sys.platform.startswith("darwin") else None
+            )
+        else:
+            shutdown_task = await serve_http(
+                app,
+                host=args.host,
+                port=args.port,
+                log_level=args.uvicorn_log_level,
+                timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
+                ssl_keyfile=args.ssl_keyfile,
+                ssl_certfile=args.ssl_certfile,
+                ssl_ca_certs=args.ssl_ca_certs,
+                ssl_cert_reqs=args.ssl_cert_reqs,
+                fd=sock.fileno() if sys.platform.startswith("darwin") else None
+            )
 
     await shutdown_task
 
