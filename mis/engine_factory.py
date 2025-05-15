@@ -2,19 +2,10 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 from os import path
-from loguru import logger
-
-try:
-    from vllm.engine.protocol import EngineClient
-except Exception as e:
-    logger.warning("import vllm failed")
 
 from mis import constants
 from mis.logger import init_logger
 from mis.args import GlobalArgs
-
-from mis.emb.engines.tei.engine import TEIServiceEngine, TEIServiceArgs
-from mis.emb.engines.clip.engine import ClipServiceArgs, ClipServiceEngine
 
 _LOCAL_LOGGING_INTERVAL_SEC = 5
 
@@ -54,11 +45,25 @@ class VLLMEngine:
     def from_args(args: GlobalArgs):
         from mis.llm.engines.vllm.engine import AsyncEngineArgs, AsyncLLMEngine
 
-        engine_args = AsyncEngineArgs(model=args.model,
-                                      served_model_name=args.served_model_name,
-                                      disable_log_stats=args.disable_log_stats,
-                                      disable_log_requests=args.disable_log_requests,
-                                      **args.engine_optimization_config)
+        if constants.MIS_VLM_ENABLE:
+            engine_args = AsyncEngineArgs(model=args.model,
+                                          served_model_name=args.served_model_name,
+                                          disable_log_stats=args.disable_log_stats,
+                                          disable_log_requests=args.disable_log_requests,
+                                          allowed_local_media_path=args.allowed_local_media_path,
+                                          limit_mm_per_prompt={
+                                              "image": args.limit_image_per_prompt,
+                                              "video": args.limit_video_per_prompt,
+                                              "audio": args.limit_audio_per_prompt
+                                          },
+                                          **args.engine_optimization_config)
+        else:
+            engine_args = AsyncEngineArgs(model=args.model,
+                                          served_model_name=args.served_model_name,
+                                          disable_log_stats=args.disable_log_stats,
+                                          disable_log_requests=args.disable_log_requests,
+                                          **args.engine_optimization_config)
+
         engine_config = engine_args.create_engine_config()
 
         from vllm.engine.metrics import LoggingStatLogger
@@ -78,9 +83,13 @@ class VLLMEngine:
                 ),
             }
 
-        return AsyncLLMEngine.from_engine_args(engine_args,
-                                               engine_config=engine_config,
-                                               stat_loggers=stat_loggers)
+        if constants.MIS_VLM_ENABLE:
+            return AsyncLLMEngine.from_engine_args(engine_args,
+                                                   stat_loggers=stat_loggers)
+        else:
+            return AsyncLLMEngine.from_engine_args(engine_args,
+                                                   engine_config=engine_config,
+                                                   stat_loggers=stat_loggers)
 
 
 class MindIESvcEngine:
@@ -111,6 +120,8 @@ class TEISvcEngine:
 
     @staticmethod
     def from_args(args: GlobalArgs):
+        from mis.emb.engines.tei.engine import TEIServiceEngine, TEIServiceArgs
+
         model_path = path.join(args.cache_path, args.model)
 
         tei_args = TEIServiceArgs(model_path, args.inner_port)
@@ -124,6 +135,8 @@ class ClipSvcEngine:
 
     @staticmethod
     def from_args(args: GlobalArgs):
+        from mis.emb.engines.clip.engine import ClipServiceArgs, ClipServiceEngine
+
         current_work_dir = os.path.dirname(__file__)
         config_path = path.join(current_work_dir, "config.yaml")
         clip_args = ClipServiceArgs(config_path, args.inner_port)

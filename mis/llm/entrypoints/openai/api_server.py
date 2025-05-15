@@ -3,10 +3,11 @@
 import json
 from typing import AsyncGenerator
 
-from fastapi import APIRouter, Request, FastAPI
+from fastapi import APIRouter, Request
 from pydantic import ValidationError
 from starlette.responses import JSONResponse, StreamingResponse
 from starlette.datastructures import State
+from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.openai.api_server import base, chat, models
 from vllm.entrypoints.openai.serving_models import BaseModelPath, OpenAIServingModels
 from vllm.entrypoints.openai.serving_tokenization import OpenAIServingTokenization
@@ -18,7 +19,6 @@ from vllm.entrypoints.openai.protocol import (
 from vllm.entrypoints.logger import RequestLogger
 from vllm.config import ModelConfig
 
-from mis.engine_factory import EngineClient
 from mis.llm.entrypoints.openai.api_extensions import (
     MISChatCompletionRequest,
     MISOpenAIServingChat

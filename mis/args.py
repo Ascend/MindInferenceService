@@ -32,6 +32,12 @@ class GlobalArgs(BaseModel):
     api_key: Optional[str] = envs.MIS_API_KEY
     disable_fastapi_docs: bool = envs.MIS_DISABLE_FASTAPI_DOCS
 
+    # vlm params
+    allowed_local_media_path: str = envs.MIS_ALLOWED_LOCAL_MEDIA_PATH
+    limit_image_per_prompt: int = envs.MIS_LIMIT_IMAGE_PER_PROMPT
+    limit_video_per_prompt: int = envs.MIS_LIMIT_VIDEO_PER_PROMPT
+    limit_audio_per_prompt: int = envs.MIS_LIMIT_AUDIO_PER_PROMPT
+
     uvicorn_log_level: str = envs.UVICORN_LOG_LEVEL
 
     # generated params
