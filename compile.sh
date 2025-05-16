@@ -57,5 +57,14 @@ function compile_mis_operator() {
   cp -r $workdir/mis-operator/Dockerfile $workdir/output/mis-operator/
 }
 
+function package() {
+  cd $workdir/output
+
+  tar -zcvf mis.tar.gz mis/
+
+  rm -rf mis/
+}
+
 compile_mis
-compile_mis_operator
+package
+
