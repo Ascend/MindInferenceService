@@ -8,12 +8,32 @@ workdir=$(
   pwd
 )
 
+VERSION_FILE=$workdir/../mindxsdk/build/conf/config.yaml
+ARCH=$(uname -m)
+
+function get_version() {
+  if [ -f "$VERSION_FILE" ]; then
+    VERSION=$(sed '/.*mindxsdk:/!d;s/.*: //' "$VERSION_FILE")
+    if [[ "$VERSION" == *.[b/B]* ]] && [[ "$VERSION" != *.[RC/rc]* ]]; then
+      VERSION=${VERSION%.*}
+    fi
+  else
+    VERSION="7.0.0"
+  fi
+}
+
+get_version
+
 function compile_mis() {
+  echo "compile mis"
+
   cd $workdir
   mkdir -p $workdir/output/mis
   rm -rf $workdir/output/mis/*
   mkdir $workdir/output/mis/llm
   mkdir $workdir/output/mis/vlm
+
+  echo "Mind Inference Service: ${VERSION}" >> $workdir/output/mis/version.info
 
   # 编译tei需要的whl包
   python3.11 setup.py bdist_wheel
@@ -35,6 +55,8 @@ function compile_mis() {
 }
 
 function compile_mis_operator() {
+  echo "compile mis operator"
+
   # pre build controller-gen
   cd $workdir/mis-operator
   go get sigs.k8s.io/controller-tools@v0.13.0
@@ -52,19 +74,36 @@ function compile_mis_operator() {
   # move
   mkdir -p $workdir/output/mis-operator
   rm -rf $workdir/output/mis-operator/*
+
+  echo "MIS Operator: ${VERSION}" >> $workdir/output/mis-operator/version.info
+
   cp -r $workdir/mis-operator/config $workdir/output/mis-operator/
   cp -r $workdir/mis-operator/mis-operator-manager $workdir/output/mis-operator/
   cp -r $workdir/mis-operator/Dockerfile $workdir/output/mis-operator/
 }
 
 function package() {
-  cd $workdir/output
+  package_dir=$1
+  target_name=$2
 
-  tar -zcvf mis.tar.gz mis/
+  cd $workdir/output/$package_dir
 
-  rm -rf mis/
+  #将所有目录设置为750，特殊目录单独处理
+  find ./ -type d -exec chmod 750 {} \;
+  #将所有文件设置640，特殊文件单独处理
+  find ./ -type f -exec chmod 640 {} \;
+  #将所有的sh和run文件设置为550
+  find ./  \( -name "*.sh" -o -name "*.run" \)  -exec  chmod 550 {} \;
+
+  cd ..
+
+  tar -zcvf $target_name $package_dir
+
+  rm -rf $package_dir
 }
 
 compile_mis
-package
+package mis $workdir/output/Ascend-mis_"$VERSION"_linux-"$ARCH".tar.gz
 
+compile_mis_operator
+package mis-operator $workdir/output/Ascend-mis-operator_"$VERSION"_linux-"$ARCH".tar.gz
