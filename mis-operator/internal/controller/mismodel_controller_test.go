@@ -7,6 +7,7 @@ package controller
 import (
 	"context"
 
+	"github.com/agiledragon/gomonkey/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/api/core/v1"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"ascend.com/mis-operator/api/apps/alphav1"
+	"ascend.com/mis-operator/internal/utils"
 )
 
 var _ = Describe("MISModel Controller", func() {
@@ -248,6 +250,215 @@ var _ = Describe("MISModel Controller", func() {
 			Expect(resource.MustParse(misModel.Spec.Storage.PVC.Size)).To(Equal(pvc.Spec.Resources.Requests[v1.ResourceStorage]))
 		})
 
+	})
+
+	Context("Test reconcile pod", func() {
+
+		var (
+			testMISModelName      string
+			testMISModelNamespace string
+			testPvcName           string
+			testImage             string
+			testMisConfig         string
+			testProxy             string
+			testPodLogs           string
+			testModelName         string
+
+			misModel alphav1.MISModel
+		)
+
+		BeforeEach(func() {
+			testMISModelName = "test-model-name"
+			testMISModelNamespace = "default"
+			testPvcName = "test-pvc-name"
+			testImage = "deepseed-r1-distill-qwen-1.5b:test"
+			testMisConfig = "atlas800ia2-1x32gb-bf16-vllm-default"
+			testProxy = "http://1.2.3.4:3128"
+			testPodLogs = "INFO 05-20 11:49:17 mis_download:8] [MIS Downloader] [model] [DeepSeek-R1-Distill-Qwen-1.5B]"
+			testModelName = "DeepSeek-R1-Distill-Qwen-1.5B"
+
+			misModel = alphav1.MISModel{
+				ObjectMeta: metav1.ObjectMeta{Name: testMISModelName, Namespace: testMISModelNamespace},
+				Spec: alphav1.MISModelSpec{
+					Storage: alphav1.MISModelStorage{
+						PVC: alphav1.MISPVC{Name: testPvcName},
+					},
+					Image: testImage,
+					Envs: []v1.EnvVar{
+						{
+							Name:  "MIS_CONFIG",
+							Value: testMisConfig,
+						}, {
+							Name:  "http_proxy",
+							Value: testProxy,
+						}, {
+							Name:  "https_proxy",
+							Value: testProxy,
+						},
+					},
+				},
+			}
+			Expect(testClient.Create(ctx, &misModel)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.reconcilePod(ctx, &misModel)
+			Expect(requeue).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should create new pod when download pod not found", func() {
+			pod := v1.Pod{}
+			podNamespaceName := types.NamespacedName{
+				Namespace: testMISModelNamespace, Name: misModel.GetDownloadPodName()}
+			Expect(testClient.Get(ctx, podNamespaceName, &pod)).NotTo(HaveOccurred())
+
+			Expect(misModel.Status.State == alphav1.MISModelStatePodCreate).To(BeTrue())
+			Expect(len(pod.Spec.Containers) == 1).To(BeTrue())
+			Expect(pod.Spec.Containers[0].Image == testImage).To(BeTrue())
+			Expect(len(pod.Spec.Containers[0].Env) == 3).To(BeTrue())
+			Expect(pod.Spec.Containers[0].Env[0].Name == "MIS_CONFIG").To(BeTrue())
+			Expect(pod.Spec.Containers[0].Env[1].Name == "http_proxy").To(BeTrue())
+			Expect(pod.Spec.Containers[0].Env[2].Name == "https_proxy").To(BeTrue())
+		})
+
+		It("should update status when pod pending", func() {
+			pod := v1.Pod{}
+			podNamespaceName := types.NamespacedName{
+				Namespace: testMISModelNamespace, Name: misModel.GetDownloadPodName()}
+			Expect(testClient.Get(ctx, podNamespaceName, &pod)).NotTo(HaveOccurred())
+
+			pod.Status.Phase = v1.PodPending
+			Expect(testClient.Status().Update(ctx, &pod)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.reconcilePod(ctx, &misModel)
+			Expect(requeue).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(misModel.Status.State == alphav1.MISModelStatePodCreate).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodRunning &&
+						condition.Status == metav1.ConditionFalse {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+		})
+
+		It("should update status when pod running", func() {
+			pod := v1.Pod{}
+			podNamespaceName := types.NamespacedName{
+				Namespace: testMISModelNamespace, Name: misModel.GetDownloadPodName()}
+			Expect(testClient.Get(ctx, podNamespaceName, &pod)).NotTo(HaveOccurred())
+
+			pod.Status.Phase = v1.PodRunning
+			Expect(testClient.Status().Update(ctx, &pod)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.reconcilePod(ctx, &misModel)
+			Expect(requeue).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(misModel.Status.State == alphav1.MISModelStateInProgress).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodRunning &&
+						condition.Status == metav1.ConditionTrue {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodComplete &&
+						condition.Status == metav1.ConditionFalse {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+		})
+
+		It("should update status when pod succeeded", func() {
+			getPodLogsPatch := gomonkey.ApplyFuncReturn(utils.GetPodLogs, testPodLogs, nil)
+			defer getPodLogsPatch.Reset()
+
+			pod := v1.Pod{}
+			podNamespaceName := types.NamespacedName{
+				Namespace: testMISModelNamespace, Name: misModel.GetDownloadPodName()}
+			Expect(testClient.Get(ctx, podNamespaceName, &pod)).NotTo(HaveOccurred())
+
+			pod.Status.Phase = v1.PodSucceeded
+			Expect(testClient.Status().Update(ctx, &pod)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.reconcilePod(ctx, &misModel)
+			Expect(requeue).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(misModel.Status.State == alphav1.MISModelStateReady).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodRunning &&
+						condition.Status == metav1.ConditionFalse {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodComplete &&
+						condition.Status == metav1.ConditionTrue {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+			Expect(misModel.Status.Model == testModelName).To(BeTrue())
+		})
+
+		It("should update status when pod failed", func() {
+			pod := v1.Pod{}
+			podNamespaceName := types.NamespacedName{
+				Namespace: testMISModelNamespace, Name: misModel.GetDownloadPodName()}
+			Expect(testClient.Get(ctx, podNamespaceName, &pod)).NotTo(HaveOccurred())
+
+			pod.Status.Phase = v1.PodFailed
+			pod.Status.ContainerStatuses = append(pod.Status.ContainerStatuses, v1.ContainerStatus{
+				Name: MISModelPodContainerName,
+				State: v1.ContainerState{
+					Terminated: &v1.ContainerStateTerminated{
+						Reason:  "terminate reason",
+						Message: "terminate message",
+					},
+				},
+			})
+			Expect(testClient.Status().Update(ctx, &pod)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.reconcilePod(ctx, &misModel)
+			Expect(requeue).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(misModel.Status.State == alphav1.MISModelStateFailed).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodRunning &&
+						condition.Status == metav1.ConditionFalse {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+			Expect(func() bool {
+				for _, condition := range misModel.Status.Conditions {
+					if condition.Type == alphav1.MISModelConditionPodComplete &&
+						condition.Status == metav1.ConditionFalse {
+						return true
+					}
+				}
+				return false
+			}()).To(BeTrue())
+		})
 	})
 
 })

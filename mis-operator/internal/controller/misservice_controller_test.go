@@ -9,12 +9,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"k8s.io/api/autoscaling/v2beta2"
+	"k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"ascend.com/mis-operator/api/apps/alphav1"
 )
@@ -23,43 +27,110 @@ var _ = Describe("MISService Controller", func() {
 
 	var (
 		reconciler *MISServiceReconciler
-		scheme     *runtime.Scheme
-		client     client.Client
+		testScheme *runtime.Scheme
+		testClient client.Client
 
 		ctx = context.Background()
 	)
 
 	BeforeEach(func() {
-		scheme = runtime.NewScheme()
-		Expect(alphav1.AddToScheme(scheme)).To(Succeed())
+		testScheme = runtime.NewScheme()
+		Expect(scheme.AddToScheme(testScheme)).To(Succeed())
+		Expect(alphav1.AddToScheme(testScheme)).To(Succeed())
+		Expect(monitorv1.AddToScheme(testScheme)).To(Succeed())
 
-		client = fake.NewClientBuilder().
-			WithScheme(scheme).
+		testClient = fake.NewClientBuilder().
+			WithScheme(testScheme).
 			WithStatusSubresource(&alphav1.MISService{}).
+			WithStatusSubresource(&alphav1.MISModel{}).
+			WithStatusSubresource(&v1.Service{}).
+			WithStatusSubresource(&monitorv1.ServiceMonitor{}).
+			WithStatusSubresource(&v2beta2.HorizontalPodAutoscaler{}).
+			WithStatusSubresource(ptr.To(getAcjobObject())).
 			Build()
 
 		reconciler = &MISServiceReconciler{
-			Client: client,
-			Scheme: scheme,
+			Client:   testClient,
+			Scheme:   testScheme,
+			recorder: record.NewFakeRecorder(1000),
 		}
 	})
 
-	Context("When reconciling a resource", func() {
-		It("should successfully reconcile the resource", func() {
+	Context("Test Check MISModel", func() {
 
-			testMISService := alphav1.MISService{
-				ObjectMeta: v1.ObjectMeta{
-					Name: "test-name",
+		var (
+			testNamespace      string
+			testPVCName        string
+			testMISModelName   string
+			testModelName      string
+			testMISServiceName string
+
+			testMISModel   alphav1.MISModel
+			testMISService alphav1.MISService
+		)
+
+		BeforeEach(func() {
+			testNamespace = "test-namespace"
+			testPVCName = "test-pvc-name"
+			testMISModelName = "test-mis-model-name"
+			testModelName = "test-model-name"
+			testMISServiceName = "test-mis-service-name"
+
+			testMISModel = alphav1.MISModel{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testMISModelName,
+					Namespace: testNamespace,
+				},
+				Spec: alphav1.MISModelSpec{
+					Storage: alphav1.MISModelStorage{
+						PVC: alphav1.MISPVC{
+							Name: testPVCName,
+						},
+					},
+				},
+				Status: alphav1.MISModelStatus{
+					State: alphav1.MISModelStateReady,
+					PVC:   testPVCName,
+					Model: testModelName,
 				},
 			}
-			Expect(client.Create(ctx, &testMISService)).NotTo(HaveOccurred())
 
-			_, err := reconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name: "test-name",
+			testMISService = alphav1.MISService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testMISServiceName,
+					Namespace: testNamespace,
 				},
-			})
+				Spec: alphav1.MISServiceSpec{
+					MISModel: testMISModelName,
+				},
+			}
+		})
+
+		It("should return err if no MISModel found", func() {
+			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
+			Expect(requeue).To(BeFalse())
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should requeue if MISModel not ready", func() {
+			testMISModel.Status.State = alphav1.MISModelStateInProgress
+			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
+			Expect(requeue).To(BeTrue())
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return true if MISModel found", func() {
+			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
+
+			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
+			Expect(requeue).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(testMISService.Status.State).To(Equal(alphav1.MISServiceStateModelReady))
+			Expect(testMISService.Status.PVC).To(Equal(testPVCName))
+			Expect(testMISService.Status.Model).To(Equal(testModelName))
 		})
 	})
 })

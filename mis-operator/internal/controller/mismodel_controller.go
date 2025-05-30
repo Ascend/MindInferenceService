@@ -6,6 +6,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"ascend.com/mis-operator/api/apps/alphav1"
+	"ascend.com/mis-operator/internal/utils"
 )
 
 // MISModelReconciler reconciles a MISModel object
@@ -237,8 +239,188 @@ func (r *MISModelReconciler) constructPVC(misModel *alphav1.MISModel, pvc *v1.Pe
 	return nil
 }
 
-func (r *MISModelReconciler) reconcilePod(ctx context.Context, misModel *alphav1.MISModel) (bool, error) {
+func (r *MISModelReconciler) reconcilePod(ctx context.Context, misModel *alphav1.MISModel) (requeue bool, err error) {
+	pod := v1.Pod{}
+	podName := misModel.GetDownloadPodName()
+	podNamespaceName := types.NamespacedName{Namespace: misModel.Namespace, Name: podName}
+	if err := r.Get(ctx, podNamespaceName, &pod); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return false, errors.Wrapf(err, "Unable to fetch download pod: %s", podName)
+		}
+		if err := r.createDownloadPod(ctx, misModel); err != nil {
+			return false, errors.Wrap(err, "Unable to create download pod")
+		}
+		return true, nil
+	}
+
+	if err := r.checkDownloadPod(misModel, &pod); err != nil {
+		return false, errors.Wrap(err, "Unable to check download pod status")
+	}
+
+	if misModel.Status.State == alphav1.MISModelStateReady && misModel.Status.Model == "" {
+		if logs, err := utils.GetPodLogs(ctx, pod.Namespace, pod.Name, MISModelPodContainerName); err != nil {
+			return false, errors.Wrap(err, "Unable to get download pod logs")
+		} else {
+			if modelName, err := utils.ExtractModelName(logs); err != nil {
+				return false, errors.Wrap(err, "Unable to extract model name from logs")
+			} else {
+				misModel.Status.Model = modelName
+			}
+		}
+	}
+
 	return false, nil
+}
+
+func (r *MISModelReconciler) createDownloadPod(ctx context.Context, misModel *alphav1.MISModel) error {
+	logger := log.FromContext(ctx)
+
+	var imagePullSecrets []v1.LocalObjectReference
+	if misModel.Spec.ImagePullSecret != nil {
+		imagePullSecrets = append(imagePullSecrets, v1.LocalObjectReference{Name: *misModel.Spec.ImagePullSecret})
+	}
+
+	pod := v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: misModel.Namespace,
+			Name:      misModel.GetDownloadPodName(),
+			Labels:    r.getStandardLabels(misModel),
+		},
+		Spec: v1.PodSpec{
+			RestartPolicy:    v1.RestartPolicyNever,
+			Containers:       r.constructDownloadPodContainers(misModel),
+			Volumes:          r.constructDownloadPodVolumes(misModel),
+			ImagePullSecrets: imagePullSecrets,
+		},
+	}
+	if err := ctrl.SetControllerReference(misModel, &pod, r.Scheme); err != nil {
+		return errors.Wrap(err, "Unable to set controller ref to download pod")
+	}
+	if err := r.Create(ctx, &pod); err != nil {
+		return errors.Wrap(err, "Unable to create download pod")
+	}
+
+	logger.Info("Create download pod success")
+	r.recorder.Eventf(misModel, v1.EventTypeNormal, "CreateDownloadPod", "Create download pod success")
+	misModel.Status.State = alphav1.MISModelStatePodCreate
+	meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+		Type:    alphav1.MISModelConditionPodCreate,
+		Status:  metav1.ConditionTrue,
+		Reason:  "JobCreate",
+		Message: "job is create",
+	})
+
+	return nil
+}
+
+func (r *MISModelReconciler) constructDownloadPodContainers(misModel *alphav1.MISModel) []v1.Container {
+	return []v1.Container{
+		{
+			Name:            MISModelPodContainerName,
+			Image:           misModel.Spec.Image,
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Env:             misModel.Spec.Envs,
+			Command:         []string{MISModelPodCmd},
+			VolumeMounts: []v1.VolumeMount{
+				{
+					Name:      MISModelPodVolumeName,
+					MountPath: MISModelPodMountPath,
+				},
+			},
+		},
+	}
+}
+
+func (r *MISModelReconciler) constructDownloadPodVolumes(misModel *alphav1.MISModel) []v1.Volume {
+	return []v1.Volume{
+		{
+			Name: MISModelPodVolumeName,
+			VolumeSource: v1.VolumeSource{
+				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+					ClaimName: misModel.GetPVCName(),
+					ReadOnly:  false,
+				},
+			},
+		},
+	}
+}
+
+func (r *MISModelReconciler) checkDownloadPod(misModel *alphav1.MISModel, pod *v1.Pod) error {
+	switch pod.Status.Phase {
+	case v1.PodPending:
+		misModel.Status.State = alphav1.MISModelStatePodCreate
+		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+			Type:    alphav1.MISModelConditionPodRunning,
+			Status:  metav1.ConditionFalse,
+			Reason:  "PodPending",
+			Message: "Pod is pending",
+		})
+	case v1.PodRunning:
+		misModel.Status.State = alphav1.MISModelStateInProgress
+		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+			Type:    alphav1.MISModelConditionPodRunning,
+			Status:  metav1.ConditionTrue,
+			Reason:  "PodRunning",
+			Message: "Pod is running",
+		})
+		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+			Type:    alphav1.MISModelConditionPodComplete,
+			Status:  metav1.ConditionFalse,
+			Reason:  "PodRunning",
+			Message: "Pod is running",
+		})
+	case v1.PodSucceeded:
+		misModel.Status.State = alphav1.MISModelStateReady
+		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+			Type:    alphav1.MISModelConditionPodRunning,
+			Status:  metav1.ConditionFalse,
+			Reason:  "PodSucceeded",
+			Message: "Pod is succeeded",
+		})
+		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+			Type:    alphav1.MISModelConditionPodComplete,
+			Status:  metav1.ConditionTrue,
+			Reason:  "PodSucceeded",
+			Message: "Pod is succeeded",
+		})
+	case v1.PodFailed:
+		if err := r.checkDownloadPodFailed(misModel, pod); err != nil {
+			return err
+		}
+	default:
+		return errors.New("download pod found in unknown status.phase")
+	}
+
+	return nil
+}
+
+func (r *MISModelReconciler) checkDownloadPodFailed(misModel *alphav1.MISModel, pod *v1.Pod) error {
+	misModel.Status.State = alphav1.MISModelStateFailed
+	meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+		Type:    alphav1.MISModelConditionPodRunning,
+		Status:  metav1.ConditionFalse,
+		Reason:  "PodFailed",
+		Message: "Pod failed",
+	})
+	meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
+		Type:    alphav1.MISModelConditionPodComplete,
+		Status:  metav1.ConditionFalse,
+		Reason:  "PodFailed",
+		Message: "Pod failed",
+	})
+	if len(pod.Status.ContainerStatuses) <= 0 {
+		return errors.New("download pod can not found container status")
+	}
+	if pod.Status.ContainerStatuses[0].Name != MISModelPodContainerName {
+		return errors.New("download pod can not found container status of download")
+	}
+	if pod.Status.ContainerStatuses[0].State.Terminated == nil {
+		return errors.New("unable to find terminated state from container download")
+	}
+	terminatedMessage := pod.Status.ContainerStatuses[0].State.Terminated.Message
+	r.recorder.Eventf(misModel, v1.EventTypeWarning, "DownloadPodFailed",
+		fmt.Sprintf("download pod failed by: %s", terminatedMessage))
+	return nil
 }
 
 func (r *MISModelReconciler) updateMISModelStatus(ctx context.Context, misModel *alphav1.MISModel) error {
@@ -268,7 +450,6 @@ func (r *MISModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&alphav1.MISModel{}).
 		Named("mismodel").
-		Owns(&v1.Secret{}).
 		Owns(&v1.PersistentVolumeClaim{}).
 		Owns(&v1.Pod{}).
 		Complete(r)
