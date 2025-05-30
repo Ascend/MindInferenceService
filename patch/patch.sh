@@ -19,20 +19,37 @@ apply_patch() {
   fi
 }
 
-sed -i 's/\r$//' $workdir/register_patch.patch
-apply_patch "/opt/vllm-ascend/vllm-ascend/vllm_ascend/__init__.py" "$workdir/register_patch.patch"
+sed -i 's/\r$//' $workdir/__init__.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/__init__.py" "$workdir/__init__.patch"
 
-sed -i 's/\r$//' $workdir/attention_forward_patch.patch
-apply_patch "/opt/vllm-ascend/vllm-ascend/vllm_ascend/attention.py" "$workdir/attention_forward_patch.patch"
+sed -i 's/\r$//' $workdir/vllm_ascend_attention.patch
+apply_patch "/usr/local/lib/python3.10/dist-packages/vllm_ascend/attention/attention.py" "$workdir/vllm_ascend_attention.patch"
 
-sed -i 's/\r$//' $workdir/compressed_tensors_patch.patch
-apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors.py" "$workdir/compressed_tensors_patch.patch"
+sed -i 's/\r$//' $workdir/awq.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/awq.py" "$workdir/awq.patch"
 
-sed -i 's/\r$//' $workdir/quantization_init_patch.patch
-apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/__init__.py" "$workdir/quantization_init_patch.patch"
+sed -i 's/\r$//' $workdir/compressed_tensors.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors.py" "$workdir/compressed_tensors.patch"
 
-sed -i 's/\r$//' $workdir/awq_patch.patch
-apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/awq.py" "$workdir/awq_patch.patch"
+sed -i 's/\r$//' $workdir/compressed_tensors_w8a8_int8.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py" "$workdir/compressed_tensors_w8a8_int8.patch"
 
-sed -i 's/\r$//' $workdir/compressed_tensors_w8a8_int8_patch.patch
-apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py" "$workdir/compressed_tensors_w8a8_int8_patch.patch"
+sed -i 's/\r$//' $workdir/config.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/config.py" "$workdir/config.patch"
+
+sed -i 's/\r$//' $workdir/loader.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/model_loader/loader.py" "$workdir/loader.patch"
+
+sed -i 's/\r$//' $workdir/platform.patch
+apply_patch "/usr/local/lib/python3.10/dist-packages/vllm_ascend/platform.py" "$workdir/platform.patch"
+
+sed -i 's/\r$//' $workdir/weight_utils.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/model_loader/weight_utils.py" "$workdir/weight_utils.patch"
+
+sed -i 's/\r$//' $workdir/kv_cache.patch
+apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/kv_cache.py" "$workdir/kv_cache.patch"
+
+sed -i 's/\r$//' $workdir/mindie_turbo_attention.patch
+apply_patch "/usr/local/lib/python3.10/dist-packages/mindie_turbo/adaptor/vllm/attention.py" "$workdir/mindie_turbo_attention.patch"
+
+

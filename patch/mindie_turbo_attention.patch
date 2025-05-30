@@ -1,0 +1,11 @@
+--- /usr/local/lib/python3.10/dist-packages/mindie_turbo/adaptor/vllm/attention.py	2025-05-26 16:41:41.000000000 +0000
++++ mindie_turbo_attention.py	2025-05-27 12:30:25.000000000 +0000
+@@ -338,7 +338,7 @@
+             self.key_cache, self.value_cache = kv_cache[0], kv_cache[1]
+         slots = attn_metadata.slot_mapping
+ 
+-    if hasattr(layer, "quant_method"):
++    if hasattr(layer, "quant_method") and False:
+         output = attention_quant_method(
+             layer,
+             query,

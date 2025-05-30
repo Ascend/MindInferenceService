@@ -1,6 +1,6 @@
---- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py	2025-04-02 11:34:13.000000000 +0000
-+++ /opt/mis/mis/patch/compressed_tensors_w8a8_int8_patch.py	2025-04-02 11:54:50.502816041 +0000
-@@ -1,6 +1,8 @@
+--- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/compressed_tensors/schemes/compressed_tensors_w8a8_int8.py	2025-05-26 16:39:18.000000000 +0000
++++ compressed_tensors_w8a8_int8.py	2025-05-28 11:44:04.000000000 +0000
+@@ -3,6 +3,8 @@
  from typing import Callable, List, Optional, Set
  
  import torch
@@ -9,7 +9,7 @@
  from compressed_tensors.quantization import QuantizationStrategy
  
  from vllm.logger import init_logger
-@@ -12,6 +14,7 @@
+@@ -14,6 +16,7 @@
                                             ChannelQuantScaleParameter,
                                             ModelWeightParameter,
                                             PerTensorScaleParameter)
@@ -17,7 +17,7 @@
  
  logger = init_logger(__name__)
  
-@@ -24,31 +27,48 @@
+@@ -26,31 +29,48 @@
          self.strategy = strategy
          self.is_static_input_scheme = is_static_input_scheme
          self.input_symmetric = input_symmetric
@@ -43,13 +43,13 @@
 +        if bias is not None and not isinstance(bias, torch.Tensor):
 +            logger.error("bias must be an instance of torch.Tensor")
 +            raise TypeError("bias must be an instance of torch.Tensor")
-+
++   
 +        act_dtype = x.dtype
-+        ori_shape = x.shape
++        ori_shape = x.shape 
 +        x = x.view(-1, x.shape[-1])
-+
++   
 +        x, pertoken_scale = torch_npu.npu_dynamic_quant(x)
-+
++   
 +        output = torch_npu.npu_quant_matmul(x, layer.weight, layer.weight_scale.view(-1), offset=None,
 +                                            pertoken_scale=pertoken_scale.view(-1), bias=None, output_dtype=act_dtype)
 +        output = output if len(ori_shape) == 2 else output.view(ori_shape[0], ori_shape[1], output.shape[-1])
@@ -80,7 +80,7 @@
  
          # WEIGHT
          weight = ModelWeightParameter(data=torch.empty(
-@@ -65,44 +85,37 @@
+@@ -67,44 +87,41 @@
          if self.strategy == QuantizationStrategy.CHANNEL:
              weight_scale = ChannelQuantScaleParameter(
                  data=torch.empty((sum(output_partition_sizes), 1),
@@ -92,6 +92,7 @@
              assert self.strategy == QuantizationStrategy.TENSOR
              weight_scale = PerTensorScaleParameter(data=torch.empty(
 -                len(output_partition_sizes), dtype=torch.float32),
++                len(output_partition_sizes), 
 +                len(output_partition_sizes),
 +                dtype=torch.float32 if params_dtype == torch.float16 else torch.bfloat16),
                                                     weight_loader=weight_loader)
@@ -121,14 +122,10 @@
 -                                  i_zp_param_name="input_zero_point",
 -                                  azp_adj_param_name="azp_adj")
 -
--    # Checkpoints are serialized in compressed-tensors format, which is
--    # different from the format the kernel may want. Handle repacking here.
+     # Checkpoints are serialized in compressed-tensors format, which is
+     # different from the format the kernel may want. Handle repacking here.
      def process_weights_after_loading(self, layer: torch.nn.Module) -> None:
 -        self.kernel.process_weights_after_loading(layer)
- 
--    def apply_weights(self, layer: torch.nn.Module, x: torch.Tensor,
--                      bias: Optional[torch.Tensor]) -> torch.Tensor:
--        return self.kernel.apply_weights(layer, x, bias)
 +        weight = layer.weight
 +        layer.weight = Parameter(weight.t().contiguous(), requires_grad=False)
 +
@@ -143,3 +140,8 @@
 +            layer.input_scale = Parameter(layer.input_scale.max(), requires_grad=False)
 +        else:
 +            layer.input_scale = None
++
+ 
+-    def apply_weights(self, layer: torch.nn.Module, x: torch.Tensor,
+-                      bias: Optional[torch.Tensor]) -> torch.Tensor:
+-        return self.kernel.apply_weights(layer, x, bias)

@@ -141,33 +141,19 @@ async def run_server(args: GlobalArgs):
 
         await init_app_state(engine_client, model_config, app, args)
 
-        if constants.MIS_VLM_ENABLE:
-            shutdown_task = await serve_http(
-                app,
-                host=args.host,
-                port=args.port,
-                sock=sock,
-                log_level=args.uvicorn_log_level,
-                timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
-                ssl_keyfile=args.ssl_keyfile,
-                ssl_certfile=args.ssl_certfile,
-                ssl_ca_certs=args.ssl_ca_certs,
-                ssl_cert_reqs=args.ssl_cert_reqs,
-                fd=sock.fileno() if sys.platform.startswith("darwin") else None
-            )
-        else:
-            shutdown_task = await serve_http(
-                app,
-                host=args.host,
-                port=args.port,
-                log_level=args.uvicorn_log_level,
-                timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
-                ssl_keyfile=args.ssl_keyfile,
-                ssl_certfile=args.ssl_certfile,
-                ssl_ca_certs=args.ssl_ca_certs,
-                ssl_cert_reqs=args.ssl_cert_reqs,
-                fd=sock.fileno() if sys.platform.startswith("darwin") else None
-            )
+        shutdown_task = await serve_http(
+            app,
+            host=args.host,
+            port=args.port,
+            sock=sock,
+            log_level=args.uvicorn_log_level,
+            timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
+            ssl_keyfile=args.ssl_keyfile,
+            ssl_certfile=args.ssl_certfile,
+            ssl_ca_certs=args.ssl_ca_certs,
+            ssl_cert_reqs=args.ssl_cert_reqs,
+            fd=sock.fileno() if sys.platform.startswith("darwin") else None
+        )
 
     await shutdown_task
 

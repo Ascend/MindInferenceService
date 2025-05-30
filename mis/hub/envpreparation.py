@@ -120,29 +120,17 @@ mindie_envs = {
     # mindie-service日志
     "MINDIE_LOG_TO_STDOUT": "0",
     "MINDIE_LOG_TO_FILE": "0",
+    "MINDIE_LOG_VERBOSE": "0",
     # 运行时日志
     "ASCEND_SLOG_PRINT_TO_STDOUT": "0",
     "ASCEND_GLOBAL_LOG_LEVEL": "3",
     "ASCEND_GLOBAL_EVENT_ENABLE": "0",
     # 加速库日志
-    "ATB_LOG_TO_FILE": "0",
     "ATB_LOG_TO_FILE_FLUSH": "3",
-    "ATB_LOG_TO_STDOUT": "0",
-    "ATB_LOG_LEVEL": "ERROR",
-    # OCK后处理日志
-    "OCK_LOG_LEVEL": "ERROR",
-    "OCK_LOG_TO_STDOUT": "0",
 
     "MINDIE_LLM_HOME_PATH": mindie_llm_path,
-    "MINDIE_LLM_PYTHON_LOG_LEVEL": "ERROR",
-    "MINDIE_LLM_PYTHON_LOG_TO_STDOUT": "0",
-    "MINDIE_LLM_PYTHON_LOG_TO_FILE": "0",
-    "MINDIE_LLM_PYTHON_LOG_PATH": f"{mindie_llm_path}/logs",
     "MINDIE_LLM_CONTINUOUS_BATCHING": "1",
     "MINDIE_LLM_RECOMPUTE_THRESHOLD": "0.5",
-    "MINDIE_LLM_LOG_LEVEL": "ERROR",
-    "MINDIE_LLM_LOG_TO_STDOUT": "0",
-    "MINDIE_LLM_LOG_TO_FILE": "0",
 }
 
 mindie_atb_envs = {
