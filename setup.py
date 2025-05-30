@@ -73,6 +73,7 @@ setup(
         "console_scripts": [
             "mis_run=mis.run:main",
             "mis_launcher=mis.llm.entrypoints.launcher:main",
+            "mis_download=mis.download:main",
             "mis_tei=mis.emb.entrypoints.tei.launcher:main",
             "mis_clip=mis.emb.entrypoints.clip.launcher:main"
         ]
