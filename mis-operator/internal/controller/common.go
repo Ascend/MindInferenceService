@@ -33,3 +33,27 @@ const (
 	// MISModelLabelPartOf indicate label set to app.kubernetes.io/part-of
 	MISModelLabelPartOf = "mis-model"
 )
+
+const (
+	// MISServiceFinalizer indicates if misservice can be deleted
+	MISServiceFinalizer = "finalizer.misservice.apps.ascend.com"
+	// MISServicePortName indicates mis service‘s port name
+	MISServicePortName = "service-port"
+
+	// MISServiceAcjobNameSuffixLen indicates acjob‘s random suffix length
+	MISServiceAcjobNameSuffixLen = 8
+	// MISServiceAcjobMaster indicates acjob‘s master replicas name
+	MISServiceAcjobMaster = "Master"
+	// MISServiceAcjobWorker indicates acjob‘s worker replicas name
+	MISServiceAcjobWorker = "Worker"
+	// MISServiceAcjobPortName indicates acjob‘s port name
+	MISServiceAcjobPortName = "ascendjob-port"
+	// MISServiceAcjobContainerName indicates acjob‘s container name
+	MISServiceAcjobContainerName = "ascend"
+
+	// MISServicePodGracePeriodSeconds indicates pod survival time before killed by k8s
+	MISServicePodGracePeriodSeconds = 5 * 60
+
+	// MISServiceLabelPartOf indicate label set to app.kubernetes.io/part-of
+	MISServiceLabelPartOf = "mis-service"
+)

@@ -15,6 +15,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -49,6 +50,7 @@ var (
 func init() {
 	utilruntime.Must(scheme.AddToScheme(setupScheme))
 
+	utilruntime.Must(v1.AddToScheme(setupScheme))
 	utilruntime.Must(alphav1.AddToScheme(setupScheme))
 }
 
