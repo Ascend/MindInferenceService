@@ -86,7 +86,7 @@ CHECKER_VLLM = {
     },
     "enable_prefix_caching": {
         "type": "bool",
-        "valid_values": [False]
+        "valid_values": [True, False]
     },
     "disable_async_output_proc": {
         "type": "bool",
@@ -279,6 +279,16 @@ class ConfigParser:
 
         self.args.model = engine_optimization_config.get("model")
         self.args.engine_type = engine_type_selected
+
+        model_type = engine_optimization_config.get("model_type")
+        if model_type is not None and model_type == "VLM":
+            self.args.engine_optimization_config["allowed_local_media_path"] = self.args.allowed_local_media_path
+            self.args.engine_optimization_config["limit_mm_per_prompt"] = {
+                "image": self.args.limit_image_per_prompt,
+                "video": self.args.limit_video_per_prompt,
+                "audio": self.args.limit_audio_per_prompt
+            }
+
         return self.args
 
     def _is_config_valid(self, config: Dict) -> bool:

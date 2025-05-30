@@ -76,6 +76,18 @@ class MindIEServiceEngine(EngineClient):
     def dead_error(self) -> BaseException:
         return Exception("MindIEServiceEngine dead")
 
+    def get_vllm_config(self):
+        pass
+
+    def is_sleeping(self):
+        pass
+
+    def sleep(self):
+        pass
+
+    def wake_up(self):
+        pass
+
     def is_service_running(self):
         if self.process and not self.process.poll():
             return True
@@ -119,12 +131,6 @@ class MindIEServiceEngine(EngineClient):
     def generate_config(self):
         config = {
             "Version": "1.0.0",
-            "LogConfig": {
-                "logLevel": LOG_LEVEL_MAP[envs.MIS_LOG_LEVEL],
-                "logFileSize": 20,
-                "logFileNum": 20,
-                "logPath": "logs/mindie-server.log"
-            },
             "ServerConfig": self.generate_server_config(),
             "BackendConfig": self.generate_backend_config(),
         }
@@ -173,6 +179,9 @@ class MindIEServiceEngine(EngineClient):
             "interCommTlsCrlFiles": ["server_crl.pem"],
 
             "openAiSupport": "vllm",
+            "tokenTimeout": 600,
+            "e2eTimeout": 600,
+            "distDPServerEnabled": False
         }
 
     def generate_backend_config(self):
@@ -204,7 +213,10 @@ class MindIEServiceEngine(EngineClient):
                                  "cpuMemSize": 5,
                                  "npuMemSize": -1,
                                  "backendType": "atb",
-                                 "trustRemoteCode": False}]
+                                 "trustRemoteCode": False,
+                                 "plugin_params": "{\"plugin_type\":\"prefix_cache\"}"
+                                 if getattr(self.mindie_args.vllm_config.cache_config,
+                                            "enable_prefix_caching", None) else "{\"plugin_type\":\"\"}", }]
             },
             "ScheduleConfig": {
                 "templateType": "Standard",
@@ -213,8 +225,7 @@ class MindIEServiceEngine(EngineClient):
                 "maxPrefillBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs // 2,
                 "maxPrefillTokens": self.mindie_args.vllm_config.scheduler_config.max_num_batched_tokens,
                 "prefillTimeMsPerReq": 150,
-                "prefillPolicyType":
-                    2 if self.mindie_args.vllm_config.scheduler_config.policy == "priority" else 0,
+                "prefillPolicyType": 2 if self.mindie_args.vllm_config.scheduler_config.policy == "priority" else 0,
 
                 "decodeTimeMsPerReq": 50,
                 "decodePolicyType": 0,

@@ -12,6 +12,7 @@ vllm:
   swap_space: 8
   cpu_offload_gb: 0
   scheduling_policy: fcfs
+  enable_prefix_caching: true
   enforce_eager: true
 engine_type: vllm
 model: MindSDK/Qwen3-32B

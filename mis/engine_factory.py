@@ -44,25 +44,11 @@ class VLLMEngine:
     @staticmethod
     def from_args(args: GlobalArgs):
         from mis.llm.engines.vllm.engine import AsyncEngineArgs, AsyncLLMEngine
-
-        if constants.MIS_VLM_ENABLE:
-            engine_args = AsyncEngineArgs(model=args.model,
-                                          served_model_name=args.served_model_name,
-                                          disable_log_stats=args.disable_log_stats,
-                                          disable_log_requests=args.disable_log_requests,
-                                          allowed_local_media_path=args.allowed_local_media_path,
-                                          limit_mm_per_prompt={
-                                              "image": args.limit_image_per_prompt,
-                                              "video": args.limit_video_per_prompt,
-                                              "audio": args.limit_audio_per_prompt
-                                          },
-                                          **args.engine_optimization_config)
-        else:
-            engine_args = AsyncEngineArgs(model=args.model,
-                                          served_model_name=args.served_model_name,
-                                          disable_log_stats=args.disable_log_stats,
-                                          disable_log_requests=args.disable_log_requests,
-                                          **args.engine_optimization_config)
+        engine_args = AsyncEngineArgs(model=args.model,
+                                      served_model_name=args.served_model_name,
+                                      disable_log_stats=args.disable_log_stats,
+                                      disable_log_requests=args.disable_log_requests,
+                                      **args.engine_optimization_config)
 
         engine_config = engine_args.create_engine_config()
 
@@ -82,14 +68,7 @@ class VLLMEngine:
                     vllm_config=engine_config
                 ),
             }
-
-        if constants.MIS_VLM_ENABLE:
-            return AsyncLLMEngine.from_engine_args(engine_args,
-                                                   stat_loggers=stat_loggers)
-        else:
-            return AsyncLLMEngine.from_engine_args(engine_args,
-                                                   engine_config=engine_config,
-                                                   stat_loggers=stat_loggers)
+        return AsyncLLMEngine.from_engine_args(engine_args, stat_loggers=stat_loggers)
 
 
 class MindIESvcEngine:

@@ -1,19 +1,16 @@
---- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/__init__.py	2025-04-02 11:34:13.000000000 +0000
-+++ /opt/mis/mis/patch/quantization_init_patch.py	2025-04-02 11:54:50.490815996 +0000
-@@ -1,8 +1,11 @@
- from typing import Dict, List, Type
+--- /opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/__init__.py	2025-05-26 16:39:18.000000000 +0000
++++ __init__.py	2025-05-26 14:25:21.728000000 +0000
+@@ -4,6 +4,9 @@
  
-+from vllm.logger import init_logger
  from vllm.model_executor.layers.quantization.base_config import (
      QuantizationConfig)
- 
-+logger = init_logger(__name__)
++from vllm.logger import init_logger
 +
- QUANTIZATION_METHODS: List[str] = [
++logger = init_logger(__name__)
+ 
+ QuantizationMethods = Literal[
      "aqlm",
-     "awq",
-@@ -57,9 +60,10 @@
-     """  # noqa: E501
+@@ -64,8 +67,9 @@
  
      def _wrapper(quant_config_cls):
          if quantization in QUANTIZATION_METHODS:
@@ -25,3 +22,10 @@
          if not issubclass(quant_config_cls, QuantizationConfig):
              raise ValueError("The quantization config must be a subclass of "
                               "`QuantizationConfig`.")
+@@ -150,4 +154,4 @@
+     "QuantizationMethods",
+     "get_quantization_config",
+     "QUANTIZATION_METHODS",
+-]
+\ No newline at end of file
++]
