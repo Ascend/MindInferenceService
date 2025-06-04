@@ -5,10 +5,17 @@ Copyright 2025 Huawei Technologies Co., Ltd.
 package controller
 
 import (
+	"time"
+
 	"github.com/pkg/errors"
+	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"ascend.com/mis-operator/api/apps/alphav1"
 )
 
 // ReplicaStatus indicates acjob status seperated by Master or Worker
@@ -38,15 +45,70 @@ func getAcjobListObject() unstructured.UnstructuredList {
 	return acjobList
 }
 
-func getAcjobCompletionTime(acjob *unstructured.Unstructured) (string, error) {
-	completionTime, found, err := unstructured.NestedString(acjob.Object, "status", "completionTime")
+func constructAcjobLabelsFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
+	switch serverInfo.ServerType {
+	case alphav1.ServerTypeAtlas800IA2:
+		return map[string]string{
+			"framework":             "pytorch",
+			"ring-controller.atlas": "ascend-910b",
+		}
+	default:
+		return map[string]string{}
+	}
+}
+
+func constructAcjobSelectorLabelsFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
+	switch serverInfo.ServerType {
+	case alphav1.ServerTypeAtlas800IA2:
+		return map[string]string{
+			"ring-controller.atlas": "ascend-910b",
+		}
+	default:
+		return map[string]string{}
+	}
+}
+
+func constructAcjobNodeSelectorFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
+	switch serverInfo.ServerType {
+	case alphav1.ServerTypeAtlas800IA2:
+		return map[string]string{
+			"host-arch":        "huawei-arm",
+			"accelerator-type": "module-910b-8",
+		}
+	default:
+		return map[string]string{}
+	}
+}
+
+func constructAcjobResourceFromServerInfo(serverInfo *alphav1.MISServerInfo) v1.ResourceRequirements {
+	switch serverInfo.ServerType {
+	case alphav1.ServerTypeAtlas800IA2:
+		return v1.ResourceRequirements{
+			Requests: map[v1.ResourceName]resource.Quantity{
+				"huawei.com/Ascend910": serverInfo.CardNum,
+			},
+			Limits: map[v1.ResourceName]resource.Quantity{
+				"huawei.com/Ascend910": serverInfo.CardNum,
+			},
+		}
+	default:
+		return v1.ResourceRequirements{}
+	}
+}
+
+func getAcjobCompletionTime(acjob *unstructured.Unstructured) (metav1.Time, error) {
+	completionTimeStr, found, err := unstructured.NestedString(acjob.Object, "status", "completionTime")
 	if err != nil {
-		return "", errors.Wrap(err, "Unable to solve ascendjob.status.completionTime in string")
+		return metav1.Time{}, errors.Wrap(err, "Unable to solve ascendjob.status.completionTime in string")
 	}
 	if !found {
-		return "", nil
+		return metav1.Time{}, nil
 	}
-	return completionTime, nil
+	completionTime, err := time.Parse(time.RFC3339, completionTimeStr)
+	if err != nil {
+		return metav1.Time{}, errors.Wrap(err, "Unable to transform ascendjob.status.completionTime to v1.Time")
+	}
+	return metav1.NewTime(completionTime), nil
 }
 
 func getAcjobReplicaStatuses(acjob *unstructured.Unstructured) (map[string]ReplicaStatus, error) {

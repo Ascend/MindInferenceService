@@ -14,7 +14,9 @@ import (
 	"k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -70,9 +72,11 @@ func (r *MISServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	misService := &alphav1.MISService{}
 	if err := r.Get(ctx, req.NamespacedName, misService); err != nil {
 		if client.IgnoreNotFound(err) != nil {
-			logger.Error(err, "Unable to fetch misService")
+			logger.Error(err, "Unable to fetch MISService")
 			return ctrl.Result{}, err
 		}
+
+		logger.Info("MISService not exist, reconcile exit")
 		return ctrl.Result{}, nil
 	}
 
@@ -126,7 +130,7 @@ func (r *MISServiceReconciler) reconcileMISService(
 		logger.Error(err, "Unable to check MISModel status")
 		return ctrl.Result{}, err
 	} else if requeue {
-		return ctrl.Result{RequeueAfter: time.Minute}, err
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	if err := r.reconcileService(ctx, misService); err != nil {
@@ -148,15 +152,15 @@ func (r *MISServiceReconciler) reconcileMISService(
 		logger.Error(err, "Error occur while reconcile acjob")
 		return ctrl.Result{}, err
 	} else if requeue {
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	return ctrl.Result{}, nil
 }
 
-func (r *MISServiceReconciler) checkMISModel(
-	ctx context.Context, misService *alphav1.MISService) (requeue bool, err error) {
-
+// return requeue and err.
+// requeue means MISModel is not ready, controller need check again after one minute
+func (r *MISServiceReconciler) checkMISModel(ctx context.Context, misService *alphav1.MISService) (bool, error) {
 	misModel := alphav1.MISModel{}
 	namespaceName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.Spec.MISModel}
 	if err := r.Get(ctx, namespaceName, &misModel); err != nil {
@@ -167,44 +171,284 @@ func (r *MISServiceReconciler) checkMISModel(
 	}
 
 	if misModel.Status.State != alphav1.MISModelStateReady {
-		meta.SetStatusCondition(&misService.Status.Conditions, metav1.Condition{
-			Type:    alphav1.MISServiceConditionModelReady,
-			Status:  metav1.ConditionFalse,
-			Reason:  "ModelPending",
-			Message: "MISModel is not ready",
-		})
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionModelReady,
+			"ModelPending", "MISModel is not ready")
 		return true, nil
 	}
 
 	misService.Status.State = alphav1.MISServiceStateModelReady
 	misService.Status.Model = misModel.Status.Model
 	misService.Status.PVC = misModel.Status.PVC
+	misService.Status.MISServerInfo = misModel.Status.MISServerInfo
 	misService.Status.Envs = misModel.Spec.Envs
 	misService.Status.Image = misModel.Spec.Image
 	misService.Status.ImagePullSecret = misModel.Spec.ImagePullSecret
-	meta.SetStatusCondition(&misService.Status.Conditions, metav1.Condition{
-		Type:    alphav1.MISServiceConditionModelReady,
-		Status:  metav1.ConditionTrue,
-		Reason:  "ModelReady",
-		Message: "MISModel is ready",
-	})
+	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionModelReady,
+		"ModelReady", "MISModel is ready")
 	return false, nil
 }
 
 func (r *MISServiceReconciler) reconcileService(ctx context.Context, misService *alphav1.MISService) error {
+	logger := log.FromContext(ctx)
+
+	service := v1.Service{}
+	namespacedName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.Spec.ServiceSpec.Name}
+	if err := r.Get(ctx, namespacedName, &service); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return errors.Wrap(err, "Unable to fetch Service")
+		}
+		if err := r.constructService(misService, &service); err != nil {
+			return errors.Wrap(err, "Unable to construct service")
+		}
+		if err := r.Create(ctx, &service); err != nil {
+			return errors.Wrap(err, "Unable to create service")
+		}
+		logger.Info("Create service succeeded")
+		r.recorder.Event(misService, v1.EventTypeNormal, "ServiceCreate", "Create service succeeded")
+	}
+
+	misService.Status.State = alphav1.MISServiceStateServiceCreated
+	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionServiceCreated,
+		"ServiceCreated", "service is created")
+
+	return nil
+}
+
+func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, service *v1.Service) error {
+	*service = v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:   misService.Namespace,
+			Name:        misService.Spec.ServiceSpec.Name,
+			Labels:      r.getStandardLabels(misService),
+			Annotations: misService.Spec.ServiceSpec.Annotations,
+		},
+		Spec: v1.ServiceSpec{
+			Ports: []v1.ServicePort{
+				{
+					Name: MISServicePortName,
+					Port: misService.Spec.ServiceSpec.Port,
+				},
+			},
+			Selector: r.getStandardSelectorLabels(misService),
+			Type:     misService.Spec.ServiceSpec.Type,
+		},
+	}
+	if err := ctrl.SetControllerReference(misService, service, r.Scheme); err != nil {
+		return errors.Wrap(err, "Unable to set controller ref to service")
+	}
 	return nil
 }
 
 func (r *MISServiceReconciler) reconcileServiceMonitor(ctx context.Context, misService *alphav1.MISService) error {
+	if misService.Spec.HPA == nil {
+		return nil
+	}
+
+	logger := log.FromContext(ctx)
+
+	var serviceMonitor monitorv1.ServiceMonitor
+	namespacedName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.GetServiceMonitorName()}
+	if err := r.Get(ctx, namespacedName, &serviceMonitor); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return errors.Wrap(err, "Unable to fetch ServiceMonitor")
+		}
+		if err := r.constructServiceMonitor(misService, &serviceMonitor); err != nil {
+			return errors.Wrap(err, "Unable to construct ServiceMonitor")
+		}
+		if err := r.Create(ctx, &serviceMonitor); err != nil {
+			return errors.Wrap(err, "Unable to create ServiceMonitor")
+		}
+		logger.Info("Create service monitor succeeded")
+		r.recorder.Event(misService, v1.EventTypeNormal, "ServiceMonitorCreate", "Create service monitor succeeded")
+	}
+
+	misService.Status.State = alphav1.MISServiceStateServiceMonitorCreated
+	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionServiceMonitorCreated,
+		"ServiceMonitorCreated", "service monitor is created")
+
+	return nil
+}
+
+func (r *MISServiceReconciler) constructServiceMonitor(
+	misService *alphav1.MISService, monitor *monitorv1.ServiceMonitor) error {
+	*monitor = monitorv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: misService.Namespace,
+			Name:      misService.GetServiceMonitorName(),
+			Labels:    r.getStandardLabels(misService),
+		},
+		Spec: monitorv1.ServiceMonitorSpec{
+			Endpoints: []monitorv1.Endpoint{
+				{
+					Port: MISServicePortName,
+					Path: MISServiceAcjobMetricsUrl,
+				},
+			},
+			NamespaceSelector: monitorv1.NamespaceSelector{
+				MatchNames: []string{
+					misService.Namespace,
+				},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: r.getStandardLabels(misService),
+			},
+		},
+	}
+	if err := ctrl.SetControllerReference(misService, monitor, r.Scheme); err != nil {
+		return errors.Wrap(err, "Unable to set controller ref for ServiceMonitor")
+	}
 	return nil
 }
 
 func (r *MISServiceReconciler) reconcileHPA(ctx context.Context, misService *alphav1.MISService) error {
+	if misService.Spec.HPA == nil {
+		return nil
+	}
+
+	logger := log.FromContext(ctx)
+
+	hpa := v2beta2.HorizontalPodAutoscaler{}
+	namespacedName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.GetHPAName()}
+	if err := r.Get(ctx, namespacedName, &hpa); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return errors.Wrap(err, "Unable to fetch hpa")
+		}
+		if err := r.constructHPA(ctx, misService, &hpa); err != nil {
+			return errors.Wrap(err, "Unable to construct hpa")
+		}
+		if err := r.Create(ctx, &hpa); err != nil {
+			return errors.Wrap(err, "Unable to create hpa")
+		}
+		logger.Info("Create HPA succeeded")
+		r.recorder.Event(misService, v1.EventTypeNormal, "HPACreate", "Create HPA succeeded")
+	}
+
+	misService.Status.State = alphav1.MISServiceStateHPACreated
+	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionHPACreated,
+		"HPACreated", "hpa is created")
+
 	return nil
 }
 
+func (r *MISServiceReconciler) constructHPA(
+	ctx context.Context, misService *alphav1.MISService, hpa *v2beta2.HorizontalPodAutoscaler) error {
+	*hpa = v2beta2.HorizontalPodAutoscaler{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: misService.Namespace,
+			Name:      misService.GetHPAName(),
+			Labels:    r.getStandardLabels(misService),
+		},
+		Spec: v2beta2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: v2beta2.CrossVersionObjectReference{
+				Kind:       misService.Kind,
+				Name:       misService.Name,
+				APIVersion: misService.APIVersion,
+			},
+			MinReplicas: &misService.Spec.HPA.MinReplicas,
+			MaxReplicas: misService.Spec.HPA.MaxReplicas,
+			Metrics:     r.resolveMetrics(ctx, misService),
+			Behavior:    misService.Spec.HPA.Behavior,
+		},
+	}
+	if err := ctrl.SetControllerReference(misService, hpa, r.Scheme); err != nil {
+		return errors.Wrap(err, "Unable to set controller ref to hpa")
+	}
+	return nil
+}
+
+func (r *MISServiceReconciler) resolveMetrics(
+	ctx context.Context, misService *alphav1.MISService) []v2beta2.MetricSpec {
+	logger := log.FromContext(ctx)
+
+	var metricSpecs []v2beta2.MetricSpec
+
+	for _, metric := range *misService.Spec.HPA.Metrics {
+		metricSpec, err := r.getMetricSpecFromMetric(metric)
+		if err != nil {
+			logger.Error(err, "Receive unsupported MetricsType")
+			continue
+		}
+		metricSpecs = append(metricSpecs, metricSpec)
+	}
+
+	return metricSpecs
+}
+
+func (r *MISServiceReconciler) getMetricSpecFromMetric(metric alphav1.Metric) (v2beta2.MetricSpec, error) {
+
+	value, err := resource.ParseQuantity(metric.Threshold)
+	if err != nil {
+		value = resource.MustParse("0")
+	}
+
+	metricSpec := v2beta2.MetricSpec{
+		Type: v2beta2.PodsMetricSourceType,
+		Pods: &v2beta2.PodsMetricSource{
+			Target: v2beta2.MetricTarget{
+				Type:         v2beta2.AverageValueMetricType,
+				AverageValue: &value,
+			},
+		},
+	}
+
+	switch metric.Type {
+	case alphav1.MetricsTypeRequestRate:
+		metricSpec.Pods.Metric.Name = "http_requests_per_second"
+	case alphav1.MetricsTypeWaitRequest:
+		metricSpec.Pods.Metric.Name = "http_requests_wait_num"
+	case alphav1.MetricsTypeCpuKVCacheUtilization:
+		metricSpec.Pods.Metric.Name = "kv_cache_utilization_cpu"
+	case alphav1.MetricsTypeAccKVCacheUtilization:
+		metricSpec.Pods.Metric.Name = "kv_cache_utilization_accelerator"
+	default:
+		return metricSpec, errors.New("metric type is not allowed")
+	}
+
+	return metricSpec, nil
+}
+
+// return requeue and err.
+// requeue mean acjob is inconsistent with target state, controller need reconcile after one minute.
 func (r *MISServiceReconciler) reconcileAcJob(ctx context.Context, misService *alphav1.MISService) (bool, error) {
 	return false, nil
+}
+
+func (r *MISServiceReconciler) updateMISServiceStatusUtil(
+	misService *alphav1.MISService, status metav1.ConditionStatus, t, reason, message string) {
+	meta.SetStatusCondition(&misService.Status.Conditions, metav1.Condition{
+		Type: t, Status: status, Reason: reason, Message: message,
+	})
+}
+
+func (r *MISServiceReconciler) queryAcjobList(
+	ctx context.Context, misService *alphav1.MISService, acjobList *unstructured.UnstructuredList) error {
+	if err := r.List(
+		ctx, acjobList,
+		client.InNamespace(misService.Namespace),
+		client.MatchingLabels(r.getStandardLabels(misService)),
+	); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return errors.Wrap(err, "Unable to fetch acjob list")
+		}
+	}
+
+	return nil
+}
+
+func (r *MISServiceReconciler) deleteAcjob(
+	ctx context.Context, misService *alphav1.MISService, acjob *unstructured.Unstructured) error {
+
+	logger := log.FromContext(ctx)
+
+	if err := r.Delete(ctx, acjob); err != nil {
+		return errors.Wrap(err, "Unable to delete Acjob")
+	}
+
+	logger.Info(fmt.Sprintf("Delete acjob: %s succeeded", acjob.GetName()))
+	r.recorder.Eventf(misService, v1.EventTypeNormal, "DeleteAcjob",
+		"Delete acjob: %s succeeded", acjob.GetName())
+
+	return nil
 }
 
 func (r *MISServiceReconciler) updateMISServiceStatus(ctx context.Context, misService *alphav1.MISService) error {

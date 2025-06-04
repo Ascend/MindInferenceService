@@ -40,8 +40,9 @@ type MISModelStatus struct {
 	State      string             `json:"state,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" 
 protobuf:"bytes,1,rep,name=conditions"`
-	Model string `json:"model,omitempty"`
-	PVC   string `json:"pvc,omitempty"`
+	Model         string        `json:"model,omitempty"`
+	PVC           string        `json:"pvc,omitempty"`
+	MISServerInfo MISServerInfo `json:"serverInfo,omitempty"`
 }
 
 // +kubebuilder:object:root=true
