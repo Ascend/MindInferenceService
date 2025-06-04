@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/api/autoscaling/v2beta2"
@@ -410,6 +411,343 @@ func (r *MISServiceReconciler) getMetricSpecFromMetric(metric alphav1.Metric) (v
 // return requeue and err.
 // requeue mean acjob is inconsistent with target state, controller need reconcile after one minute.
 func (r *MISServiceReconciler) reconcileAcJob(ctx context.Context, misService *alphav1.MISService) (bool, error) {
+
+	acjobList := getAcjobListObject()
+	if err := r.queryAcjobList(ctx, misService, &acjobList); err != nil {
+		return false, err
+	}
+
+	if err := r.checkAcJobList(ctx, misService, &acjobList); err != nil {
+		return false, errors.Wrap(err, "Check acjob list failed")
+	}
+
+	if query, err := r.scaleAcjobList(ctx, misService, &acjobList); err != nil {
+		return false, errors.Wrap(err, "Scale acjob failed")
+	} else if query {
+		if err := r.queryAcjobList(ctx, misService, &acjobList); err != nil {
+			return false, err
+		}
+	}
+
+	if requeue, err := r.checkAcjobStatus(misService, &acjobList); err != nil {
+		return false, errors.Wrap(err, "Unable to check acjob status")
+	} else if requeue {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (r *MISServiceReconciler) checkAcJobList(
+	ctx context.Context, misService *alphav1.MISService, acjobList *unstructured.UnstructuredList) error {
+
+	validAcjobItems := acjobList.Items[:0]
+
+	for _, acjob := range acjobList.Items {
+		if completionTime, err := getAcjobCompletionTime(&acjob); err != nil {
+			return errors.Wrap(err, "Unable to process acjob.status.completionTime")
+		} else if !completionTime.IsZero() {
+			if completionTime.Add(MISServiceAcjobDeleteLastTime * time.Second).After(time.Now()) {
+				validAcjobItems = append(validAcjobItems, acjob)
+				continue
+			}
+			err := r.deleteAcjob(ctx, misService, &acjob)
+			if err != nil {
+				return err
+			}
+		} else {
+			validAcjobItems = append(validAcjobItems, acjob)
+		}
+	}
+
+	acjobList.Items = validAcjobItems
+
+	return nil
+}
+
+// return query and err
+// query mean acjob instance changed, need query again to get the latest status
+func (r *MISServiceReconciler) scaleAcjobList(ctx context.Context,
+	misService *alphav1.MISService, acjobList *unstructured.UnstructuredList) (bool, error) {
+	logger := log.FromContext(ctx)
+	currentReplicas := len(acjobList.Items)
+	targetReplicas := misService.Spec.Replicas
+	if targetReplicas > currentReplicas {
+		addNum := targetReplicas - currentReplicas
+		logger.Info(fmt.Sprintf("Scale acjob, %d instance will be add", addNum))
+		for i := 0; i < addNum; i++ {
+			job := getAcjobObject()
+			if err := r.constructAcjob(misService, &job); err != nil {
+				return false, errors.Wrap(err, "Unable to construct Acjob")
+			}
+			if err := r.Create(ctx, &job); err != nil {
+				return false, errors.Wrap(err, "Unable to create Acjob")
+			}
+			logger.Info(fmt.Sprintf("Create %d acjob succeeded", currentReplicas+i))
+			r.recorder.Eventf(misService, v1.EventTypeNormal, "CreateAcjob",
+				"Create %d's acjob succeeded", currentReplicas+i)
+		}
+	} else if targetReplicas < currentReplicas {
+		delNum := currentReplicas - targetReplicas
+		logger.Info(fmt.Sprintf("Scale acjob, %d instance will be del", delNum))
+		var runningAcjobList []*unstructured.Unstructured
+		delCnt := 0
+		// 优先删除进入completions状态的
+		for i := 0; i < currentReplicas && delCnt < delNum; i++ {
+			completionTime, err := getAcjobCompletionTime(&acjobList.Items[i])
+			if err != nil {
+				return false, errors.Wrap(err, "Unable to process acjob.status.completionTime")
+			} else if completionTime.IsZero() {
+				runningAcjobList = append(runningAcjobList, &acjobList.Items[i])
+				continue
+			}
+			if err := r.deleteAcjob(ctx, misService, &acjobList.Items[i]); err != nil {
+				return false, err
+			}
+			delCnt++
+		}
+		// 然后删除正常running的
+		for i := 0; i < len(runningAcjobList) && delCnt < delNum; i++ {
+			if err := r.deleteAcjob(ctx, misService, runningAcjobList[i]); err != nil {
+				return false, err
+			}
+			delCnt++
+		}
+	} else {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (r *MISServiceReconciler) constructAcjob(misService *alphav1.MISService, job *unstructured.Unstructured) error {
+	acjobName := fmt.Sprintf("%s-%s", misService.Name, uuid.New().String()[:MISServiceAcjobNameSuffixLen])
+
+	(*job).Object["metadata"] = map[string]interface{}{
+		"name":      acjobName,
+		"namespace": misService.Namespace,
+		"labels":    r.constructAcjobLabels(misService),
+	}
+
+	(*job).Object["spec"] = map[string]interface{}{
+		"schedulerName": MISServiceAcjobSchedulerName,
+		"runPolicy": map[string]interface{}{
+			"schedulingPolicy": map[string]interface{}{
+				"minAvailable": ptr.To[int32](1),
+				"queue":        "default",
+			},
+		},
+		"successPolicy": MISServiceAcjobSuccessPolicy,
+		"replicaSpecs": map[string]interface{}{
+			MISServiceAcjobMaster: ptr.To(r.constructMasterReplicas(misService)),
+		},
+	}
+
+	if err := ctrl.SetControllerReference(misService, job, r.Scheme); err != nil {
+		return errors.Wrap(err, "Unable to set controller ref to acjob")
+	}
+
+	return nil
+}
+
+func (r *MISServiceReconciler) constructAcjobLabels(misService *alphav1.MISService) map[string]string {
+	labels := r.getStandardLabels(misService)
+	acjobLabels := constructAcjobLabelsFromServerInfo(&misService.Status.MISServerInfo)
+	for key, value := range acjobLabels {
+		labels[key] = value
+	}
+	return labels
+}
+
+func (r *MISServiceReconciler) constructAcjobSelectorLabels(misService *alphav1.MISService) map[string]string {
+	selectorLabels := r.getStandardSelectorLabels(misService)
+	acjobSelectorLabels := constructAcjobSelectorLabelsFromServerInfo(&misService.Status.MISServerInfo)
+	for key, value := range acjobSelectorLabels {
+		selectorLabels[key] = value
+	}
+	return selectorLabels
+}
+
+func (r *MISServiceReconciler) constructMasterReplicas(misService *alphav1.MISService) map[string]interface{} {
+	nodeSelector := constructAcjobNodeSelectorFromServerInfo(&misService.Status.MISServerInfo)
+
+	podSpec := v1.PodSpec{
+		NodeSelector:                  nodeSelector,
+		Containers:                    r.constructMasterContainer(misService),
+		Volumes:                       r.constructVolumes(misService),
+		TerminationGracePeriodSeconds: ptr.To[int64](MISServicePodGracePeriodSeconds),
+		SecurityContext: &v1.PodSecurityContext{
+			RunAsUser:  misService.Spec.UserID,
+			RunAsGroup: misService.Spec.GroupID,
+		},
+	}
+
+	// if ImagePullSecret got from mismodel, then set it to acjob’s running pod
+	if misService.Status.ImagePullSecret != nil && *misService.Status.ImagePullSecret != "" {
+		podSpec.ImagePullSecrets = []v1.LocalObjectReference{
+			{Name: *misService.Status.ImagePullSecret},
+		}
+	}
+
+	masterReplicas := map[string]interface{}{
+		"replicas":      ptr.To[int32](1),
+		"restartPolicy": v1.RestartPolicyNever,
+		"template": v1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: r.constructAcjobSelectorLabels(misService),
+			},
+			Spec: podSpec,
+		},
+	}
+
+	return masterReplicas
+}
+
+func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISService) []v1.Container {
+	return []v1.Container{
+		{
+			Name:  MISServiceAcjobContainerName,
+			Image: misService.Status.Image,
+
+			ImagePullPolicy: v1.PullIfNotPresent,
+			Env:             r.constructMasterEnvs(misService),
+			Ports: []v1.ContainerPort{
+				{
+					ContainerPort: misService.Spec.ServiceSpec.Port,
+					Name:          MISServiceAcjobPortName,
+				},
+			},
+			Resources:      constructAcjobResourceFromServerInfo(&misService.Status.MISServerInfo),
+			VolumeMounts:   r.constructVolumeMounts(),
+			ReadinessProbe: misService.Spec.ReadinessProbe,
+			LivenessProbe:  misService.Spec.LivenessProbe,
+			StartupProbe:   misService.Spec.StartupProbe,
+		},
+	}
+}
+
+func (r *MISServiceReconciler) constructMasterEnvs(misService *alphav1.MISService) []v1.EnvVar {
+	unavailableServiceEnvs := map[string]struct{}{
+		"http_proxy":  {},
+		"https_proxy": {},
+		"HTTP_PROXY":  {},
+		"HTTPS_PROXY": {},
+	}
+
+	envs := []v1.EnvVar{
+		{
+			Name: "XDL_IP",
+			ValueFrom: &v1.EnvVarSource{
+				FieldRef: &v1.ObjectFieldSelector{
+					FieldPath: "status.hostIP",
+				},
+			},
+		},
+	}
+
+	for _, env := range misService.Status.Envs {
+		if _, ok := unavailableServiceEnvs[env.Name]; !ok {
+			envs = append(envs, env)
+		}
+	}
+
+	return envs
+}
+
+func (r *MISServiceReconciler) constructVolumeMounts() []v1.VolumeMount {
+	return []v1.VolumeMount{
+		{
+			Name:      "model",
+			MountPath: MISModelPodMountPath,
+		},
+		{
+			Name:      "dshm",
+			MountPath: "/dev/shm",
+		},
+		{
+			Name:      "localtime",
+			MountPath: "/etc/localtime",
+		},
+	}
+}
+
+func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) []v1.Volume {
+	return []v1.Volume{
+		{
+			Name: "model",
+			VolumeSource: v1.VolumeSource{
+				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
+					ClaimName: misService.Status.PVC,
+				},
+			},
+		},
+		{
+			Name: "dshm",
+			VolumeSource: v1.VolumeSource{
+				EmptyDir: &v1.EmptyDirVolumeSource{
+					Medium: v1.StorageMediumMemory,
+				},
+			},
+		},
+		{
+			Name: "localtime",
+			VolumeSource: v1.VolumeSource{
+				HostPath: &v1.HostPathVolumeSource{
+					Path: "/etc/localtime",
+				},
+			},
+		},
+	}
+}
+
+func (r *MISServiceReconciler) checkAcjobStatus(
+	misService *alphav1.MISService, acjobList *unstructured.UnstructuredList) (requeue bool, err error) {
+	totolNum := len(acjobList.Items)
+	running, failed, pending := 0, 0, 0
+	for _, acjob := range acjobList.Items {
+		replicaStatuses, err := getAcjobReplicaStatuses(&acjob)
+		if err != nil {
+			return false, errors.Wrap(err, "Unable to process acjob.status.replicaStatuses")
+		}
+		masterStatus, ok := replicaStatuses[MISServiceAcjobMaster]
+		if !ok {
+			pending++
+		} else if masterStatus.Active > 0 {
+			running++
+		} else if masterStatus.Failed > 0 {
+			failed++
+		} else {
+			pending++
+		}
+	}
+	if pending > 0 {
+		misService.Status.State = alphav1.MISServiceStateWaiting
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionAcjobReconciling,
+			"AcjobReconciling", "At least one Acjob in waiting")
+	} else {
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionAcjobReconciling,
+			"AcjobNotReconciling", "No Acjob in waiting")
+	}
+	if running > 0 {
+		misService.Status.State = alphav1.MISServiceStateReady
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionAcjobReady,
+			"AcjobReady", "At least one Acjob in running")
+	} else {
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionAcjobReady,
+			"AcjobNotReady", "No Acjob in running")
+	}
+	if failed > 0 {
+		misService.Status.State = alphav1.MISServiceStateFailed
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionAcjobFailed,
+			"AcjobFailed", "At least one Acjob is failed")
+	} else {
+		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionAcjobFailed,
+			"AcjobNotFailed", "No Acjob is failed")
+	}
+	misService.Status.Replicas = running
+	misService.Status.Running = fmt.Sprintf("%d/%d", running, totolNum)
+	if running != misService.Spec.Replicas {
+		return true, nil
+	}
 	return false, nil
 }
 
