@@ -20,9 +20,8 @@ type MISServiceSpec struct {
 	// +kubebuilder:default:=1
 	Replicas int `json:"replicas,omitempty"`
 	// +optional
-	HPA         *HPA                     `json:"hpa,omitempty"`
-	ServiceSpec MISSvcSpec               `json:"serviceSpec,omitempty"`
-	Resources   *v1.ResourceRequirements `json:"resources,omitempty"`
+	HPA         *HPA       `json:"hpa,omitempty"`
+	ServiceSpec MISSvcSpec `json:"serviceSpec,omitempty"`
 	// +optional
 	StartupProbe *v1.Probe `json:"startupProbe,omitempty"`
 	// +optional
@@ -73,14 +72,15 @@ type MISServiceStatus struct {
 	State      string             `json:"state,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" 
 protobuf:"bytes,1,rep,name=conditions"`
-	Replicas        int         `json:"replicas,omitempty"`
-	Selector        string      `json:"selector,omitempty"`
-	Model           string      `json:"model,omitempty"`
-	PVC             string      `json:"pvc,omitempty"`
-	Envs            []v1.EnvVar `json:"envs,omitempty"`
-	Image           string      `json:"image,omitempty"`
-	ImagePullSecret *string     `json:"imagePullSecret,omitempty"`
-	Running         string      `json:"running,omitempty"`
+	Replicas        int           `json:"replicas,omitempty"`
+	Selector        string        `json:"selector,omitempty"`
+	Model           string        `json:"model,omitempty"`
+	PVC             string        `json:"pvc,omitempty"`
+	MISServerInfo   MISServerInfo `json:"serverInfo,omitempty"`
+	Envs            []v1.EnvVar   `json:"envs,omitempty"`
+	Image           string        `json:"image,omitempty"`
+	ImagePullSecret *string       `json:"imagePullSecret,omitempty"`
+	Running         string        `json:"running,omitempty"`
 }
 
 // +kubebuilder:object:root=true

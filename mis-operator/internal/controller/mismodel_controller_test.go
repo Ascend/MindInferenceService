@@ -274,7 +274,8 @@ var _ = Describe("MISModel Controller", func() {
 			testImage = "deepseed-r1-distill-qwen-1.5b:test"
 			testMisConfig = "atlas800ia2-1x32gb-bf16-vllm-default"
 			testProxy = "http://1.2.3.4:3128"
-			testPodLogs = "INFO 05-20 11:49:17 mis_download:8] [MIS Downloader] [model] [DeepSeek-R1-Distill-Qwen-1.5B]"
+			testPodLogs = "INFO 05-20 11:49:17 mis_download:8] [MIS Downloader] [model] [DeepSeek-R1-Distill-Qwen-1.5B]\n" +
+				"INFO 05-20 11:49:17 mis_download:8] [MIS Downloader] [MIS_CONFIG] [atlas800ia2-1x32gb-bf16-vllm-default]"
 			testModelName = "DeepSeek-R1-Distill-Qwen-1.5B"
 
 			misModel = alphav1.MISModel{

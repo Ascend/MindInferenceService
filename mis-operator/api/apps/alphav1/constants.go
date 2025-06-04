@@ -15,9 +15,11 @@ const (
 	MISModelStatePodCreate = "PodCreate"
 	// MISModelStateInProgress indicates download pod is running
 	MISModelStateInProgress = "InProgress"
+	// MISModelStateComplete indicates download pod is complete
+	MISModelStateComplete = "Complete"
 	// MISModelStateFailed indicates download pod failed
 	MISModelStateFailed = "Failed"
-	// MISModelStateReady indicates download pod succeeded
+	// MISModelStateReady indicates MISModel is ready
 	MISModelStateReady = "Ready"
 
 	// MISModelConditionSecretExist indicates if secret exist
@@ -64,6 +66,14 @@ const (
 	MISServiceConditionAcjobReady = "MIS_SVC_ACJOB_READY"
 	// MISServiceConditionAcjobFailed indicate at least one acjob is failed
 	MISServiceConditionAcjobFailed = "MIS_SVC_ACJOB_FAILED"
+)
+
+// ServerType indicates available  server type
+type ServerType string
+
+const (
+	// ServerTypeAtlas800IA2 indicates atlas800ia2 machine
+	ServerTypeAtlas800IA2 ServerType = "atlas800ia2"
 )
 
 // MetricsType indicates available metric type

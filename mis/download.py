@@ -13,6 +13,7 @@ def main():
     if not args.model:
         raise ValueError("MIS Downloader failed to find model name")
     logger.info(f"[MIS Downloader] [model] [{args.model.split('/')[-1]}]")
+    logger.info(f"[MIS Downloader] [MIS_CONFIG] [{args.mis_config}]")
 
 
 if __name__ == "__main__":

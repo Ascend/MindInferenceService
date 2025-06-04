@@ -69,6 +69,8 @@ func (r *MISModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			logger.Error(err, "Unable to fetch MISModel")
 			return ctrl.Result{}, err
 		}
+
+		logger.Info("MISModel not exist, reconcile exit")
 		return ctrl.Result{}, nil
 	}
 
@@ -257,17 +259,33 @@ func (r *MISModelReconciler) reconcilePod(ctx context.Context, misModel *alphav1
 		return false, errors.Wrap(err, "Unable to check download pod status")
 	}
 
-	if misModel.Status.State == alphav1.MISModelStateReady && misModel.Status.Model == "" {
+	if misModel.Status.State != alphav1.MISModelStateComplete {
+		return false, nil
+	}
+
+	if misModel.Status.MISServerInfo.ServerType == "" {
 		if logs, err := utils.GetPodLogs(ctx, pod.Namespace, pod.Name, MISModelPodContainerName); err != nil {
 			return false, errors.Wrap(err, "Unable to get download pod logs")
 		} else {
-			if modelName, err := utils.ExtractModelName(logs); err != nil {
+			modelName, err := utils.ExtractModelName(logs)
+			if err != nil {
 				return false, errors.Wrap(err, "Unable to extract model name from logs")
-			} else {
-				misModel.Status.Model = modelName
 			}
+			misModel.Status.Model = modelName
+
+			misConfig, err := utils.ExtractMISConfig(logs)
+			if err != nil {
+				return false, errors.Wrap(err, "Unable to extract mis_config from logs")
+			}
+			serverInfo, err := utils.ExtractServerInfo(misConfig)
+			if err != nil {
+				return false, errors.Wrap(err, "Unable to resolve server info from mis_config")
+			}
+			misModel.Status.MISServerInfo = serverInfo
 		}
 	}
+
+	misModel.Status.State = alphav1.MISModelStateReady
 
 	return false, nil
 }
@@ -370,7 +388,7 @@ func (r *MISModelReconciler) checkDownloadPod(misModel *alphav1.MISModel, pod *v
 			Message: "Pod is running",
 		})
 	case v1.PodSucceeded:
-		misModel.Status.State = alphav1.MISModelStateReady
+		misModel.Status.State = alphav1.MISModelStateComplete
 		meta.SetStatusCondition(&misModel.Status.Conditions, metav1.Condition{
 			Type:    alphav1.MISModelConditionPodRunning,
 			Status:  metav1.ConditionFalse,

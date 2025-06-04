@@ -50,6 +50,15 @@ const (
 	MISServiceAcjobPortName = "ascendjob-port"
 	// MISServiceAcjobContainerName indicates acjob‘s container name
 	MISServiceAcjobContainerName = "ascend"
+	// MISServiceAcjobDeleteLastTime indicates how long will acjob be deleted after completion
+	MISServiceAcjobDeleteLastTime = 5 * 60
+	// MISServiceAcjobMetricsUrl indicates how to query metrics
+	MISServiceAcjobMetricsUrl = "/v1/metrics"
+
+	// MISServiceAcjobSchedulerName indicate use what to scheduler acjob
+	MISServiceAcjobSchedulerName = "volcano"
+	// MISServiceAcjobSuccessPolicy indicate acjob success policy
+	MISServiceAcjobSuccessPolicy = "AllWorkers"
 
 	// MISServicePodGracePeriodSeconds indicates pod survival time before killed by k8s
 	MISServicePodGracePeriodSeconds = 5 * 60
