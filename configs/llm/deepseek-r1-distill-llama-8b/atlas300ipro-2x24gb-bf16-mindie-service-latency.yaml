@@ -1,0 +1,15 @@
+mindie-service:
+  tensor_parallel_size: 2
+  pipeline_parallel_size: 1
+  max_num_seqs: 256
+  max_model_len: 24576
+  max_num_batched_tokens: 24576
+  max_seq_len_to_capture: 24576
+  gpu_memory_utilization: 0.95
+  block_size: 16
+  swap_space: 4
+  scheduling_policy: priority
+  num_scheduler_steps: 1
+  enable_prefix_caching: true
+engine_type: mindie-service
+model: MindSDK/DeepSeek-R1-Distill-Llama-8B
