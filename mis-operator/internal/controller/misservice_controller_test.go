@@ -7,14 +7,18 @@ package controller
 import (
 	"context"
 
+	"github.com/agiledragon/gomonkey/v2"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"k8s.io/api/autoscaling/v2beta2"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
@@ -290,4 +294,129 @@ var _ = Describe("MISService Controller", func() {
 		})
 	})
 
+	Context("Test reconcile acjob", func() {
+		var (
+			testMISServiceName  string
+			testNamespace       string
+			testReplicas        int
+			testPort            int32
+			testUserId          int64
+			testGroupId         int64
+			testImage           string
+			testImagePullSecret string
+			testPVC             string
+			testProbUrl         string
+			testEnvs            []v1.EnvVar
+
+			testMISService alphav1.MISService
+		)
+
+		BeforeEach(func() {
+			testReplicas = 2
+			testPort = 8000
+			testUserId = 1000
+			testGroupId = 1000
+			testImage = "deepseek-r1-qwen1.5:0.1"
+			testImagePullSecret = "test-secret"
+			testPVC = "test-pvc"
+			testProbUrl = "/openai/v1/models"
+			testEnvs = []v1.EnvVar{
+				{
+					Name:  "MIS_CONFIG",
+					Value: "test-mid-config",
+				}, {
+					Name:  "http_proxy",
+					Value: "http://1.2.3.4:3128",
+				}, {
+					Name:  "https_proxy",
+					Value: "http://1.2.3.4:3128",
+				},
+			}
+
+			testMISService = alphav1.MISService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testMISServiceName,
+					Namespace: testNamespace,
+				},
+				Spec: alphav1.MISServiceSpec{
+					Replicas: testReplicas,
+					ReadinessProbe: &v1.Probe{
+						ProbeHandler: v1.ProbeHandler{
+							HTTPGet: &v1.HTTPGetAction{
+								Path: testProbUrl,
+								Port: intstr.FromInt32(testPort),
+							},
+						},
+					},
+					UserID:  ptr.To[int64](testUserId),
+					GroupID: ptr.To[int64](testGroupId),
+				},
+				Status: alphav1.MISServiceStatus{
+					Image:           testImage,
+					ImagePullSecret: &testImagePullSecret,
+					PVC:             testPVC,
+					Envs:            testEnvs,
+				},
+			}
+
+		})
+
+		It("should success create target replicas of acjob", func() {
+			createTimes := 0
+			reservedObject := unstructured.Unstructured{}
+
+			createPatch := gomonkey.ApplyMethodFunc(testClient, "Create",
+				func(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
+					createTimes++
+					acjob, ok := obj.(*unstructured.Unstructured)
+					if !ok {
+						return errors.New("failed")
+					}
+					reservedObject = *acjob
+					return nil
+				})
+			defer createPatch.Reset()
+
+			requeue, err := reconciler.reconcileAcJob(ctx, &testMISService)
+			Expect(requeue).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(createTimes == testReplicas).To(BeTrue())
+
+			acjobSpecData, ok := reservedObject.Object["spec"]
+			Expect(ok).To(BeTrue())
+			acjobSpec, ok := acjobSpecData.(map[string]interface{})
+			Expect(ok).To(BeTrue())
+
+			acjobReplicaSpecsData, ok := acjobSpec["replicaSpecs"]
+			Expect(ok).To(BeTrue())
+			acjobReplicaSpec, ok := acjobReplicaSpecsData.(map[string]interface{})
+			Expect(ok).To(BeTrue())
+
+			masterReplicaSpecPtrData, ok := acjobReplicaSpec[MISServiceAcjobMaster]
+			Expect(ok).To(BeTrue())
+			masterReplicaSpecPtr, ok := masterReplicaSpecPtrData.(*map[string]interface{})
+			Expect(ok).To(BeTrue())
+
+			masterTemplateSpecData, ok := (*masterReplicaSpecPtr)["template"]
+			Expect(ok).To(BeTrue())
+			masterReplicaSpec, ok := masterTemplateSpecData.(v1.PodTemplateSpec)
+			Expect(ok).To(BeTrue())
+
+			podSpec := masterReplicaSpec.Spec
+			Expect(podSpec.Containers[0].Name == MISServiceAcjobContainerName).To(BeTrue())
+
+			Expect(*podSpec.SecurityContext.RunAsUser == testUserId).To(BeTrue())
+			Expect(*podSpec.SecurityContext.RunAsGroup == testGroupId).To(BeTrue())
+
+			Expect(podSpec.Containers[0].ReadinessProbe.ProbeHandler.HTTPGet.Path == testProbUrl).To(BeTrue())
+			Expect(podSpec.Containers[0].ReadinessProbe.ProbeHandler.HTTPGet.Port == intstr.FromInt32(testPort)).To(BeTrue())
+			Expect(podSpec.Containers[0].Image == testImage).To(BeTrue())
+
+			Expect(podSpec.Containers[0].Env[1].Name).To(Equal("MIS_CONFIG"))
+
+			Expect(podSpec.ImagePullSecrets[0].Name).To(Equal(testImagePullSecret))
+
+		})
+	})
 })
