@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import json
 import os
 import re
 from typing import List, Union
@@ -104,3 +105,34 @@ def _set_config_perm(model_path: str, mode: int = 0o750) -> None:
         _log_and_raise(logger,
                        f"An error occurred while setting the permission of the model config file: {e}",
                       Exception)
+
+
+def read_json(json_path: str) -> Union[str, dict, list]:
+    """
+    Read config file content
+    :param json_path: Path to JSON file
+    :return: Content of the JSON file as a str, dictionary or list
+    """
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            json_data = json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to read JSON file: {str(e)}")
+        raise RuntimeError("Failed to read JSON file") from e
+    return json_data
+
+
+def write_json(json_path: str, json_data: Union[str, dict, list]) -> None:
+    """
+    Write modified config back to file
+    :param json_path: Path to JSON file
+    :param json_data: Data to write to the JSON file
+    """
+    try:
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(json_data, f, indent=2, ensure_ascii=False)
+            f.write('\n')
+        logger.info(f"JSON file written to: {json_path}")
+    except Exception as e:
+        logger.error(f"Save failed: {str(e)}")
+        raise RuntimeError("JSON file write operation failed") from e

@@ -190,8 +190,8 @@ ENGINE_ENVS = {
 def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> GlobalArgs:
     """Do some preparations for mis
         include:
-            - model-pre-downloading
             - model-preferred-config-resolve
+            - model-pre-downloading
             - set environment variables if needed
     """
     # preferred config

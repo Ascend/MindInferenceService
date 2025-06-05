@@ -38,7 +38,6 @@ class MISChatCompletionRequest(ChatCompletionRequest):
                 logger.warning(f"MIS chat completion ignore param `{key}`.")
         self.remove_invalid_messages(used_kwargs)
         self.set_default_field(used_kwargs)
-        self.top_logprobs = None
         super().__init__(**used_kwargs)
 
     @staticmethod
@@ -68,7 +67,7 @@ class MISChatCompletionRequest(ChatCompletionRequest):
 
     def model_post_init(self, __context: Any) -> None:
         if getattr(self, "top_logprobs", None) == 0:
-            self.top_logprobs = None
+            setattr(self, "top_logprobs", None)
 
 
 class MISOpenAIServingMixin:

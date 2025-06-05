@@ -2,6 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import json
 import logging
+import os
 import signal
 import subprocess
 import time
@@ -76,6 +77,26 @@ class MindIEServiceEngine(EngineClient):
     def dead_error(self) -> BaseException:
         return Exception("MindIEServiceEngine dead")
 
+    @staticmethod
+    def model_config_file_modify(model_path: str):
+        try:
+            import acl
+            acl.init()
+            soc_info = acl.get_soc_name()
+        except Exception as e:
+            logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
+            raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
+        finally:
+            acl.finalize()
+
+        if soc_info is not None and "310P" in soc_info:
+            from mis.llm.engines.mindie.utils import ConfigTypeConverter
+            converter = ConfigTypeConverter(model_path)
+            model_path = converter.safe_convert()
+        else:
+            logger.debug(f"Model type in config.json does not require modification.")
+        return model_path
+
     def get_vllm_config(self):
         pass
 
@@ -94,8 +115,9 @@ class MindIEServiceEngine(EngineClient):
         return False
 
     def start_service(self):
+        self.mindie_args.vllm_config.model_config.model = (
+            self.model_config_file_modify(self.mindie_args.vllm_config.model_config.model))
         self.generate_config()
-
         self.process = subprocess.Popen(
             ["/bin/bash", "-c", "./bin/mindieservice_daemon"], cwd=constants.MINDIE_SERVICE_PATH
         )
