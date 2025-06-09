@@ -315,7 +315,7 @@ var _ = Describe("MISModel Controller", func() {
 			Expect(misModel.Status.State == alphav1.MISModelStatePodCreate).To(BeTrue())
 			Expect(len(pod.Spec.Containers) == 1).To(BeTrue())
 			Expect(pod.Spec.Containers[0].Image == testImage).To(BeTrue())
-			Expect(len(pod.Spec.Containers[0].Env) == 3).To(BeTrue())
+			Expect(len(pod.Spec.Containers[0].Env) == 4).To(BeTrue()) // 默认增加了一个TORCH_DEVICE_BACKEND_AUTOLOAD的环境变量
 			Expect(pod.Spec.Containers[0].Env[0].Name == "MIS_CONFIG").To(BeTrue())
 			Expect(pod.Spec.Containers[0].Env[1].Name == "http_proxy").To(BeTrue())
 			Expect(pod.Spec.Containers[0].Env[2].Name == "https_proxy").To(BeTrue())

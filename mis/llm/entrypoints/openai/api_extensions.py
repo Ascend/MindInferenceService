@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-from typing import Any
+from typing import Any, ClassVar
 
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
@@ -29,6 +29,8 @@ MIS_CHAT_COMPLETION_WHITELIST = {
 
 
 class MISChatCompletionRequest(ChatCompletionRequest):
+    model_post_init: ClassVar[Any]
+
     def __init__(self, **kwargs):
         used_kwargs = {}
         for key in kwargs:

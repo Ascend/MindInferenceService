@@ -43,7 +43,7 @@ func (r *MISModelReconciler) getStandardLabels(misModel *alphav1.MISModel) map[s
 
 func (r *MISModelReconciler) getStandardSelectorLabels(misModel *alphav1.MISModel) map[string]string {
 	return map[string]string{
-		MISLabelManagedBy: misModel.Name,
+		MISModelLabelPartOf: misModel.Name,
 	}
 }
 
@@ -306,7 +306,7 @@ func (r *MISModelReconciler) createDownloadPod(ctx context.Context, misModel *al
 		},
 		Spec: v1.PodSpec{
 			RestartPolicy:    v1.RestartPolicyNever,
-			Containers:       r.constructDownloadPodContainers(misModel),
+			Containers:       r.constructDownloadPodContainers(ctx, misModel),
 			Volumes:          r.constructDownloadPodVolumes(misModel),
 			ImagePullSecrets: imagePullSecrets,
 		},
@@ -331,13 +331,34 @@ func (r *MISModelReconciler) createDownloadPod(ctx context.Context, misModel *al
 	return nil
 }
 
-func (r *MISModelReconciler) constructDownloadPodContainers(misModel *alphav1.MISModel) []v1.Container {
-	return []v1.Container{
+func (r *MISModelReconciler) constructDownloadPodContainers(
+	ctx context.Context, misModel *alphav1.MISModel) []v1.Container {
+
+	logger := log.FromContext(ctx)
+
+	downloadPodEnvs := misModel.Spec.Envs[:0]
+	for _, env := range misModel.Spec.Envs {
+		if env.Name == "TORCH_DEVICE_BACKEND_AUTOLOAD" {
+			logger.Info("MISModel not support manual set env: TORCH_DEVICE_BACKEND_AUTOLOAD")
+		} else {
+			downloadPodEnvs = append(downloadPodEnvs, env)
+		}
+	}
+
+	downloadPodEnvs = append(
+		downloadPodEnvs,
+		v1.EnvVar{
+			Name:  "TORCH_DEVICE_BACKEND_AUTOLOAD",
+			Value: "0",
+		},
+	)
+
+	containers := []v1.Container{
 		{
 			Name:            MISModelPodContainerName,
 			Image:           misModel.Spec.Image,
 			ImagePullPolicy: v1.PullIfNotPresent,
-			Env:             misModel.Spec.Envs,
+			Env:             downloadPodEnvs,
 			Command:         []string{MISModelPodCmd},
 			VolumeMounts: []v1.VolumeMount{
 				{
@@ -347,6 +368,8 @@ func (r *MISModelReconciler) constructDownloadPodContainers(misModel *alphav1.MI
 			},
 		},
 	}
+
+	return containers
 }
 
 func (r *MISModelReconciler) constructDownloadPodVolumes(misModel *alphav1.MISModel) []v1.Volume {
@@ -435,9 +458,10 @@ func (r *MISModelReconciler) checkDownloadPodFailed(misModel *alphav1.MISModel, 
 	if pod.Status.ContainerStatuses[0].State.Terminated == nil {
 		return errors.New("unable to find terminated state from container download")
 	}
+	terminatedReason := pod.Status.ContainerStatuses[0].State.Terminated.Reason
 	terminatedMessage := pod.Status.ContainerStatuses[0].State.Terminated.Message
 	r.recorder.Eventf(misModel, v1.EventTypeWarning, "DownloadPodFailed",
-		fmt.Sprintf("download pod failed by: %s", terminatedMessage))
+		fmt.Sprintf("download pod failed by reason [%s], message: [%s]", terminatedReason, terminatedMessage))
 	return nil
 }
 
