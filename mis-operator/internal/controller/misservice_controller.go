@@ -48,7 +48,7 @@ func (r *MISServiceReconciler) getStandardLabels(misService *alphav1.MISService)
 
 func (r *MISServiceReconciler) getStandardSelectorLabels(misService *alphav1.MISService) map[string]string {
 	return map[string]string{
-		MISLabelManagedBy: misService.Name,
+		MISServiceLabelPartOf: misService.Name,
 	}
 }
 
@@ -92,7 +92,7 @@ func (r *MISServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 
 		misService.Status.State = alphav1.MISServiceStateStarted
-		misService.Status.Selector = fmt.Sprintf("%s=%s", "mis-service", misService.Name)
+		misService.Status.Selector = fmt.Sprintf("%s=%s", MISServiceLabelPartOf, misService.Name)
 	} else {
 		if controllerutil.ContainsFinalizer(misService, MISServiceFinalizer) {
 			controllerutil.RemoveFinalizer(misService, MISServiceFinalizer)
