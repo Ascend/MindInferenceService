@@ -8,6 +8,7 @@ from mis.utils.utils import read_json, write_json, _set_config_perm
 logger = init_logger(__name__)
 
 DST_PATH = "/opt/.cache/MindIE"
+ATB_MINICPM_QWEN2_PATH = "/usr/local/Ascend/atb/atb_llm/models/minicpm_qwen2_v2"
 
 
 class ConfigTypeConverter:
@@ -69,3 +70,17 @@ class ConfigTypeConverter:
                         "MindIE-Service Backend on 310P Platform only supports float16")
             return True
         return False
+
+
+def atb_link_to_model_path(model_path: str) -> None:
+    try:
+        dst_file = os.path.join(ATB_MINICPM_QWEN2_PATH, "resampler.py")
+        src_file = os.path.join(model_path, "resampler.py")
+        if not os.path.islink(dst_file):
+            os.symlink(src_file, dst_file)
+            logger.info(f"Create symbolic link {dst_file} to {src_file}")
+    except Exception as e:
+        logger.error(f"Create symbolic link failed: {str(e)}. "
+                     f"Please check whether the MiniCPM-V-2_6 model repository contains resampler.py. ")
+        raise RuntimeError("Create symbolic link failed. "
+                           "Please check whether the MiniCPM-V-2_6 model repository contains resampler.py. ") from e

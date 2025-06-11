@@ -2,19 +2,48 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 from abc import ABC
 import os
-from typing import Dict, Type
+from typing import Dict, Type, Union
 
 import yaml
 
 from mis.logger import init_logger
 from mis.args import GlobalArgs
-from mis.utils.utils import ConfigChecker
+from mis.constants import HW_310P, HW_910B
+from mis.utils.utils import ConfigChecker, get_soc_name
 
 logger = init_logger(__name__)
 
 ROOT_DIR = "configs/llm/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
-
+MIS_CONFIG_DEFAULT = {
+    "deepseek-r1-distill-llama-8b": {HW_310P: "ascend310p-2x24gb-bf16-mindie-service-default",
+                                     HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "deepseek-r1-distill-llama-70b": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
+    "deepseek-r1-distill-qwen-1.5b": {HW_310P: "ascend310p-1x24gb-bf16-mindie-service-default",
+                                      HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "deepseek-r1-distill-qwen-7b": {HW_310P: "ascend310p-2x24gb-bf16-mindie-service-default",
+                                    HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "deepseek-r1-distill-qwen-14b": {HW_310P: "ascend310p-4x24gb-bf16-mindie-service-default",
+                                     HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "deepseek-r1-distill-qwen-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "llama-3.2-1b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "llama-3.2-3b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "llama-3.3-70b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
+    "minicpm-v-2_6": {HW_310P: "ascend310p-2x24gb-bf16-mindie-service-default",
+                      HW_910B: "atlas800ia2-2x32gb-bf16-mindie-service-default"},
+    "qwen2.5-0.5b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-1.5b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-3b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-7b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-14b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen2.5-32b-instruct": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen2.5-72b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
+    "qwen2.5-vl-7b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen3-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen3-14b": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen3-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwq-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+}
 CHECKER_VLLM = {
     "dtype": {
         "type": "str_in",
@@ -211,6 +240,7 @@ class ConfigParser:
         self._check_all_args_valid()
 
         self.model_type = self.args.model.split('/')[-1]
+        self.model_folder_path = os.path.join(ROOT_DIR, self.model_type.lower())
         self.engine_type = self.args.engine_type
         self.mis_config = self.args.mis_config
 
@@ -255,20 +285,18 @@ class ConfigParser:
             logger.warning("The environment variable MIS_CONFIG is missed. "
                            "Please check if the environment variables is valid. "
                            f"The engine will be started with the default parameters. ")
+            self.mis_config = self._get_default_config()
+
+        elif not os.path.exists(os.path.join(self.model_folder_path, self.mis_config + ".yaml")):
+            logger.debug(f"Selected config {self.mis_config} does not exist. "
+                         f"The engine will be started with the default config. ")
+            self.mis_config = self._get_default_config()
+
+        if self.mis_config is None:
             return self.args
 
-        model_folder_path = os.path.join(ROOT_DIR, self.model_type.lower())
-
-        if not os.path.exists(model_folder_path):
-            logger.debug(f"Model folder {model_folder_path} does not exist. "
-                           f"The engine will be started with the default parameters. ")
-            return self.args
-
-        engine_optimization_config = None
-        filename_list = os.listdir(model_folder_path)
-        if self.mis_config + ".yaml" in filename_list:
-            config_file_path = os.path.join(model_folder_path, self.mis_config + ".yaml")
-            engine_optimization_config = self._config_yaml_file_loading(config_file_path)
+        config_file_path = os.path.join(self.model_folder_path, self.mis_config + ".yaml")
+        engine_optimization_config = self._config_yaml_file_loading(config_file_path)
 
         if not engine_optimization_config or not self._is_config_valid(engine_optimization_config):
             return self.args
@@ -279,6 +307,8 @@ class ConfigParser:
 
         self.args.model = engine_optimization_config.get("model")
         self.args.engine_type = engine_type_selected
+        if engine_optimization_config.get("trust_remote_code") is not None:
+            self.args.trust_remote_code = engine_optimization_config.get("trust_remote_code")
 
         model_type = engine_optimization_config.get("model_type")
         if model_type is not None and model_type == "VLM":
@@ -332,3 +362,18 @@ class ConfigParser:
                     ConfigChecker.check_string_input(attr, args_attr)
                 except Exception as e:
                     raise Exception(f"{attr} in args is not a valid string: {e}") from e
+
+    def _get_default_config(self) -> Union[str, None]:
+        soc_name = get_soc_name()
+        model_config_dict = MIS_CONFIG_DEFAULT.get(self.model_type.lower())
+        if model_config_dict is None:
+            logger.warning(f"Default configuration for {self.model_type} is not found. "
+                           f"Please check whether the model name is consistent with the image description.")
+            return None
+        model_config_default = model_config_dict.get(soc_name)
+        if model_config_default is None:
+            logger.warning(f"The current model {self.model_type} is not compatible with "
+                           f"the hardware platform {soc_name}. "
+                           f"Check the hardware support status of the model in the image description.")
+            return None
+        return model_config_default

@@ -20,8 +20,11 @@ from vllm.lora.request import LoRARequest
 from vllm.model_executor.layers.sampler import SamplerOutput
 from vllm.transformers_utils.tokenizer import AnyTokenizer
 
-from mis import constants, envs
+from mis import constants
 from mis.logger import init_logger
+from mis.utils.utils import get_soc_name, check_dependencies
+from mis.llm.engines.mindie.utils import atb_link_to_model_path
+
 
 logger = init_logger(__name__)
 
@@ -34,6 +37,8 @@ LOG_LEVEL_MAP = {
 }
 
 STOP_WAIT_TIMES = 5
+ATB_PACKAGE_NAME = "atb_llm"
+MINDIE_TURBO_PACKAGE_NAME = "mindie_turbo"
 
 
 @dataclass
@@ -55,7 +60,7 @@ class MindIEServiceEngine(EngineClient):
     def __init__(self, mindie_args: MindIEServiceArgs):
         self.mindie_args = mindie_args
         self.process = None
-
+        check_dependencies([ATB_PACKAGE_NAME, MINDIE_TURBO_PACKAGE_NAME])
         self.start_service()
 
     def __del__(self):
@@ -79,17 +84,8 @@ class MindIEServiceEngine(EngineClient):
 
     @staticmethod
     def model_config_file_modify(model_path: str):
-        try:
-            import acl
-            acl.init()
-            soc_info = acl.get_soc_name()
-        except Exception as e:
-            logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
-            raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
-        finally:
-            acl.finalize()
-
-        if soc_info is not None and "310P" in soc_info:
+        soc_name = get_soc_name()
+        if constants.HW_310P == soc_name:
             from mis.llm.engines.mindie.utils import ConfigTypeConverter
             converter = ConfigTypeConverter(model_path)
             model_path = converter.safe_convert()
@@ -117,6 +113,7 @@ class MindIEServiceEngine(EngineClient):
     def start_service(self):
         self.mindie_args.vllm_config.model_config.model = (
             self.model_config_file_modify(self.mindie_args.vllm_config.model_config.model))
+        atb_link_to_model_path(self.mindie_args.vllm_config.model_config.model)
         self.generate_config()
         self.process = subprocess.Popen(
             ["/bin/bash", "-c", "./bin/mindieservice_daemon"], cwd=constants.MINDIE_SERVICE_PATH
@@ -235,7 +232,7 @@ class MindIEServiceEngine(EngineClient):
                                  "cpuMemSize": 5,
                                  "npuMemSize": -1,
                                  "backendType": "atb",
-                                 "trustRemoteCode": False,
+                                 "trustRemoteCode": self.mindie_args.vllm_config.model_config.trust_remote_code,
                                  "plugin_params": "{\"plugin_type\":\"prefix_cache\"}"
                                  if getattr(self.mindie_args.vllm_config.cache_config,
                                             "enable_prefix_caching", None) else "{\"plugin_type\":\"\"}", }]
