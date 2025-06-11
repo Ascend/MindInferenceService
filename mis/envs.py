@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     MIS_MAX_MODEL_LEN: Optional[int] = None
     MIS_ENABLE_KV_CACHE_REUSE: bool = False
     MIS_CONFIG: str = "atlas800ia2-32gb-bf16-vllm-default"
+    MIS_TRUST_REMOTE_CODE: bool = False
 
     MIS_HOST: Optional[str] = None
     MIS_PORT: int = 8000
@@ -47,6 +48,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),
     "MIS_CONFIG": lambda: _get_optimization_config(),
+    "MIS_TRUST_REMOTE_CODE": lambda: False,
 
     "MIS_HOST": lambda: _get_ip_address_from_env("MIS_HOST", None),
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),

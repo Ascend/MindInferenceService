@@ -48,6 +48,7 @@ class VLLMEngine:
                                       served_model_name=args.served_model_name,
                                       disable_log_stats=args.disable_log_stats,
                                       disable_log_requests=args.disable_log_requests,
+                                      trust_remote_code=args.trust_remote_code,
                                       **args.engine_optimization_config)
 
         engine_config = engine_args.create_engine_config()
@@ -85,6 +86,7 @@ class MindIESvcEngine:
                                       served_model_name=args.served_model_name,
                                       disable_log_stats=args.disable_log_stats,
                                       disable_log_requests=args.disable_log_requests,
+                                      trust_remote_code=args.trust_remote_code,
                                       **args.engine_optimization_config)
         engine_config = engine_args.create_engine_config()
 

@@ -2,6 +2,21 @@
 
 set -e
 
+ENABLE_MINICPMV_PATCHES=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --enable-minicpmv-patches)
+      ENABLE_MINICPMV_PATCHES=true
+      shift
+      ;;
+    *)
+      echo "未知参数: $1"
+      exit 1
+      ;;
+  esac
+done
+
 workdir=$(
   cd $(dirname $0) || exit
   pwd
@@ -52,4 +67,10 @@ apply_patch "/opt/vllm-ascend/vllm/vllm/model_executor/layers/quantization/kv_ca
 sed -i 's/\r$//' $workdir/mindie_turbo_attention.patch
 apply_patch "/usr/local/lib/python3.10/dist-packages/mindie_turbo/adaptor/vllm/attention.py" "$workdir/mindie_turbo_attention.patch"
 
+if [ "ENABLE_MINICPMV_PATCHES" = true ]; then
+  sed -i 's/\r$//' $workdir/atb_base_config.patch
+  apply_patch "/usr/local/Ascend/atb/atb_llm/models/base/config.py" "$workdir/atb_base_config.patch"
 
+  sed -i 's/\r$//' $workdir/flash_causal_lm.patch
+  apply_patch "/usr/local/Ascend/atb/atb_llm/models/base/flash_causal_lm.py" "$workdir/flash_causal_lm.patch"
+fi
