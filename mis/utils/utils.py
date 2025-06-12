@@ -144,13 +144,10 @@ def write_json(json_path: str, json_data: Union[str, dict, list]) -> None:
 def get_soc_name() -> Union[str, None]:
     try:
         import acl
-        acl.init()
         soc_info = acl.get_soc_name()
     except Exception as e:
         logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
         raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
-    finally:
-        acl.finalize()
     if HW_310P in soc_info:
         return HW_310P
     elif HW_910B in soc_info:

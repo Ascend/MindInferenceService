@@ -27,6 +27,3 @@ MINDIE_ATB_PATH = f"{ASCEND_PATH}/atb"
 
 HW_310P = "310P"
 HW_910B = "910B"
-
-# if True, use vllm 0.7.1, else use vllm 0.8.5
-MIS_VLM_ENABLE = False
