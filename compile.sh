@@ -31,7 +31,6 @@ function compile_mis() {
   mkdir -p $workdir/output/mis
   rm -rf $workdir/output/mis/*
   mkdir $workdir/output/mis/llm
-  mkdir $workdir/output/mis/vlm
 
   echo "Mind Inference Service: ${VERSION}" >> $workdir/output/mis/version.info
 
@@ -39,15 +38,8 @@ function compile_mis() {
   python3.11 setup.py bdist_wheel
   mv dist/* $workdir/output/mis/
 
-  # 修改常量MIS_VLM_ENABLE=False
-  sed -i 's/^MIS_VLM_ENABLE.*/MIS_VLM_ENABLE = False/' mis/constants.py
   python3.10 setup.py bdist_wheel
   mv dist/* $workdir/output/mis/llm
-
-  # 修改常量MIS_VLM_ENABLE=True
-  sed -i 's/^MIS_VLM_ENABLE.*/MIS_VLM_ENABLE = True/' mis/constants.py
-  python3.10 setup.py bdist_wheel
-  mv dist/* $workdir/output/mis/vlm
 
   # 输出模型配置config和量化补丁patch
   cp -r configs $workdir/output/mis/

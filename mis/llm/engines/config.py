@@ -43,6 +43,8 @@ MIS_CONFIG_DEFAULT = {
     "qwen3-14b": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
     "qwen3-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
     "qwq-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen2.5-omni-3b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-omni-7b": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
 }
 CHECKER_VLLM = {
     "dtype": {
