@@ -12,7 +12,7 @@ vllm:
   swap_space: 4
   cpu_offload_gb: 0
   scheduling_policy: fcfs
-  enable_prefix_caching: true
-  enforce_eager: true
+  enable_prefix_caching: false
+  enforce_eager: false
 engine_type: vllm
 model: MindSDK/Qwen3-14B
