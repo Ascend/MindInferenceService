@@ -23,6 +23,11 @@ MIS_CHAT_COMPLETION_WHITELIST = {
     "stream_options",
     "temperature",
     "top_p",
+
+    # tools call
+    "tools",
+    "tool_choice",
+
     # vLLM params
     "top_k",
 }

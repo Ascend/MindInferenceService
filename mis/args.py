@@ -7,6 +7,9 @@ from pydantic import BaseModel
 import mis.envs as envs
 
 
+TOOL_PARSER_TYPE = "pythonic"
+
+
 class GlobalArgs(BaseModel):
     # environment params
     cache_path: str = envs.MIS_CACHE_PATH
@@ -44,6 +47,9 @@ class GlobalArgs(BaseModel):
 
     # generated params
     engine_optimization_config: dict = {}
+
+    enable_auto_tools: Optional[bool] = envs.MIS_ENABLE_AUTO_TOOLS
+    tool_parser: Optional[str] = TOOL_PARSER_TYPE
 
 
 ARGS: GlobalArgs = GlobalArgs()

@@ -144,7 +144,9 @@ async def init_openai_app_state(
         "assistant",
         request_logger=request_logger,
         chat_template=None,
-        chat_template_content_format="auto"
+        chat_template_content_format="auto",
+        enable_auto_tools=args.enable_auto_tools,
+        tool_parser=args.tool_parser
     )
 
     # register openai_serving_tokenization, will be use by function `base`
