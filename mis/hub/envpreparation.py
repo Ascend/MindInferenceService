@@ -7,10 +7,10 @@ import torch
 
 import mis.constants as constants
 import mis.envs as envs
-from mis.logger import init_logger
 from mis.args import GlobalArgs
 from mis.hub.downloader import ModelerDownloader
 from mis.llm.engines.config import ConfigParser
+from mis.logger import init_logger
 
 logger = init_logger(__name__)
 
@@ -203,6 +203,14 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
 
     # download model
     args.model = ModelerDownloader.get_model_path(args.model)
+
+    # tool call
+    if args.enable_auto_tools:
+        model_name_lower = args.model.lower()
+        if "qwen" in model_name_lower:
+            args.tool_parser = "hermes"
+        elif "llama-3" in model_name_lower:
+            args.tool_parser = "llama3_json"
 
     # source envs in main process
     if resolve_env:
