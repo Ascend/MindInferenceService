@@ -168,6 +168,16 @@ class MindIEServiceChat:
 
         return line_str, created
 
+    @staticmethod
+    def _multimodal_file_contents_preprocess(contents):
+        for content in contents:
+            content_type = content.get("type", "")
+            if "url" in content_type:
+                url = content.get(content_type, {}).get("url", "")
+                # Unified MindIE and vLLM multimodal (file) chat request url
+                if url.startswith("file:"):
+                    content[content_type]["url"] = url.replace("file:", "file://", 1)
+
     async def create_chat_completion(
             self, request: MISChatCompletionRequest
     ) -> Union[AsyncGenerator[str, None], ErrorResponse, dict]:
@@ -181,6 +191,11 @@ class MindIEServiceChat:
 
     async def chat_completions_stream_generator(self, request: MISChatCompletionRequest):
         include_usage = False
+        try:
+            request = self._multimodal_file_request_preprocess(request)
+        except Exception as e:
+            logger.warning(f"MindIE multimodal file chat request conversion failed, "
+                           f"will send original request to inference backend")
         if request.stream_options and request.stream_options.include_usage:
             include_usage = True
         try:
@@ -204,6 +219,11 @@ class MindIEServiceChat:
             raise
 
     async def chat_completions_full_generator(self, request: MISChatCompletionRequest) -> dict:
+        try:
+            request = self._multimodal_file_request_preprocess(request)
+        except Exception as e:
+            logger.warning(f"MindIE multimodal file chat request conversion failed, "
+                           f"will send original request to inference backend")
         try:
             response = httpx.post(f"http://{self.config.address}:{self.config.server_port}/v1/chat/completions",
                                   json=request.dict(),
@@ -249,6 +269,13 @@ class MindIEServiceChat:
         except asyncio.CancelledError:
             logger.warning(f"request:{request.request_id} is cancelled")
             raise
+
+    def _multimodal_file_request_preprocess(self, request: MISChatCompletionRequest):
+        for message in request.messages:
+            contents = message.get("content", [])
+            if isinstance(contents, list):
+                self._multimodal_file_contents_preprocess(contents)
+        return request
 
 
 async def init_mindie_app_state(engine_client: EngineClient,

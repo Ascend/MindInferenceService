@@ -52,7 +52,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CONFIG": lambda: _get_optimization_config(),
     "MIS_TRUST_REMOTE_CODE": lambda: False,
 
-    "MIS_ENABLE_AUTO_TOOLS": lambda : _get_bool_from_env("MIS_ENABLE_AUTO_TOOLS", True),
+    "MIS_ENABLE_AUTO_TOOLS": lambda: _get_bool_from_env("MIS_ENABLE_AUTO_TOOLS", True),
 
     "MIS_HOST": lambda: _get_ip_address_from_env("MIS_HOST", None),
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),
