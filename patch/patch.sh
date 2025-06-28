@@ -4,6 +4,7 @@ set -e
 
 ENABLE_MINICPMV_PATCHES=false
 ENABLE_OMNI_PATCHES=false
+WORKDIR_SUBDIR=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -15,6 +16,10 @@ while [[ $# -gt 0 ]]; do
       ENABLE_OMNI_PATCHES=true
       shift
       ;;
+    --workdir-subdir)
+      WORKDIR_SUBDIR="$2"
+      shift 2
+      ;;
     *)
       echo "未知参数: $1"
       exit 1
@@ -23,7 +28,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 workdir=$(
-  cd $(dirname $0) || exit
+  cd $(dirname $0)/$WORKDIR_SUBDIR || exit
   pwd
 )
 
