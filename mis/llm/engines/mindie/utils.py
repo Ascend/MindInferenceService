@@ -76,7 +76,7 @@ def atb_link_to_model_path(model_path: str) -> None:
     try:
         dst_file = os.path.join(ATB_MINICPM_QWEN2_PATH, "resampler.py")
         src_file = os.path.join(model_path, "resampler.py")
-        if not os.path.exists(dst_file) and not os.path.islink(dst_file):
+        if os.path.exists(src_file) and not os.path.exists(dst_file) and not os.path.islink(dst_file):
             os.symlink(src_file, dst_file)
             logger.info(f"Create symbolic link {dst_file} to {src_file}")
     except Exception as e:
