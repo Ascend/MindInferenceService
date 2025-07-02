@@ -14,4 +14,4 @@ vllm:
   scheduling_policy: fcfs
   enforce_eager: true
 engine_type: vllm
-model: MindSDK/DeepSeek-R1-Distill-Llama-70B
+model: MindSDK/Qwen3-235B-A22B
