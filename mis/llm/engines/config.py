@@ -40,7 +40,10 @@ MIS_CONFIG_DEFAULT = {
                              HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
     "qwen2.5-32b-instruct": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
     "qwen2.5-72b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
+    "qwen2.5-vl-3b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen2.5-vl-7b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen2.5-vl-32b-instruct": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen2.5-vl-72b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
     "qwen3-0.6b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen3-1.7b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen3-4b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
@@ -336,7 +339,13 @@ class ConfigParser:
                 "video": self.args.limit_video_per_prompt,
                 "audio": self.args.limit_audio_per_prompt
             }
-
+            self.args.engine_optimization_config["mm_processor_kwargs"] = {
+                "total_pixels": self.args.total_pixels,
+                "max_pixels": self.args.total_pixels  # The `max_pixels` applies to a single image and
+                # is less or equal than `total_pixels`. However, during the initialization of vLLM,
+                # no such restriction is enforced, which may lead to an excessive number of initial multimodal tokens
+                # and result in an Out-Of-Memory (OOM) error.
+            }
         return self.args
 
     def _is_config_valid(self, config: Dict) -> bool:

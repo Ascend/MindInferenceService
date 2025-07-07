@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     MIS_LIMIT_IMAGE_PER_PROMPT: int = 1
     MIS_LIMIT_VIDEO_PER_PROMPT: int = 1
     MIS_LIMIT_AUDIO_PER_PROMPT: int = 0
+    MIS_TOTAL_PIXELS: int = 1280 * 720
 
     UVICORN_LOG_LEVEL: str = "info"
 
@@ -74,6 +75,8 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_LIMIT_IMAGE_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_IMAGE_PER_PROMPT", 1, 0, 10),
     "MIS_LIMIT_VIDEO_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_VIDEO_PER_PROMPT", 1, 0, 10),
     "MIS_LIMIT_AUDIO_PER_PROMPT": lambda: _get_int_from_env("MIS_LIMIT_AUDIO_PER_PROMPT", 0, 0, 10),
+    # frame * height * width
+    "MIS_TOTAL_PIXELS": lambda: _get_int_from_env("MIS_TOTAL_PIXELS", 1 * 1080 * 720, 1 * 28 * 28, 10 * 2560 * 1080),
 
     "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", constants.UVICORN_LOG_LEVELS),
 }
