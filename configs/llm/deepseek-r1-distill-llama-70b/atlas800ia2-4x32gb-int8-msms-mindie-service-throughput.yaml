@@ -11,5 +11,6 @@ mindie-service:
   swap_space: 32
   scheduling_policy: fcfs
   quantization: ms-model-slim
+  npu_memory_fraction: 0.95
 engine_type: mindie-service
 model: MindSDK/DeepSeek-R1-Distill-Llama-70B-w8a8

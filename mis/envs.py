@@ -34,7 +34,6 @@ if TYPE_CHECKING:
     MIS_MAX_LOG_LEN: Optional[int] = None
     MIS_DISABLE_LOG_REQUESTS: bool = False
     MIS_DISABLE_LOG_STATS: bool = False
-    MIS_API_KEY: Optional[str] = None
     MIS_DISABLE_FASTAPI_DOCS: bool = False
 
     MIS_ALLOWED_LOCAL_MEDIA_PATH: str = "/opt"
@@ -52,7 +51,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_MAX_MODEL_LEN": lambda: _get_int_from_env("MIS_MAX_MODEL_LEN", None),
     "MIS_ENABLE_KV_CACHE_REUSE": lambda: _get_bool_from_env("MIS_ENABLE_KV_CACHE_REUSE", False),
     "MIS_CONFIG": lambda: _get_optimization_config(),
-    "MIS_TRUST_REMOTE_CODE": lambda: False,
+    "MIS_TRUST_REMOTE_CODE": lambda: _get_bool_from_env("MIS_TRUST_REMOTE_CODE", False),
 
     "MIS_ENABLE_AUTO_TOOLS": lambda: _get_bool_from_env("MIS_ENABLE_AUTO_TOOLS", True),
 
@@ -67,9 +66,8 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_FORCE_DOWNLOAD_MODEL": lambda: _get_bool_from_env("MIS_FORCE_DOWNLOAD_MODEL", False),
     "MIS_LOG_LEVEL": lambda: _get_str_from_env("MIS_LOG_LEVEL", "INFO", constants.MIS_LOG_LEVELS),
     "MIS_MAX_LOG_LEN": lambda: _get_int_from_env("MIS_MAX_LOG_LEN", None),
-    "MIS_DISABLE_LOG_REQUESTS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_REQUESTS", False),
+    "MIS_DISABLE_LOG_REQUESTS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_REQUESTS", True),
     "MIS_DISABLE_LOG_STATS": lambda: _get_bool_from_env("MIS_DISABLE_LOG_STATS", False),
-    "MIS_API_KEY": lambda: _get_str_from_env("MIS_API_KEY", None),
     "MIS_DISABLE_FASTAPI_DOCS": lambda: _get_bool_from_env("MIS_DISABLE_FASTAPI_DOCS", False),
 
     "MIS_ALLOWED_LOCAL_MEDIA_PATH": lambda: _get_str_from_env("MIS_ALLOWED_LOCAL_MEDIA_PATH", "/opt"),
@@ -128,7 +126,7 @@ def _get_ip_address_from_env(name: str, default: Optional[str] = None) -> Option
 
 
 def _get_optimization_config():
-    return _get_str_from_env("MIS_CONFIG", "atlas800ia2-1x32gb-bf16-vllm-default", valid_values=None)
+    return _get_str_from_env("MIS_CONFIG", None, valid_values=None)
 
 
 def _get_ssl_cert_reqs():

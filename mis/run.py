@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 from mis.args import ARGS
+from mis.constants import MIS_LOCAL_BIN_PATH
 from mis.hub.envpreparation import environment_preparation
 
 
@@ -19,7 +20,7 @@ def main():
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        process = subprocess.Popen(["/usr/local/bin/mis_launcher"])
+        process = subprocess.Popen([f"{MIS_LOCAL_BIN_PATH}/bin/mis_launcher"])
         exit_code = process.wait()
     except KeyboardInterrupt:
         if process:

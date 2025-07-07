@@ -10,6 +10,8 @@ workdir=$(
 
 VERSION_FILE=$workdir/../mindxsdk/build/conf/config.yaml
 ARCH=$(uname -m)
+export CFLAGS="-fstack-protector-strong -fPIC -D_FORTIFY_SOURCE=2 -O2 -ftrapv"
+export LDFLAGS="-Wl,-z,relro,-z,now,-z,noexecstack -s"
 
 function get_version() {
   if [ -f "$VERSION_FILE" ]; then

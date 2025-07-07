@@ -90,7 +90,7 @@ class MindIESvcEngine:
                                       **args.engine_optimization_config)
         engine_config = engine_args.create_engine_config()
 
-        mindie_args = MindIEServiceArgs(engine_config, args.host or "0.0.0.0")
+        mindie_args = MindIEServiceArgs(engine_config)
         return MindIEServiceEngine(mindie_args)
 
 

@@ -20,27 +20,9 @@ def build_engine_client_from_args(args: GlobalArgs):
     return AutoEngine.from_config(args)
 
 
-def register_clip_app(app: FastAPI,
-                      args: GlobalArgs,
-                      router: APIRouter):
-    app.include_router(router)
-
-    if args.api_key is not None:
-        token = args.api_key
-
-        @app.middleware("http")
-        async def authentication(request: Request, call_next):
-            if request.method == "OPTIONS":
-                return await call_next(request)
-
-            if request.headers.get("Authorization") != "Bearer " + token:
-                return JSONResponse(content={"error": "Unauthorized"},
-                                    status_code=401)
-
-
 def init_app_state(app, args: GlobalArgs):
     from mis.emb.entrypoints.clip.api_server import router
-    register_clip_app(app, args, router)
+    app.include_router(router)
 
 
 def run_clip_server(args: GlobalArgs):

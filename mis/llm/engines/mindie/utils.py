@@ -2,13 +2,14 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 
+from mis.constants import ASCEND_PATH, MIS_BASE_PATH
 from mis.logger import init_logger
 from mis.utils.utils import read_json, write_json, _set_config_perm
 
 logger = init_logger(__name__)
 
-DST_PATH = "/opt/.cache/MindIE"
-ATB_MINICPM_QWEN2_PATH = "/usr/local/Ascend/atb/atb_llm/models/minicpm_qwen2_v2"
+DST_PATH = f"{MIS_BASE_PATH}/.cache/MindIE"
+ATB_MINICPM_QWEN2_PATH = f"{ASCEND_PATH}/atb/atb_llm/models/minicpm_qwen2_v2"
 
 
 class ConfigTypeConverter:

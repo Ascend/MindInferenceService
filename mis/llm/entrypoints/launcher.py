@@ -83,34 +83,14 @@ def build_app(args: GlobalArgs) -> FastAPI:
     return app
 
 
-def register_openai_app(app: FastAPI,
-                        args: GlobalArgs,
-                        router: APIRouter):
-    app.include_router(router)
-
-    if args.api_key is not None:
-        token = args.api_key
-
-        @app.middleware("http")
-        async def authentication(request: Request, call_next):
-            if request.method == "OPTIONS":
-                return await call_next(request)
-            url_path = request.url.path
-            if not url_path.startswith("/openai/v1"):
-                return await call_next(request)
-            if request.headers.get("Authorization") != "Bearer " + token:
-                return JSONResponse(content={"error": "Unauthorized"},
-                                    status_code=401)
-
-
 async def init_app_state(engine_client: EngineClient, model_config: ModelConfig, app, args: GlobalArgs):
     if args.engine_type in ["vllm"]:
         from mis.llm.entrypoints.openai.api_server import router, init_openai_app_state
-        register_openai_app(app, args, router)
+        app.include_router(router)
         await init_openai_app_state(engine_client, model_config, app.state, args)
     elif args.engine_type in ["mindie-service"]:
         from mis.llm.entrypoints.openai.mindie.api_server import router, init_mindie_app_state
-        register_openai_app(app, args, router)
+        app.include_router(router)
         await init_mindie_app_state(engine_client, model_config, app.state, args)
     else:
         raise ValueError("Available EngineType is in [vllm, mindie-service]")
