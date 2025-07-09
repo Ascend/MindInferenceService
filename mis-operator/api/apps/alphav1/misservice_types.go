@@ -14,6 +14,9 @@ import (
 
 // MISServiceSpec defines the desired state of MISService.
 type MISServiceSpec struct {
+	// +optional
+	// TLSSecret name of secret that contains tls cert and key
+	TLSSecret string `json:"tlsSecret,omitempty"`
 	// MISModel name of used MISModel
 	MISModel string `json:"misModel,omitempty"`
 	// +kubebuilder:validation:Minimum=1
@@ -64,6 +67,7 @@ type MISSvcSpec struct {
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default:=8000
 	Port        int32             `json:"port,omitempty"`
+	MetricsPort int32             `json:"metricsPort,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 

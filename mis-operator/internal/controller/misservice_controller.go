@@ -7,6 +7,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -25,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"ascend.com/mis-operator/api/apps/alphav1"
@@ -56,6 +58,7 @@ func (r *MISServiceReconciler) getStandardSelectorLabels(misService *alphav1.MIS
 // +kubebuilder:rbac:groups=apps.ascend.com,resources=misservices/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=apps.ascend.com,resources=misservices/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps.ascend.com,resources=mismodel,verbs=get;list;watch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=create;update;patch;delete
@@ -127,11 +130,14 @@ func (r *MISServiceReconciler) reconcileMISService(
 
 	logger := log.FromContext(ctx)
 
-	if requeue, err := r.checkMISModel(ctx, misService); err != nil {
+	if err := r.checkTLSSecret(ctx, misService); err != nil {
+		logger.Error(err, "Unable to check TLSSecret")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.checkMISModel(ctx, misService); err != nil {
 		logger.Error(err, "Unable to check MISModel status")
 		return ctrl.Result{}, err
-	} else if requeue {
-		return ctrl.Result{RequeueAfter: time.Minute}, nil
 	}
 
 	if err := r.reconcileService(ctx, misService); err != nil {
@@ -159,22 +165,54 @@ func (r *MISServiceReconciler) reconcileMISService(
 	return ctrl.Result{}, nil
 }
 
-// return requeue and err.
-// requeue means MISModel is not ready, controller need check again after one minute
-func (r *MISServiceReconciler) checkMISModel(ctx context.Context, misService *alphav1.MISService) (bool, error) {
+// checkTLSSecret used to check if TLSSecret is set and exists, then check its type and content.
+func (r *MISServiceReconciler) checkTLSSecret(ctx context.Context, misService *alphav1.MISService) error {
+	if misService.Spec.TLSSecret == "" {
+		return nil
+	}
+
+	tlsSecret := v1.Secret{}
+	namespaceName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.Spec.TLSSecret}
+	if err := r.Get(ctx, namespaceName, &tlsSecret); err != nil {
+		if client.IgnoreNotFound(err) != nil {
+			return errors.Wrap(err, "Unable to fetch Secret")
+		}
+		return errors.Wrap(err, "TLSSecret not exist")
+	}
+
+	if tlsSecret.Type != v1.SecretTypeTLS {
+		return errors.New(fmt.Sprintf("TLSSecret type is not %s", v1.SecretTypeTLS))
+	}
+
+	if _, ok := tlsSecret.Data["tls.crt"]; !ok {
+		return errors.New("TLSSecret has no `tls.crt`")
+	}
+
+	if _, ok := tlsSecret.Data["tls.key"]; !ok {
+		return errors.New("TLSSecret has no `tls.key`")
+	}
+
+	misService.Status.State = alphav1.MISServiceStateTLSSecretReady
+	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionTLSSecretReady,
+		"TLSSecretReady", "TLSSecret is ready")
+	return nil
+}
+
+// checkMISModel check if MISModel exists, and copy its useful information to MISService.
+func (r *MISServiceReconciler) checkMISModel(ctx context.Context, misService *alphav1.MISService) error {
 	misModel := alphav1.MISModel{}
 	namespaceName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.Spec.MISModel}
 	if err := r.Get(ctx, namespaceName, &misModel); err != nil {
 		if client.IgnoreNotFound(err) != nil {
-			return false, errors.Wrap(err, "Unable to fetch MISModel")
+			return errors.Wrap(err, "Unable to fetch MISModel")
 		}
-		return false, errors.Wrap(err, "MISModel not exist")
+		return errors.Wrap(err, "MISModel not exist")
 	}
 
 	if misModel.Status.State != alphav1.MISModelStateReady {
 		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionModelReady,
 			"ModelPending", "MISModel is not ready")
-		return true, nil
+		return errors.New("MISModel not ready")
 	}
 
 	misService.Status.State = alphav1.MISServiceStateModelReady
@@ -186,9 +224,11 @@ func (r *MISServiceReconciler) checkMISModel(ctx context.Context, misService *al
 	misService.Status.ImagePullSecret = misModel.Spec.ImagePullSecret
 	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionModelReady,
 		"ModelReady", "MISModel is ready")
-	return false, nil
+	return nil
 }
 
+// reconcileService is responsible for process ServiceSpec in MISService.
+// It will create Service if Service with given name is not exist, and update status of MISService.
 func (r *MISServiceReconciler) reconcileService(ctx context.Context, misService *alphav1.MISService) error {
 	logger := log.FromContext(ctx)
 
@@ -215,6 +255,8 @@ func (r *MISServiceReconciler) reconcileService(ctx context.Context, misService 
 	return nil
 }
 
+// constructService used to construct Service.
+// It will expose inference port and metrics port for the Service, and use getStandardSelectorLabels to match pod.
 func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, service *v1.Service) error {
 	*service = v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -229,6 +271,10 @@ func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, 
 					Name: MISServicePortName,
 					Port: misService.Spec.ServiceSpec.Port,
 				},
+				{
+					Name: MISServiceMetricsPortName,
+					Port: misService.Spec.ServiceSpec.MetricsPort,
+				},
 			},
 			Selector: r.getStandardSelectorLabels(misService),
 			Type:     misService.Spec.ServiceSpec.Type,
@@ -240,6 +286,9 @@ func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, 
 	return nil
 }
 
+// reconcileServiceMonitor used to construct ServiceMonitor.
+// It helps create ServiceMonitor on Service to adjust the Prometheus scrape configuration to fetch metrics from pods
+// that routed by the Service.
 func (r *MISServiceReconciler) reconcileServiceMonitor(ctx context.Context, misService *alphav1.MISService) error {
 	if misService.Spec.HPA == nil {
 		return nil
@@ -270,6 +319,7 @@ func (r *MISServiceReconciler) reconcileServiceMonitor(ctx context.Context, misS
 	return nil
 }
 
+// constructServiceMonitor set Prometheus to scrape metrics from port MISServiceMetricsPortName of Service.
 func (r *MISServiceReconciler) constructServiceMonitor(
 	misService *alphav1.MISService, monitor *monitorv1.ServiceMonitor) error {
 	*monitor = monitorv1.ServiceMonitor{
@@ -281,7 +331,7 @@ func (r *MISServiceReconciler) constructServiceMonitor(
 		Spec: monitorv1.ServiceMonitorSpec{
 			Endpoints: []monitorv1.Endpoint{
 				{
-					Port: MISServicePortName,
+					Port: MISServiceMetricsPortName,
 					Path: MISServiceAcjobMetricsUrl,
 				},
 			},
@@ -617,7 +667,7 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 				},
 			},
 			Resources:      constructAcjobResourceFromServerInfo(&misService.Status.MISServerInfo),
-			VolumeMounts:   r.constructVolumeMounts(),
+			VolumeMounts:   r.constructVolumeMounts(misService),
 			ReadinessProbe: misService.Spec.ReadinessProbe,
 			LivenessProbe:  misService.Spec.LivenessProbe,
 			StartupProbe:   misService.Spec.StartupProbe,
@@ -625,24 +675,18 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 	}
 }
 
+// constructMasterEnvs use envs from MISModel to construct envs for create acjob, some unavailable envs will be ignored,
+// if TLSSecret is provided, TLS config will be added.
 func (r *MISServiceReconciler) constructMasterEnvs(misService *alphav1.MISService) []v1.EnvVar {
 	unavailableServiceEnvs := map[string]struct{}{
-		"http_proxy":  {},
-		"https_proxy": {},
-		"HTTP_PROXY":  {},
-		"HTTPS_PROXY": {},
+		"http_proxy":                    {},
+		"https_proxy":                   {},
+		"HTTP_PROXY":                    {},
+		"HTTPS_PROXY":                   {},
+		"TORCH_DEVICE_BACKEND_AUTOLOAD": {},
 	}
 
-	envs := []v1.EnvVar{
-		{
-			Name: "XDL_IP",
-			ValueFrom: &v1.EnvVarSource{
-				FieldRef: &v1.ObjectFieldSelector{
-					FieldPath: "status.hostIP",
-				},
-			},
-		},
-	}
+	var envs []v1.EnvVar
 
 	for _, env := range misService.Status.Envs {
 		if _, ok := unavailableServiceEnvs[env.Name]; !ok {
@@ -650,30 +694,61 @@ func (r *MISServiceReconciler) constructMasterEnvs(misService *alphav1.MISServic
 		}
 	}
 
+	if misService.Spec.TLSSecret != "" {
+		envs = append(envs, v1.EnvVar{
+			Name:  MISEnvironmentTlsCert,
+			Value: filepath.Join(MISServiceTLSPath, MISServiceTLSCert),
+		})
+
+		envs = append(envs, v1.EnvVar{
+			Name:  MISEnvironmentTlsKey,
+			Value: filepath.Join(MISServiceTLSPath, MISServiceTLSKey),
+		})
+	}
+
 	return envs
 }
 
-func (r *MISServiceReconciler) constructVolumeMounts() []v1.VolumeMount {
-	return []v1.VolumeMount{
+// constructVolumeMounts construct volume mount config for creating acjob. Related to constructVolumes.
+func (r *MISServiceReconciler) constructVolumeMounts(misService *alphav1.MISService) []v1.VolumeMount {
+	volumeMounts := []v1.VolumeMount{
 		{
-			Name:      "model",
+			Name:      MISServiceVolumeModel,
 			MountPath: MISModelPodMountPath,
 		},
 		{
-			Name:      "dshm",
-			MountPath: "/dev/shm",
+			Name:      MISServiceVolumeTmpfs,
+			MountPath: MISServiceVolumeTmpfsPath,
 		},
 		{
-			Name:      "localtime",
-			MountPath: "/etc/localtime",
+			Name:      MISServiceVolumeTime,
+			MountPath: MISServiceVolumeTimePath,
 		},
 	}
+
+	if misService.Spec.TLSSecret != "" {
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      MISServiceVolumeTls,
+			MountPath: filepath.Join(MISServiceTLSPath, MISServiceTLSCert),
+			SubPath:   MISServiceTLSCert,
+		})
+
+		volumeMounts = append(volumeMounts, v1.VolumeMount{
+			Name:      MISServiceVolumeTls,
+			MountPath: filepath.Join(MISServiceTLSPath, MISServiceTLSKey),
+			SubPath:   MISServiceTLSKey,
+		})
+	}
+
+	return volumeMounts
 }
 
+// constructVolumeMounts construct volumes for creating acjob.
+// Include model, shared memory, timezone, or tls path if TLSSecret exists.
 func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) []v1.Volume {
-	return []v1.Volume{
+	volumes := []v1.Volume{
 		{
-			Name: "model",
+			Name: MISServiceVolumeModel,
 			VolumeSource: v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 					ClaimName: misService.Status.PVC,
@@ -681,7 +756,7 @@ func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) 
 			},
 		},
 		{
-			Name: "dshm",
+			Name: MISServiceVolumeTmpfs,
 			VolumeSource: v1.VolumeSource{
 				EmptyDir: &v1.EmptyDirVolumeSource{
 					Medium: v1.StorageMediumMemory,
@@ -689,7 +764,7 @@ func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) 
 			},
 		},
 		{
-			Name: "localtime",
+			Name: MISServiceVolumeTime,
 			VolumeSource: v1.VolumeSource{
 				HostPath: &v1.HostPathVolumeSource{
 					Path: "/etc/localtime",
@@ -697,8 +772,22 @@ func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) 
 			},
 		},
 	}
+
+	if misService.Spec.TLSSecret != "" {
+		volumes = append(volumes, v1.Volume{
+			Name: MISServiceVolumeTls,
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName: misService.Spec.TLSSecret,
+				},
+			},
+		})
+	}
+
+	return volumes
 }
 
+// checkAcjobStatus check status of acjob created by MISService and adjust status of MISService.
 func (r *MISServiceReconciler) checkAcjobStatus(
 	misService *alphav1.MISService, acjobList *unstructured.UnstructuredList) (requeue bool, err error) {
 	totolNum := len(acjobList.Items)
@@ -751,6 +840,7 @@ func (r *MISServiceReconciler) checkAcjobStatus(
 	return false, nil
 }
 
+// updateMISServiceStatusUtil helps set status for MISService.
 func (r *MISServiceReconciler) updateMISServiceStatusUtil(
 	misService *alphav1.MISService, status metav1.ConditionStatus, t, reason, message string) {
 	meta.SetStatusCondition(&misService.Status.Conditions, metav1.Condition{
@@ -789,33 +879,109 @@ func (r *MISServiceReconciler) deleteAcjob(
 	return nil
 }
 
+// updateMISServiceStatus use Patch to update MISService status efficiently.
 func (r *MISServiceReconciler) updateMISServiceStatus(ctx context.Context, misService *alphav1.MISService) error {
 
 	obj := alphav1.MISService{}
-	if err := r.Get(ctx, types.NamespacedName{Name: misService.Name, Namespace: misService.Namespace}, &obj); r != nil {
-		if err != nil {
-			return errors.Wrap(err, "Fetch MISService failed")
-		}
+	if err := r.Get(
+		ctx, types.NamespacedName{Name: misService.Name, Namespace: misService.Namespace}, &obj); err != nil {
+		return errors.Wrap(err, "Fetch MISService failed")
 	}
 
 	patch := client.MergeFrom(obj.DeepCopy())
 	obj.Status = (*misService).Status
 
 	if err := r.Status().Patch(ctx, &obj, patch); err != nil {
-		if err != nil {
-			return errors.Wrap(err, "Update MISService failed")
-		}
+		return errors.Wrap(err, "Update MISService failed")
 	}
 
 	return nil
 }
 
+// createIndexTLSSecretForService create index for TLSSecret to accelerate query.
+func (r *MISServiceReconciler) createIndexTLSSecretForService(mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&alphav1.MISService{},
+		"tlsSecret",
+		func(o client.Object) []string {
+			misservice, ok := o.(*alphav1.MISService)
+			if !ok {
+				return []string{}
+			}
+			return []string{misservice.Spec.TLSSecret}
+		},
+	)
+}
+
+// createIndexTLSSecretForService create index for MISModel to accelerate query.
+func (r *MISServiceReconciler) createIndexMISModelForService(mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(
+		context.Background(),
+		&alphav1.MISService{},
+		"misModel",
+		func(o client.Object) []string {
+			misservice, ok := o.(*alphav1.MISService)
+			if !ok {
+				return []string{}
+			}
+			return []string{misservice.Spec.MISModel}
+		},
+	)
+}
+
+func (r *MISServiceReconciler) findMISServiceForIndexTLSSecret(ctx context.Context, obj client.Object) []ctrl.Request {
+	return r.findMISServiceForIndex(ctx, obj, "tlsSecret")
+}
+
+func (r *MISServiceReconciler) findMISServiceForIndexMISModel(ctx context.Context, obj client.Object) []ctrl.Request {
+	return r.findMISServiceForIndex(ctx, obj, "misModel")
+}
+
+// findMISServiceForIndex use index to query MISService. Must use with createIndexTLSSecretForService liked method.
+// For example, if createIndexTLSSecretForService has been used to create index `tlsSecret` for column
+// MISService.spec.TLSSecret, after register findMISServiceForIndex and index `tlsSecret` to Watch Secret,
+// when Secret changes, this method will return MISService searched by Secret.Name.
+func (r *MISServiceReconciler) findMISServiceForIndex(
+	ctx context.Context, obj client.Object, index string) []ctrl.Request {
+
+	var requests []ctrl.Request
+
+	misservices := alphav1.MISServiceList{}
+	if err := r.List(ctx, &misservices,
+		client.InNamespace(obj.GetNamespace()),
+		client.MatchingFields{index: obj.GetName()},
+	); err == nil {
+		for _, misservice := range misservices.Items {
+			requests = append(requests, ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: misservice.Namespace,
+					Name:      misservice.Name,
+				},
+			})
+		}
+	}
+
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *MISServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.recorder = mgr.GetEventRecorderFor("misservice-controller")
+
+	if err := r.createIndexTLSSecretForService(mgr); err != nil {
+		return errors.Wrap(err, "Unable to build index of TLSSecret for MISService")
+	}
+
+	if err := r.createIndexMISModelForService(mgr); err != nil {
+		return errors.Wrap(err, "Unable to build index of MISModel for MISService")
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&alphav1.MISService{}).
 		Named("misservice").
+		Watches(&v1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.findMISServiceForIndexTLSSecret)).
+		Watches(&alphav1.MISModel{}, handler.EnqueueRequestsFromMapFunc(r.findMISServiceForIndexMISModel)).
 		Owns(&v1.Service{}).
 		Owns(&monitorv1.ServiceMonitor{}).
 		Owns(&v2beta2.HorizontalPodAutoscaler{}).

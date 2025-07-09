@@ -49,6 +49,8 @@ function compile_mis() {
 function compile_mis_operator() {
   echo "compile mis operator"
 
+  OUTPUT_NAME=mis-operator-manager
+
   # pre build controller-gen
   cd $workdir/mis-operator
   go get sigs.k8s.io/controller-tools@v0.13.0
@@ -61,7 +63,14 @@ function compile_mis_operator() {
   go mod tidy
   /opt/buildtools/controller-gen rbac:roleName=manager-role crd paths="./api/..." paths="./internal/..." output:crd:artifacts:config=config/crd/bases
   /opt/buildtools/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./api/..."
-  CGO_ENABLED=0 GOOS=linux go build -a -o mis-operator-manager cmd/main.go
+
+  export CGO_ENABLED=0
+
+  go build \
+  -buildmode=pie \
+  -trimpath \
+  -ldflags "-s -linkmode=external -extldflags=-Wl,-z,relro,-z,now,-z,noexecstack -X main.BuildName=${OUTPUT_NAME} -X main.BuildVersion=${VERSION}_linux-${ARCH}" \
+  -o ${OUTPUT_NAME} cmd/main.go
 
   # move
   mkdir -p $workdir/output/mis-operator

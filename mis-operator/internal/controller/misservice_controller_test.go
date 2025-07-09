@@ -49,6 +49,7 @@ var _ = Describe("MISService Controller", func() {
 			WithScheme(testScheme).
 			WithStatusSubresource(&alphav1.MISService{}).
 			WithStatusSubresource(&alphav1.MISModel{}).
+			WithStatusSubresource(&v1.Secret{}).
 			WithStatusSubresource(&v1.Service{}).
 			WithStatusSubresource(&monitorv1.ServiceMonitor{}).
 			WithStatusSubresource(&v2beta2.HorizontalPodAutoscaler{}).
@@ -60,6 +61,72 @@ var _ = Describe("MISService Controller", func() {
 			Scheme:   testScheme,
 			recorder: record.NewFakeRecorder(1000),
 		}
+	})
+
+	Context("Test Check TLSSecret", func() {
+
+		var (
+			testNamespace string
+
+			testTLSSecretName string
+
+			testMISServiceName string
+
+			testTLSSecret  v1.Secret
+			testMISService alphav1.MISService
+		)
+
+		BeforeEach(func() {
+			testNamespace = "test-namespace"
+
+			testTLSSecretName = "test-tls-secret"
+
+			testMISServiceName = "test-mis-service-name"
+
+			testTLSSecret = v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testTLSSecretName,
+					Namespace: testNamespace,
+				},
+				Type: v1.SecretTypeTLS,
+				Data: map[string][]byte{
+					"tls.crt": []byte{},
+					"tls.key": []byte{},
+				},
+			}
+
+			testMISService = alphav1.MISService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testMISServiceName,
+					Namespace: testNamespace,
+				},
+				Spec: alphav1.MISServiceSpec{
+					TLSSecret: testTLSSecretName,
+				},
+			}
+		})
+
+		It("should return err if no TLSSecret found", func() {
+			err := reconciler.checkTLSSecret(ctx, &testMISService)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should requeue if TLSSecret type not right", func() {
+			testTLSSecret.Type = v1.SecretTypeBasicAuth
+			Expect(testClient.Create(ctx, &testTLSSecret)).NotTo(HaveOccurred())
+
+			err := reconciler.checkTLSSecret(ctx, &testMISService)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should return true if TLSSecret is right", func() {
+			Expect(testClient.Create(ctx, &testTLSSecret)).NotTo(HaveOccurred())
+
+			err := reconciler.checkTLSSecret(ctx, &testMISService)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(testMISService.Status.State).To(Equal(alphav1.MISServiceStateTLSSecretReady))
+		})
 	})
 
 	Context("Test Check MISModel", func() {
@@ -113,8 +180,7 @@ var _ = Describe("MISService Controller", func() {
 		})
 
 		It("should return err if no MISModel found", func() {
-			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(requeue).To(BeFalse())
+			err := reconciler.checkMISModel(ctx, &testMISService)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -122,16 +188,14 @@ var _ = Describe("MISService Controller", func() {
 			testMISModel.Status.State = alphav1.MISModelStateInProgress
 			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
 
-			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(requeue).To(BeTrue())
-			Expect(err).NotTo(HaveOccurred())
+			err := reconciler.checkMISModel(ctx, &testMISService)
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("should return true if MISModel found", func() {
 			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
 
-			requeue, err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(requeue).To(BeFalse())
+			err := reconciler.checkMISModel(ctx, &testMISService)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(testMISService.Status.State).To(Equal(alphav1.MISServiceStateModelReady))
@@ -261,7 +325,7 @@ var _ = Describe("MISService Controller", func() {
 					Namespace: testNamespace, Name: testMISService.GetServiceMonitorName()}
 				Expect(testClient.Get(ctx, testSvcNamespaceName, &testSvcMonitor)).NotTo(HaveOccurred())
 
-				Expect(testSvcMonitor.Spec.Endpoints[0].Port == MISServicePortName).To(BeTrue())
+				Expect(testSvcMonitor.Spec.Endpoints[0].Port == MISServiceMetricsPortName).To(BeTrue())
 				Expect(utils.MapEqual(testSvcMonitor.Spec.Selector.MatchLabels, reconciler.getStandardLabels(&testMISService))).To(BeTrue())
 			})
 		})
@@ -413,7 +477,7 @@ var _ = Describe("MISService Controller", func() {
 			Expect(podSpec.Containers[0].ReadinessProbe.ProbeHandler.HTTPGet.Port == intstr.FromInt32(testPort)).To(BeTrue())
 			Expect(podSpec.Containers[0].Image == testImage).To(BeTrue())
 
-			Expect(podSpec.Containers[0].Env[1].Name).To(Equal("MIS_CONFIG"))
+			Expect(podSpec.Containers[0].Env[0].Name).To(Equal("MIS_CONFIG"))
 
 			Expect(podSpec.ImagePullSecrets[0].Name).To(Equal(testImagePullSecret))
 
