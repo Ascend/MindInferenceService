@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import asyncio
 import os
 import re
 import signal
@@ -8,6 +9,7 @@ from contextlib import asynccontextmanager
 from http import HTTPStatus
 from typing import Optional
 
+import uvicorn
 import uvloop
 from fastapi import FastAPI, APIRouter
 from fastapi.exceptions import RequestValidationError
@@ -21,7 +23,6 @@ from vllm.entrypoints.openai.api_server import lifespan, create_server_socket
 from vllm.entrypoints.openai.protocol import ErrorResponse
 from vllm.utils import set_ulimit
 
-from mis import constants
 from mis.args import ARGS, GlobalArgs
 from mis.engine_factory import AutoEngine
 from mis.hub.envpreparation import environment_preparation
@@ -71,8 +72,6 @@ def build_app(args: GlobalArgs) -> FastAPI:
     else:
         app = FastAPI(lifespan=lifespan)
 
-    mount_metrics(app)
-
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_, exc):
         error = ErrorResponse(message=str(exc),
@@ -118,6 +117,15 @@ async def init_app_state(engine_client: EngineClient, model_config: ModelConfig,
 
 
 async def run_server(args: GlobalArgs):
+    """Starts the completions server using the vLLM engine.
+
+    This function sets up a server socket, configures signal handling, builds the engine client, initializes the FastAPI
+    application, and serves HTTP/HTTPS requests. It also handles graceful shutdown of the server.
+
+    Args:
+        args: global args containing all configuration resolved by MIS.
+    """
+
     logger.info("MIS API server")
     logger.info("args: %s", args)
 
@@ -160,9 +168,71 @@ async def run_server(args: GlobalArgs):
     sock.close()
 
 
+async def run_metrics(args: GlobalArgs):
+    """Starts a metrics server using FastAPI and Uvicorn.
+
+    This function sets up a FastAPI application, mounts the metrics endpoint, and starts a Uvicorn server to serve the
+    metrics. This metrics service is an HTTP service.
+
+    Args:
+        args: global args containing all configuration resolved by MIS.
+    """
+
+    app = FastAPI()
+
+    mount_metrics(app)
+
+    sock_addr = (args.host or "", args.metrics_port)
+    sock = create_server_socket(sock_addr)
+
+    metrics_config = uvicorn.Config(app,
+                                    host=args.host,
+                                    port=args.metrics_port)
+
+    metrics_server = uvicorn.Server(metrics_config)
+
+    loop = asyncio.get_running_loop()
+    metrics_server_task = loop.create_task(metrics_server.serve([sock]))
+
+    try:
+        await metrics_server_task
+    except asyncio.CancelledError:
+        # use should_exit to confirm graceful shutdown
+        metrics_server.should_exit = True
+
+    sock.close()
+
+
+async def run(args: GlobalArgs):
+    """Starts both the main server and the metrics server.
+
+    This function creates and runs two asynchronous tasks: one for the main server and one for the metrics server.
+    It waits for either of the tasks to complete. If one task completes (or is cancelled), the other task is cancelled.
+
+    Args:
+        args: global args containing all configuration resolved by MIS.
+    """
+
+    loop = asyncio.get_running_loop()
+    server_task = loop.create_task(run_server(args))
+    metrics_task = loop.create_task(run_metrics(args))
+
+    done, pending = await asyncio.wait([server_task, metrics_task], return_when=asyncio.FIRST_COMPLETED)
+
+    for p in pending:
+        p.cancel()
+
+    # raise exceptions that occurred in the done tasks to prevents swallowing exceptions.
+    for d in done:
+        try:
+            d.result()
+        except Exception as e:
+            raise Exception("Server running failed") from e
+
+
 def main():
     args = environment_preparation(ARGS)
-    uvloop.run(run_server(args))
+    uvloop.run(run(args))
 
 
 if __name__ == "__main__":

@@ -1,16 +1,17 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-from typing import Optional
+from typing import Optional, Any, ClassVar
 
 from pydantic import BaseModel
 
 import mis.envs as envs
 
-
 TOOL_PARSER_TYPE = "pythonic"
 
 
 class GlobalArgs(BaseModel):
+    model_post_init: ClassVar[Any]
+
     # environment params
     cache_path: str = envs.MIS_CACHE_PATH
 
@@ -25,6 +26,7 @@ class GlobalArgs(BaseModel):
     # server
     host: Optional[str] = envs.MIS_HOST
     port: int = envs.MIS_PORT
+    metrics_port: int = envs.MIS_METRICS_PORT
     inner_port: int = envs.MIS_INNER_PORT
     ssl_keyfile: Optional[str] = envs.MIS_SSL_KEYFILE
     ssl_certfile: Optional[str] = envs.MIS_SSL_CERTFILE
@@ -50,6 +52,20 @@ class GlobalArgs(BaseModel):
 
     enable_auto_tools: Optional[bool] = envs.MIS_ENABLE_AUTO_TOOLS
     tool_parser: Optional[str] = TOOL_PARSER_TYPE
+
+    def model_post_init(self, __context: Any) -> None:
+        """This method is called after the model has been fully initialized and validates configuration of MIS.
+
+        Args:
+            __context (Any): The context passed to the model during initialization. This is typically used for advanced
+                use cases and is not used in this method.
+
+        Raises:
+            ValueError: If `port` and `metrics_port` are the same.
+        """
+
+        if self.port == self.metrics_port:
+            raise ValueError("MIS_PORT and MIS_METRICS_PORT is not allowed to use the same port.")
 
 
 ARGS: GlobalArgs = GlobalArgs()

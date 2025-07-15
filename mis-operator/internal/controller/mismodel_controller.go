@@ -468,19 +468,15 @@ func (r *MISModelReconciler) checkDownloadPodFailed(misModel *alphav1.MISModel, 
 func (r *MISModelReconciler) updateMISModelStatus(ctx context.Context, misModel *alphav1.MISModel) error {
 
 	obj := alphav1.MISModel{}
-	if err := r.Get(ctx, types.NamespacedName{Name: misModel.Name, Namespace: misModel.Namespace}, &obj); r != nil {
-		if err != nil {
-			return errors.Wrap(err, "Fetch MISModel failed")
-		}
+	if err := r.Get(ctx, types.NamespacedName{Name: misModel.Name, Namespace: misModel.Namespace}, &obj); err != nil {
+		return errors.Wrap(err, "Fetch MISModel failed")
 	}
 
 	patch := client.MergeFrom(obj.DeepCopy())
 	obj.Status = (*misModel).Status
 
 	if err := r.Status().Patch(ctx, &obj, patch); err != nil {
-		if err != nil {
-			return errors.Wrap(err, "Update MISModel failed")
-		}
+		return errors.Wrap(err, "Update MISModel failed")
 	}
 
 	return nil

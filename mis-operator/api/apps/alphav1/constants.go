@@ -37,6 +37,8 @@ const (
 const (
 	// MISServiceStateStarted indicates MISService first create
 	MISServiceStateStarted = "Stared"
+	// MISServiceStateTLSSecretReady indicates related TLSSecret is ok
+	MISServiceStateTLSSecretReady = "TLSSecretReady"
 	// MISServiceStateModelReady indicates related MISModel is ok
 	MISServiceStateModelReady = "ModelReady"
 	// MISServiceStateServiceCreated indicates related service is created
@@ -52,6 +54,8 @@ const (
 	// MISServiceStateFailed indicates err occurred and can't provide service
 	MISServiceStateFailed = "Failed"
 
+	// MISServiceConditionTLSSecretReady indicates if TLSSecret is in ready
+	MISServiceConditionTLSSecretReady = "MIS_SVC_TLS_SECRET_READY"
 	// MISServiceConditionModelReady indicates if MISModel is in ready
 	MISServiceConditionModelReady = "MIS_SVC_MODEL_READY"
 	// MISServiceConditionServiceCreated indicates if service is created

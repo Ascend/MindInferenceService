@@ -3,6 +3,7 @@
 import os
 import ssl
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+import socket
 
 from mis.utils.env_checker import EnvChecker
 import mis.constants as constants
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 
     MIS_HOST: Optional[str] = None
     MIS_PORT: int = 8000
+    MIS_METRICS_PORT: int = 8001
     MIS_INNER_PORT = 9090
     MIS_SSL_KEYFILE: Optional[str] = None
     MIS_SSL_CERTFILE: Optional[str] = None
@@ -56,6 +58,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
 
     "MIS_HOST": lambda: _get_ip_address_from_env("MIS_HOST", None),
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),
+    "MIS_METRICS_PORT": lambda: _get_int_from_env("MIS_METRICS_PORT", 8001, 1024, 65535),
     "MIS_INNER_PORT": lambda: _get_int_from_env("MIS_INNER_PORT", 9090, 1024, 65535),
     "MIS_SSL_KEYFILE": lambda: _get_file_from_env("MIS_SSL_KEYFILE", None),
     "MIS_SSL_CERTFILE": lambda: _get_file_from_env("MIS_SSL_CERTFILE", None),
