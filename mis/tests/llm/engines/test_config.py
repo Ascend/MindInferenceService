@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+# Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import unittest
 from unittest.mock import patch, mock_open
 
@@ -8,8 +10,7 @@ from mis.llm.engines.config import ConfigParser
 class TestConfigParser(unittest.TestCase):
 
     @patch('os.path.exists', return_value=True)
-    @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\nmodel: test_model\n')
-    def test_engine_config_loading_valid_config(self, mock_file, mock_exists):
+    def test_engine_config_loading_valid_config(self, mock_exists):
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -20,7 +21,6 @@ class TestConfigParser(unittest.TestCase):
 
         self.assertEqual(updated_args.engine_type, 'vllm')
         self.assertEqual(updated_args.model, 'test_model')
-        mock_file.assert_called_once()
 
     @patch('os.path.exists', return_value=False)
     def test_engine_config_loading_invalid_config_path(self, mock_exists):

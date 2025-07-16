@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+# Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -26,7 +28,8 @@ class TestDownloader(unittest.TestCase):
 
         path = ModelerDownloader.get_model_path(self.raw_model)
         self.assertEqual(path, str(self.abs_model_path))
-        mock_logger.info.assert_called_with(f"Found model weight cached in path {self.abs_model_path}, local model weight will be used")
+        mock_logger.info.assert_called_with(f"Found model weight cached in path {self.abs_model_path}, "
+                                            f"local model weight will be used")
 
     @patch("openmind_hub.snapshot_download")
     def test_get_model_path_force_download(self, mock_snapshot_download):

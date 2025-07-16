@@ -10,6 +10,7 @@ mindie-service:
   block_size: 32
   swap_space: 4
   scheduling_policy: fcfs
+  npu_memory_fraction: 0.7
 engine_type: mindie-service
 model: MindSDK/MiniCPM-V-2_6
 model_type: VLM

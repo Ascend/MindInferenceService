@@ -1,16 +1,21 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import importlib
-import json
 import os
 import re
-from typing import List, Union
+from typing import List, Tuple, Union, Optional
+
+import json
+import socket
 
 from mis.constants import HW_310P, HW_910B
 from mis.logger import init_logger
 
 
 logger = init_logger(__name__)
+
+
+ENV_CONTAINER_VARS = ('CONTAINER_IP', 'POD_IP', 'HOST_IP')
 
 
 class ConfigChecker:
@@ -148,6 +153,9 @@ def get_soc_name() -> Union[str, None]:
     except Exception as e:
         logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
         raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
+    if soc_info is None:
+        logger.error("get soc info failed, please check the device mounting status.")
+        raise RuntimeError("get soc info failed, please check the device mounting status.")
     if HW_310P in soc_info:
         return HW_310P
     elif HW_910B in soc_info:
@@ -165,3 +173,50 @@ def check_dependencies(required_packages: list) -> None:
 
     if missing_packages:
         logger.warning(f"The following required packages are missing: {', '.join(missing_packages)}")
+
+
+class ContainerIPDetector:
+    """Detects the container's IP address at environment preparation."""
+    @staticmethod
+    def _get_hostname_ip() -> Optional[str]:
+        """Get IP address using the hostname method."""
+        try:
+            hostname = socket.gethostname()
+            ip = socket.gethostbyname(hostname)
+            logger.info(f"IP obtained through hostname")
+            return ip
+        except Exception as e:
+            logger.warning(f"Failed to obtain IP through hostname")
+            return None
+
+    @staticmethod
+    def _get_container_ip_from_env() -> Optional[str]:
+        """Get container IP from environment variables."""
+        # Some container orchestration systems set these environment variables
+        env_vars = ENV_CONTAINER_VARS
+        for var in env_vars:
+            ip = os.environ.get(var)
+            if ip:
+                logger.info(f"IP obtained from environment variable")
+                return ip
+        logger.info("Failed to obtain IP from environment variables")
+        return None
+
+    @classmethod
+    def get_ip(cls, ip_current) -> Optional[str]:
+        """Run IP detection and return the primary IP."""
+        if ip_current is not None and ip_current != "0.0.0.0":
+            return ip_current
+
+        # Fallback to hostname IP
+        primary_ip = cls._get_hostname_ip()
+        if primary_ip:
+            return primary_ip
+
+        # Fallback to environment variable IP
+        primary_ip = cls._get_container_ip_from_env()
+        if primary_ip:
+            return primary_ip
+
+        logger.warning("Failed to detect primary IP address")
+        return None

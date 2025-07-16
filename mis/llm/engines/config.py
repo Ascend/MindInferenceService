@@ -42,6 +42,8 @@ MIS_CONFIG_DEFAULT = {
     "qwen3-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen3-14b": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
     "qwen3-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen3-30b-a3b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen3-235b-a22b": {HW_910B: "atlas800ia2-16x64gb-bf16-vllm-default"},
     "qwq-32b": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
     "qwen2.5-omni-3b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen2.5-omni-7b": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
@@ -138,6 +140,11 @@ CHECKER_VLLM = {
     "quantization": {
         "type": "str_in",
         "valid_values": ["awq", "compressed-tensors", "ms-model-slim"]
+    },
+    "npu_memory_fraction": {
+        "type": "float",
+        "min": 0.5,
+        "max": 0.97,
     }
 }
 
@@ -340,7 +347,11 @@ class ConfigParser:
                          f"The engine will be started with the default parameters. ")
             return False
 
-        if config.get(config.get("engine_type")) is None:
+        engine_type = config.get("engine_type")
+        if engine_type not in ["vllm", "mindie-service"]:
+            logger.error(f"engine_type in YAML config file must in ['vllm', 'mindie-service']")
+
+        if config.get(engine_type) is None:
             logger.debug(f"Config of engine type {config.get('engine_type')} is required. "
                            f"The engine will be started with the default parameters. ")
             return False

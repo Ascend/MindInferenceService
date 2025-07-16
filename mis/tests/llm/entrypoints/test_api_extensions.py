@@ -1,3 +1,5 @@
+# -*- coding:utf-8 -*-
+# Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import unittest
 from unittest.mock import patch
 
@@ -46,7 +48,7 @@ class TestAPIExtensions(unittest.TestCase):
                 "function": {
                     "name": "get_forecast", "description": "Get the weather forecast for a given location",
                     "parameters":
-                        {"type": "object","properties":
+                        {"type": "object", "properties":
                             {"city":
                                  {"type": "string",
                                   "description": "The city to get the forecast for, e.g. 'New York'"},

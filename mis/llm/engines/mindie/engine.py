@@ -28,14 +28,6 @@ from mis.llm.engines.mindie.utils import atb_link_to_model_path
 
 logger = init_logger(__name__)
 
-LOG_LEVEL_MAP = {
-    "DEBUG": "Debug",
-    "INFO": "Info",
-    "WARNING": "Warning",
-    "ERROR": "Error",
-    "CRITICAL": "Error",  # mindie-service not have CRITICAL level
-}
-
 STOP_WAIT_TIMES = 5
 ATB_PACKAGE_NAME = "atb_llm"
 MINDIE_TURBO_PACKAGE_NAME = "mindie_turbo"

@@ -11,13 +11,17 @@ from mis.args import GlobalArgs
 from mis.hub.downloader import ModelerDownloader
 from mis.llm.engines.config import ConfigParser
 from mis.logger import init_logger
+from mis.utils.utils import ContainerIPDetector
 
 logger = init_logger(__name__)
 
 arch = platform.machine()
 cxx_abi = 1 if torch.compiled_with_cxx11_abi() else 0
 
+logger.info(f"The installation path for the Ascend package has been set to {constants.ASCEND_PATH} "
+            f"according to the executing user")
 toolkit_path = constants.ASCEND_TOOLKIT_PATH
+
 nnal_atb_home_path = f"{constants.ASCEND_NNAL_PATH}/latest/atb/cxx_abi_{cxx_abi}"
 
 mindie_rt_home = constants.MINDIE_RT_PATH
@@ -26,6 +30,16 @@ mindie_service_path = constants.MINDIE_SERVICE_PATH
 mindie_llm_path = constants.MINDIE_LLM_PATH
 
 mindie_atb_path = constants.MINDIE_ATB_PATH
+
+
+LOG_LEVEL_MAP = {
+    "DEBUG": "debug",
+    "INFO": "info",
+    "WARNING": "warn",
+    "ERROR": "error",
+    "CRITICAL": "critical",  # MindIE LOG LEVEL
+}
+
 
 # environments those need to be appended, not to be overridden
 APPENDABLE_ENVIRONMENTS = [
@@ -118,9 +132,11 @@ mindie_envs = {
     "TASK_QUEUE_ENABLE": "1",
     "HCCL_BUFFSIZE": "120",
     # mindie-service日志
-    "MINDIE_LOG_TO_STDOUT": "0",
+    "MINDIE_LOG_TO_STDOUT": "1",
+    # In mis/run.py, the call to mis/envs.py needs to occur before mis/hub/envpreparation.py.
+    "MINDIE_LOG_LEVEL": LOG_LEVEL_MAP.get(envs.MIS_LOG_LEVEL, "info") if envs.MIS_LOG_LEVEL is not None else "info",
     "MINDIE_LOG_TO_FILE": "0",
-    "MINDIE_LOG_VERBOSE": "0",
+    "MINDIE_LOG_VERBOSE": "1",
     # 运行时日志
     "ASCEND_SLOG_PRINT_TO_STDOUT": "0",
     "ASCEND_GLOBAL_LOG_LEVEL": "3",
@@ -181,6 +197,18 @@ def source_mindie_service_envs():
     enable_envs(mindie_atb_envs)
 
 
+def source_components_envs():
+    if "VLLM_DO_NOT_TRACK" not in os.environ:
+        os.environ["VLLM_DO_NOT_TRACK"] = "1"  # disable vLLM tracking
+
+
+def source_configuration_envs(engine_optimization_config: dict):
+    config2env_name = "npu_memory_fraction"
+    npu_memory_fraction = engine_optimization_config.pop(config2env_name, None)
+    if config2env_name.upper() not in os.environ and npu_memory_fraction is not None:
+        os.environ[config2env_name.upper()] = str(npu_memory_fraction)
+
+
 ENGINE_ENVS = {
     "vllm": source_ascend_envs,
     "mindie-service": source_mindie_service_envs
@@ -194,6 +222,14 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
             - model-pre-downloading
             - set environment variables if needed
     """
+    ip_update = ContainerIPDetector.get_ip(args.host)
+    if ip_update is None:
+        logger.error(f"Unable to automatically detect Host IP. "
+                     f"Please manually set the Host IP via the environment variable MIS_HOST.")
+        raise RuntimeError("Host IP could not be detected automatically.")
+    else:
+        args.host = ip_update
+
     # preferred config
     configparser = ConfigParser(args)
     args = configparser.engine_config_loading()
@@ -211,6 +247,11 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
             args.tool_parser = "hermes"
         elif "llama-3" in model_name_lower:
             args.tool_parser = "llama3_json"
+
+    # source envs from optimization config
+    source_configuration_envs(args.engine_optimization_config)
+
+    source_components_envs()
 
     # source envs in main process
     if resolve_env:

@@ -36,7 +36,6 @@ class GlobalArgs(BaseModel):
     max_log_len: Optional[int] = envs.MIS_MAX_LOG_LEN
     disable_log_requests: bool = envs.MIS_DISABLE_LOG_REQUESTS
     disable_log_stats: bool = envs.MIS_DISABLE_LOG_STATS
-    api_key: Optional[str] = envs.MIS_API_KEY
     disable_fastapi_docs: bool = envs.MIS_DISABLE_FASTAPI_DOCS
 
     # vlm params

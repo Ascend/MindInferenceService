@@ -11,6 +11,7 @@ mindie-service:
   swap_space: 4
   scheduling_policy: priority
   num_scheduler_steps: 1
+  npu_memory_fraction: 0.7
 engine_type: mindie-service
 model: MindSDK/MiniCPM-V-2_6
 model_type: VLM
