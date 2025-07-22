@@ -671,6 +671,8 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 			ReadinessProbe: misService.Spec.ReadinessProbe,
 			LivenessProbe:  misService.Spec.LivenessProbe,
 			StartupProbe:   misService.Spec.StartupProbe,
+			Stdin:          true,
+			TTY:            true,
 		},
 	}
 }
