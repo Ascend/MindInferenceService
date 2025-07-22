@@ -2,6 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 import platform
+from typing import Optional
 
 import torch
 
@@ -215,6 +216,65 @@ ENGINE_ENVS = {
 }
 
 
+def _is_private_key_encrypted(key_file_path: str) -> bool:
+    """Check if a PEM formatted private key file is encrypted
+
+    Args:
+        key_file_path (str): Path to the private key file
+
+    Returns:
+        bool: True if encrypted, False if not encrypted
+    """
+    if not os.path.isfile(key_file_path):
+        logger.warning(f"SSL key file not found")
+        return False
+
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.serialization import load_pem_private_key
+
+        with open(key_file_path, 'rb') as key_file:
+            key_data = key_file.read()
+
+        try:
+            load_pem_private_key(key_data, password=None)
+            return False  # Successfully loaded, indicating it is not encrypted
+        except TypeError:
+            return True  # Requires a password, indicating it is encrypted
+
+    except Exception as e:
+        logger.warning(f"Failed to parse SSL key file: {e}")
+        return False
+
+
+def check_ssl_config(ssl_keyfile: Optional[str], ssl_certfile: Optional[str]) -> None:
+    """Check SSL configuration to ensure that the necessary files are provided and
+    that the private key is properly encrypted.
+
+    Args:
+        ssl_keyfile (str): Path to the SSL private key file.
+        ssl_certfile (str): Path to the SSL certificate file.
+
+    Returns:
+        None
+    """
+    if not ssl_keyfile or not ssl_certfile:
+        logger.warning("SSL not configured. To ensure security, "
+                       "you must provide a certificate and encrypted private key.")
+        return
+
+    try:
+        if _is_private_key_encrypted(ssl_keyfile):
+            logger.info(f"SSL private key is encrypted!. You may need to provide a password for startup")
+        else:
+            logger.warning(f"SSL private key is not encrypted. "
+                           f"The private key will be mounted in plain text, "
+                           f"which poses a serious security risk. It is suggest to encrypt the private key.")
+
+    except Exception as e:
+        logger.warning(f"SSL configuration error: {e}")
+
+
 def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> GlobalArgs:
     """Do some preparations for mis
         include:
@@ -252,6 +312,8 @@ def environment_preparation(args: GlobalArgs, resolve_env: bool = False) -> Glob
     source_configuration_envs(args.engine_optimization_config)
 
     source_components_envs()
+
+    check_ssl_config(args.ssl_keyfile, args.ssl_certfile)
 
     # source envs in main process
     if resolve_env:
