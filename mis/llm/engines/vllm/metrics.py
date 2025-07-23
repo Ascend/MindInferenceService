@@ -126,21 +126,6 @@ class MisMetrics:
             documentation="Histogram of time spent in DECODE phase for request.",
             labelnames=labelnames,
             buckets=request_latency_buckets)
-        self.histogram_time_in_queue_request = self._histogram_cls(
-            name="mis:time_in_queue_requests",
-            documentation="Histogram of time the request spent in the queue in seconds.",
-            labelnames=labelnames,
-            buckets=request_latency_buckets)
-        self.histogram_model_forward_time_request = self._histogram_cls(
-            name="mis:model_forward_time_milliseconds",
-            documentation="Histogram of time spent in the model forward pass in ms.",
-            labelnames=labelnames,
-            buckets=build_1_2_3_5_8_buckets(3000))
-        self.histogram_model_execute_time_request = self._histogram_cls(
-            name="mis:model_execute_time_milliseconds",
-            documentation="Histogram of time spent in the model execute function in ms.",
-            labelnames=labelnames,
-            buckets=build_1_2_3_5_8_buckets(3000))
 
     def _init_request_metadata_info(self, labelnames: List[str], max_model_len: int):
         self.histogram_num_prompt_tokens_request = self._histogram_cls(
@@ -230,12 +215,7 @@ class MisPrometheusStatLogger(VllmPrometheusStatLogger):
                             stats.time_prefill_requests)
         self._log_histogram(self.metrics.histogram_decode_time_request,
                             stats.time_decode_requests)
-        self._log_histogram(self.metrics.histogram_time_in_queue_request,
-                            stats.time_in_queue_requests)
-        self._log_histogram(self.metrics.histogram_model_forward_time_request,
-                            stats.model_forward_time_requests)
-        self._log_histogram(self.metrics.histogram_model_execute_time_request,
-                            stats.model_execute_time_requests)
+
         # Metadata
         finished_reason_counter = Counter(stats.finished_reason_requests)
         self._log_counter_labels(self.metrics.counter_request_success,

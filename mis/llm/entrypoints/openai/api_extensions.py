@@ -16,6 +16,7 @@ MIS_CHAT_COMPLETION_WHITELIST = {
     "model",
     "frequency_penalty",
     "max_tokens",
+    "min_tokens",
     "presence_penalty",
     "seed",
     "stop",
@@ -30,6 +31,10 @@ MIS_CHAT_COMPLETION_WHITELIST = {
 
     # vLLM params
     "top_k",
+    "repetition_penalty",
+    "priority",  # only for V0
+    "max_completion_tokens",  # backward compatibility
+    "ignore_eos"
 }
 
 

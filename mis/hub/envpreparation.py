@@ -181,7 +181,6 @@ def enable_envs(env_dicts: dict):
 
 
 def source_ascend_envs():
-    os.environ["VLLM_PLUGINS"] = "ascend"
     os.environ["VLLM_LOGGING_LEVEL"] = envs.MIS_LOG_LEVEL
 
     enable_envs(ascend_toolkit_envs)
@@ -189,7 +188,6 @@ def source_ascend_envs():
 
 
 def source_mindie_service_envs():
-    os.environ["VLLM_PLUGINS"] = "ascend"
     os.environ["VLLM_LOGGING_LEVEL"] = envs.MIS_LOG_LEVEL
 
     enable_envs(ascend_toolkit_envs)
@@ -204,7 +202,7 @@ def source_components_envs():
 
 
 def source_configuration_envs(engine_optimization_config: dict):
-    config2env_name_list = ["npu_memory_fraction", "vllm_allow_long_max_model_len"]
+    config2env_name_list = constants.CONFIG2ENV_NAME_LIST
     for config2env_name in config2env_name_list:
         env_from_config = engine_optimization_config.pop(config2env_name, None)
         if env_from_config is not None:  # if env_from_config is None, there is no need to modify the env variable.

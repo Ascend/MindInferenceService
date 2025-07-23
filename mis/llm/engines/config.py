@@ -2,7 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 from abc import ABC
 import os
-from typing import Dict, Type, Union, Any
+from typing import Any, Dict, Optional, Type, Union
 
 import yaml
 
@@ -13,7 +13,6 @@ from mis.utils.utils import ConfigChecker, get_soc_name
 
 logger = init_logger(__name__)
 
-ROOT_DIR = "configs/llm/"
 OPTIMAL_ENGINE_TYPE = "optimal_engine_type"
 MIS_CONFIG_DEFAULT = {
     "deepseek-r1-distill-llama-8b": {HW_310P: "ascend310p-2x24gb-bf16-mindie-service-default",
@@ -61,19 +60,19 @@ MIS_CONFIG_DEFAULT = {
 CHECKER_VLLM = {
     "dtype": {
         "type": "str_in",
-        "valid_values": ["bfloat16"]
+        "valid_values": ("bfloat16",)
     },
     "tensor_parallel_size": {
         "type": "int",
-        "valid_values": [1, 2, 4, 8]
+        "valid_values": (1, 2, 4, 8)
     },
     "pipeline_parallel_size": {
         "type": "int",
-        "valid_values": [1, 2, 4, 8]
+        "valid_values": (1, 2, 4, 8)
     },
     "distributed_exector_size": {
         "type": "str_in",
-        "valid_values": ["ray", "mp"]
+        "valid_values": ("ray", "mp")
     },
     "max_num_seqs": {
         "type": "int",
@@ -102,7 +101,7 @@ CHECKER_VLLM = {
     },
     "block_size": {
         "type": "int",
-        "valid_values": [16, 32, 64, 128]
+        "valid_values": (16, 32, 64, 128)
     },
     "swap_space": {
         "type": "int",
@@ -116,7 +115,7 @@ CHECKER_VLLM = {
     },
     "scheduling_policy": {
         "type": "str_in",
-        "valid_values": ["fcfs", "priority"]
+        "valid_values": ("fcfs", "priority")
     },
     "num_scheduler_steps": {
         "type": "int",
@@ -125,31 +124,31 @@ CHECKER_VLLM = {
     },
     "enable_chunked_prefill": {
         "type": "bool",
-        "valid_values": [False]
+        "valid_values": (True, False)
     },
     "enable_prefix_caching": {
         "type": "bool",
-        "valid_values": [True, False]
+        "valid_values": (True, False)
     },
     "disable_async_output_proc": {
         "type": "bool",
-        "valid_values": [True, False]
+        "valid_values": (True, False)
     },
     "multi_step_stream_outputs": {
         "type": "bool",
-        "valid_values": [True, False]
+        "valid_values": (True, False)
     },
     "enforce_eager": {
         "type": "bool",
-        "valid_values": [True, False]
+        "valid_values": (True, False)
     },
     "distributed_executor_backend": {
         "type": "str_in",
-        "valid_values": ["ray", "mp"]
+        "valid_values": ("ray", "mp")
     },
     "quantization": {
         "type": "str_in",
-        "valid_values": ["awq", "compressed-tensors", "ms-model-slim"]
+        "valid_values": ("awq", "compressed-tensors", "ms-model-slim")
     },
     "npu_memory_fraction": {
         "type": "float",
@@ -158,8 +157,12 @@ CHECKER_VLLM = {
     },
     "vllm_allow_long_max_model_len": {
         "type": "bool",
-        "valid_values": [True, False]
+        "valid_values": (True, False)
     },
+    "vllm_use_v1": {
+        "type": "str_in",
+        "valid_values": ("1", "0")
+    }
 }
 
 
@@ -263,7 +266,7 @@ class ConfigParser:
         self._check_all_args_valid()
 
         self.model_type = self.args.model.split('/')[-1]
-        self.model_folder_path = os.path.join(ROOT_DIR, self.model_type.lower())
+        self.model_folder_path = os.path.join(args.configs_path, self.model_type.lower())
         self.engine_type = self.args.engine_type
         self.mis_config = self.args.mis_config
 
@@ -344,15 +347,19 @@ class ConfigParser:
         except Exception as e:
             logger.error(f"Error processing in print config ranges: {e}")
 
-    def engine_config_loading(self) -> GlobalArgs:
+    def load_config_from_file(self) -> Optional[Dict]:
         """
-        Obtain the engine configuration. IF the parameters are successfully obtained, update the args.
-        :return: Update global parameters
+        Loading the configuration from a specified YAML file.
+        If the specified configuration file does not exist or the environment variable `MIS_CONFIG` is not set,
+        the method will use the default configuration.
+
+        :returns: A dictionary containing the configuration loaded from the YAML file,
+        or `None` if no valid configuration is found.
         """
         if self.mis_config is None:
             logger.warning("The environment variable MIS_CONFIG is missed. "
                            "Please check if the environment variables is valid. "
-                           f"The engine will be started with the default parameters. ")
+                           "The engine will be started with the default parameters. ")
             self.mis_config = self._get_default_config()
 
         elif not os.path.exists(os.path.join(self.model_folder_path, self.mis_config + ".yaml")):
@@ -361,11 +368,18 @@ class ConfigParser:
             self.mis_config = self._get_default_config()
 
         if self.mis_config is None:
-            return self.args
+            return None
 
         config_file_path = os.path.join(self.model_folder_path, self.mis_config + ".yaml")
         engine_optimization_config = self._config_yaml_file_loading(config_file_path)
+        return engine_optimization_config
 
+    def engine_config_loading(self) -> GlobalArgs:
+        """
+        Obtain the engine configuration. If the parameters are successfully obtained, update the args.
+        :return: Update global parameters
+        """
+        engine_optimization_config = self.load_config_from_file()
         if not engine_optimization_config or not self._is_config_valid(engine_optimization_config):
             return self.args
 
@@ -442,6 +456,11 @@ class ConfigParser:
                     raise Exception(f"{attr} in args is not a valid string: {e}") from e
 
     def _get_default_config(self) -> Union[str, None]:
+        if self.model_type.lower() not in MIS_CONFIG_DEFAULT:
+            logger.info(f"The current model {self.model_type} is not included in the optimization configuration "
+                        f"or is not a large model (e.g., a embedding model).")
+            return None
+
         soc_name = get_soc_name()
         model_config_dict = MIS_CONFIG_DEFAULT.get(self.model_type.lower())
         if model_config_dict is None:

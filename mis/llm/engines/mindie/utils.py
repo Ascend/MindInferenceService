@@ -4,7 +4,7 @@ import os
 
 from mis.constants import ASCEND_PATH, MIS_BASE_PATH
 from mis.logger import init_logger
-from mis.utils.utils import read_json, write_json, _set_config_perm
+from mis.utils.utils import read_json, write_json, set_config_perm
 
 logger = init_logger(__name__)
 
@@ -35,7 +35,7 @@ class ConfigTypeConverter:
             if self._torch_dtype_convert():
                 self._create_symbolic_link()
                 write_json(self.config_path_link, self.config_data)
-                _set_config_perm(self.link_dir, mode=0o750)
+                set_config_perm(self.link_dir, mode=0o750)
                 self.model_path = self.link_dir
 
         except Exception as e:

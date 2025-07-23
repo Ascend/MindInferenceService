@@ -3,10 +3,11 @@
 import importlib
 import os
 import re
-from typing import List, Tuple, Union, Optional
+from typing import List, Union, Optional
 
 import json
 import socket
+from vllm.config import VllmConfig
 
 from mis.constants import HW_310P, HW_910B
 from mis.logger import init_logger
@@ -88,7 +89,7 @@ def _log_and_raise(logger_: logger, error_message: str, exception_class) -> None
     raise exception_class(error_message)
 
 
-def _set_config_perm(model_path: str, mode: int = 0o750) -> None:
+def set_config_perm(model_path: str, mode: int = 0o750) -> None:
     """Model config permission setting for MindIE-Service Backend
     :param: model_path: model path
     """
@@ -173,6 +174,20 @@ def check_dependencies(required_packages: list) -> None:
 
     if missing_packages:
         logger.warning(f"The following required packages are missing: {', '.join(missing_packages)}")
+
+
+def vllm_v1_supported(engine_config: VllmConfig) -> Optional[bool]:
+    v1_params = ['model_config', 'cache_config', 'parallel_config']
+    engine_config_dict = vars(engine_config)
+    v1_supported = any(param in engine_config_dict for param in v1_params)
+    try:
+        v1_supported = v1_supported and "v1" in engine_config.parallel_config.worker_cls
+    except AttributeError:
+        logger.warning("Unable to detect vLLM engine version (V0 / V1). "
+                       "Please check the engine environment variables corresponding to the vllm version and "
+                       "the model support provided by the vLLM engine.")
+        return None
+    return v1_supported
 
 
 class ContainerIPDetector:

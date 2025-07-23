@@ -32,16 +32,15 @@ function compile_mis() {
   cd $workdir
   mkdir -p $workdir/output/mis
   rm -rf $workdir/output/mis/*
-  mkdir $workdir/output/mis/llm
 
   echo "Mind Inference Service: ${VERSION}" >> $workdir/output/mis/version.info
 
-  # 编译tei需要的whl包
+  # 编译不同python版本的whl包
   python3.11 setup.py bdist_wheel
   mv dist/* $workdir/output/mis/
 
   python3.10 setup.py bdist_wheel
-  mv dist/* $workdir/output/mis/llm
+  mv dist/* $workdir/output/mis/
 
   # 输出模型配置config和量化补丁patch
   cp -r configs $workdir/output/mis/

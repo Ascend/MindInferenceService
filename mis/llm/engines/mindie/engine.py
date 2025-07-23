@@ -52,7 +52,7 @@ class MindIEServiceEngine(EngineClient):
     def __init__(self, mindie_args: MindIEServiceArgs):
         self.mindie_args = mindie_args
         self.process = None
-        check_dependencies([ATB_PACKAGE_NAME, MINDIE_TURBO_PACKAGE_NAME])
+        check_dependencies([ATB_PACKAGE_NAME])
         self.start_service()
 
     def __del__(self):
@@ -142,112 +142,12 @@ class MindIEServiceEngine(EngineClient):
     def generate_config(self):
         config = {
             "Version": "1.0.0",
-            "ServerConfig": self.generate_server_config(),
-            "BackendConfig": self.generate_backend_config(),
+            "ServerConfig": self._generate_server_config(),
+            "BackendConfig": self._generate_backend_config(),
         }
 
         with open(constants.MINDIE_SERVICE_CONFIG_PATH, "w") as json_file:
             json.dump(config, json_file, ensure_ascii=False, indent=4)
-
-    def generate_server_config(self):
-        return {
-            "ipAddress": self.mindie_args.address,
-            "managementIpAddress": self.mindie_args.address,
-            "port": self.mindie_args.server_port,
-            "managementPort": self.mindie_args.manage_port,
-            "metricsPort": self.mindie_args.metrics_port,
-            "allowAllZeroIpListening": True,
-            "maxLinkNum": 1000,
-            "httpsEnabled": False,
-            "fullTextEnabled": False,
-
-            "tlsCaPath": "security/ca/",
-            "tlsCaFile": ["ca.pem"],
-            "tlsCert": "security/certs/server.pem",
-            "tlsPk": "security/keys/server.key.pem",
-            "tlsPkPwd": "security/pass/key_pwd.txt",
-            "tlsCrlPath": "security/certs/",
-            "tlsCrlFiles": ["server_crl.pem"],
-            "managementTlsCaFile": ["management_ca.pem"],
-            "managementTlsCert": "security/certs/management/server.pem",
-            "managementTlsPk": "security/keys/management/server.key.pem",
-            "managementTlsPkPwd": "security/pass/management/key_pwd.txt",
-            "managementTlsCrlPath": "security/management/certs/",
-            "managementTlsCrlFiles": ["server_crl.pem"],
-
-            "kmcKsfMaster": "tools/pmt/master/ksfa",
-            "kmcKsfStandby": "tools/pmt/standby/ksfb",
-
-            "inferMode": "standard",
-            "interCommTLSEnabled": False,
-            "interCommPort": self.mindie_args.inter_comm_port,
-            "interCommTlsCaPath": "security/grpc/ca/",
-            "interCommTlsCaFiles": ["ca.pem"],
-            "interCommTlsCert": "security/grpc/certs/server.pem",
-            "interCommPk": "security/grpc/keys/server.key.pem",
-            "interCommPkPwd": "security/grpc/pass/key_pwd.txt",
-            "interCommTlsCrlPath": "security/grpc/certs/",
-            "interCommTlsCrlFiles": ["server_crl.pem"],
-
-            "openAiSupport": "vllm",
-            "tokenTimeout": 600,
-            "e2eTimeout": 600,
-            "distDPServerEnabled": False
-        }
-
-    def generate_backend_config(self):
-        return {
-            "backendName": "mindieservice_llm_engine",
-            "modelInstanceNumber": 1,
-            "npuDeviceIds": [[i for i in range(self.mindie_args.vllm_config.parallel_config.world_size)]],
-            "tokenizerProcessNumber": 8,
-            "multiNodesInferEnabled": False,
-            "multiNodesInferPort": self.mindie_args.multi_node_infer_port,
-            "interNodeTLSEnabled": False,
-            "interNodeTlsCaPath": "security/grpc/ca/",
-            "interNodeTlsCaFiles": ["ca.pem"],
-            "interNodeTlsCert": "security/grpc/cert/server.pem",
-            "interNodeTlsPk": "security/grpc/keys/server.key.pem",
-            "interNodeTlsPkPwd": "security/grpc/pass/mindie_server_key_pwd.txt",
-            "interNodeTlsCrlPath": "security/grpc/certs/",
-            "interNodeTlsCrlFiles": ["server_crl.pem"],
-            "interNodeKmcKsfMaster": "tools/pmt/master/ksfa",
-            "interNodeKmcKsfStandby": "tools/pmt/standby/ksfb",
-            "ModelDeployConfig": {
-                "maxSeqLen": self.mindie_args.vllm_config.model_config.max_model_len,
-                "maxInputTokenLen": self.mindie_args.vllm_config.model_config.max_seq_len_to_capture,
-                "truncation": False,
-                "ModelConfig": [{"modelInstanceType": "Standard",
-                                 "modelName": self.mindie_args.vllm_config.model_config.served_model_name,
-                                 "modelWeightPath": self.mindie_args.vllm_config.model_config.model,
-                                 "worldSize": self.mindie_args.vllm_config.parallel_config.world_size,
-                                 "cpuMemSize": 5,
-                                 "npuMemSize": -1,
-                                 "backendType": "atb",
-                                 "trustRemoteCode": self.mindie_args.vllm_config.model_config.trust_remote_code,
-                                 "plugin_params": "{\"plugin_type\":\"prefix_cache\"}"
-                                 if getattr(self.mindie_args.vllm_config.cache_config,
-                                            "enable_prefix_caching", None) else "{\"plugin_type\":\"\"}", }]
-            },
-            "ScheduleConfig": {
-                "templateType": "Standard",
-                "templateName": "Standard_LLM",
-                "cacheBlockSize": self.mindie_args.vllm_config.cache_config.block_size,
-                "maxPrefillBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs // 2,
-                "maxPrefillTokens": self.mindie_args.vllm_config.scheduler_config.max_num_batched_tokens,
-                "prefillTimeMsPerReq": 150,
-                "prefillPolicyType": 2 if self.mindie_args.vllm_config.scheduler_config.policy == "priority" else 0,
-
-                "decodeTimeMsPerReq": 50,
-                "decodePolicyType": 0,
-
-                "maxBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs,
-                "maxIterTimes": self.mindie_args.vllm_config.model_config.max_model_len,
-                "supportSelectBatch": False,
-                "maxQueueDelayMicroseconds": 5000,
-                "maxPreemptCount": 1 if hasattr(self.mindie_args.vllm_config.cache_config, "swap_space") else 0
-            },
-        }
 
     def generate(self, *args, **kwargs) -> AsyncGenerator[RequestOutput, None]:
         pass
@@ -293,3 +193,111 @@ class MindIEServiceEngine(EngineClient):
 
     async def add_lora(self, lora_request: LoRARequest) -> None:
         pass
+
+    async def reset_mm_cache(self):
+        pass
+
+    def _generate_server_config(self):
+        return {
+            "ipAddress": self.mindie_args.address,
+            "managementIpAddress": self.mindie_args.address,
+            "port": self.mindie_args.server_port,
+            "managementPort": self.mindie_args.manage_port,
+            "metricsPort": self.mindie_args.metrics_port,
+            "allowAllZeroIpListening": True,
+            "maxLinkNum": 1000,
+            "httpsEnabled": False,
+            "fullTextEnabled": False,
+
+            "tlsCaPath": "security/ca/",
+            "tlsCaFile": ["ca.pem"],
+            "tlsCert": "security/certs/server.pem",
+            "tlsPk": "security/keys/server.key.pem",
+            "tlsPkPwd": "security/pass/key_pwd.txt",
+            "tlsCrlPath": "security/certs/",
+            "tlsCrlFiles": ["server_crl.pem"],
+            "managementTlsCaFile": ["management_ca.pem"],
+            "managementTlsCert": "security/certs/management/server.pem",
+            "managementTlsPk": "security/keys/management/server.key.pem",
+            "managementTlsPkPwd": "security/pass/management/key_pwd.txt",
+            "managementTlsCrlPath": "security/management/certs/",
+            "managementTlsCrlFiles": ["server_crl.pem"],
+
+            "kmcKsfMaster": "tools/pmt/master/ksfa",
+            "kmcKsfStandby": "tools/pmt/standby/ksfb",
+
+            "inferMode": "standard",
+            "interCommTLSEnabled": False,
+            "interCommPort": self.mindie_args.inter_comm_port,
+            "interCommTlsCaPath": "security/grpc/ca/",
+            "interCommTlsCaFiles": ["ca.pem"],
+            "interCommTlsCert": "security/grpc/certs/server.pem",
+            "interCommPk": "security/grpc/keys/server.key.pem",
+            "interCommPkPwd": "security/grpc/pass/key_pwd.txt",
+            "interCommTlsCrlPath": "security/grpc/certs/",
+            "interCommTlsCrlFiles": ["server_crl.pem"],
+
+            "openAiSupport": "vllm",
+            "tokenTimeout": 600,
+            "e2eTimeout": 600,
+            "distDPServerEnabled": False
+        }
+
+    def _generate_backend_config(self):
+        return {
+            "backendName": "mindieservice_llm_engine",
+            "modelInstanceNumber": 1,
+            "npuDeviceIds": [[i for i in range(self.mindie_args.vllm_config.parallel_config.world_size)]],
+            "tokenizerProcessNumber": 8,
+            "multiNodesInferEnabled": False,
+            "multiNodesInferPort": self.mindie_args.multi_node_infer_port,
+            "interNodeTLSEnabled": False,
+            "interNodeTlsCaPath": "security/grpc/ca/",
+            "interNodeTlsCaFiles": ["ca.pem"],
+            "interNodeTlsCert": "security/grpc/cert/server.pem",
+            "interNodeTlsPk": "security/grpc/keys/server.key.pem",
+            "interNodeTlsPkPwd": "security/grpc/pass/mindie_server_key_pwd.txt",
+            "interNodeTlsCrlPath": "security/grpc/certs/",
+            "interNodeTlsCrlFiles": ["server_crl.pem"],
+            "interNodeKmcKsfMaster": "tools/pmt/master/ksfa",
+            "interNodeKmcKsfStandby": "tools/pmt/standby/ksfb",
+            "ModelDeployConfig": {
+                "maxSeqLen": self.mindie_args.vllm_config.model_config.max_model_len,
+                "maxInputTokenLen": self.mindie_args.vllm_config.model_config.max_seq_len_to_capture,
+                "truncation": False,
+                "ModelConfig": [{"modelInstanceType": "Standard",
+                                 "modelName": self.mindie_args.vllm_config.model_config.
+                                     served_model_name.split('/')[-1],
+                                 "modelWeightPath": self.mindie_args.vllm_config.model_config.model,
+                                 "worldSize": self.mindie_args.vllm_config.parallel_config.world_size,
+                                 "cpuMemSize": 5,
+                                 "npuMemSize": -1,
+                                 "backendType": "atb",
+                                 "trustRemoteCode": self.mindie_args.vllm_config.model_config.trust_remote_code,
+                                 "plugin_params": "{\"plugin_type\":\"prefix_cache\"}"
+                                 if getattr(self.mindie_args.vllm_config.cache_config,
+                                            "enable_prefix_caching", None) else "{\"plugin_type\":\"\"}", }]
+            },
+            "ScheduleConfig": self._generate_schedule_config(),
+        }
+
+    def _generate_schedule_config(self):
+        return {
+            "templateType": "Standard",
+            "templateName": "Standard_LLM",
+            "cacheBlockSize": self.mindie_args.vllm_config.cache_config.block_size,
+            "maxPrefillBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs // 2,
+            "maxPrefillTokens": max(self.mindie_args.vllm_config.scheduler_config.max_num_batched_tokens,
+                                    self.mindie_args.vllm_config.model_config.max_seq_len_to_capture),
+            "prefillTimeMsPerReq": 150,
+            "prefillPolicyType": 2 if self.mindie_args.vllm_config.scheduler_config.policy == "priority" else 0,
+
+            "decodeTimeMsPerReq": 50,
+            "decodePolicyType": 0,
+
+            "maxBatchSize": self.mindie_args.vllm_config.scheduler_config.max_num_seqs,
+            "maxIterTimes": self.mindie_args.vllm_config.model_config.max_model_len,
+            "supportSelectBatch": False,
+            "maxQueueDelayMicroseconds": 5000,
+            "maxPreemptCount": 1 if hasattr(self.mindie_args.vllm_config.cache_config, "swap_space") else 0
+        }

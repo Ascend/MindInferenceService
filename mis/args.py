@@ -14,6 +14,7 @@ class GlobalArgs(BaseModel):
 
     # environment params
     cache_path: str = envs.MIS_CACHE_PATH
+    configs_path: str = envs.MIS_CONFIGS_PATH
 
     model: str = envs.MIS_MODEL
     engine_type: str = envs.MIS_ENGINE_TYPE
