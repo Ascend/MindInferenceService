@@ -34,8 +34,10 @@ MIS_CONFIG_DEFAULT = {
     "qwen2.5-0.5b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen2.5-1.5b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen2.5-3b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
-    "qwen2.5-7b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
-    "qwen2.5-14b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen2.5-7b-instruct": {HW_310P: "ascend310p-2x24gb-bf16-mindie-service-default",
+                            HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
+    "qwen2.5-14b-instruct": {HW_310P: "ascend310p-4x24gb-bf16-mindie-service-default",
+                             HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
     "qwen2.5-32b-instruct": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
     "qwen2.5-72b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
     "qwen2.5-vl-7b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
@@ -145,7 +147,11 @@ CHECKER_VLLM = {
         "type": "float",
         "min": 0.5,
         "max": 0.97,
-    }
+    },
+    "vllm_allow_long_max_model_len": {
+        "type": "bool",
+        "valid_values": [True, False]
+    },
 }
 
 
