@@ -46,6 +46,9 @@ if TYPE_CHECKING:
 
     UVICORN_LOG_LEVEL: str = "info"
 
+    # guided decode params
+    MIS_GUIDED_DECODE_BACKEND: Optional[str] = None
+
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
     "MIS_CONFIGS_PATH": lambda: _get_cache_path_from_env("MIS_CONFIGS_PATH", "/home/HwHiAiUser/configs/llm"),
@@ -84,6 +87,9 @@ environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CONFIG_EXPORT": lambda: _get_bool_from_env("MIS_CONFIG_EXPORT", False),
 
     "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", constants.UVICORN_LOG_LEVELS),
+
+    # guided decode params
+    "MIS_GUIDED_DECODE_BACKEND": lambda: _get_str_from_env("MIS_GUIDED_DECODE_BACKEND", "npu"),
 }
 
 

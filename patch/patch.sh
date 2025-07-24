@@ -115,6 +115,9 @@ apply_patch "${VLLM_PATH}/vllm/model_executor/layers/quantization/kv_cache.py" "
 sed -i 's/\r$//' $workdir/mindie_turbo_attention.patch
 apply_patch "${PYTHON_PATH}/mindie_turbo/adaptor/vllm/attention.py" "$workdir/mindie_turbo_attention.patch"
 
+sed -i 's/\r$//' $workdir/serving_chat.patch
+apply_patch "${VLLM_PATH}/vllm/entrypoints/openai/serving_chat.py" "$workdir/serving_chat.patch"
+
 if [ "$ENABLE_MINICPMV_PATCHES" = true ]; then
   sed -i 's/\r$//' $workdir/atb_base_config.patch
   apply_patch "${ASCEND_PATH}/atb/atb_llm/models/base/config.py" "$workdir/atb_base_config.patch"
