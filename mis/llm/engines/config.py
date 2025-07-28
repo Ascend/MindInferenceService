@@ -38,6 +38,8 @@ MIS_CONFIG_DEFAULT = {
                             HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen2.5-14b-instruct": {HW_310P: "ascend310p-4x24gb-bf16-mindie-service-default",
                              HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
+    "qwen2.5-7b-instruct-1m": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
+    "qwen2.5-14b-instruct-1m": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
     "qwen2.5-32b-instruct": {HW_910B: "atlas800ia2-4x32gb-bf16-vllm-default"},
     "qwen2.5-72b-instruct": {HW_910B: "atlas800ia2-8x32gb-bf16-vllm-default"},
     "qwen2.5-vl-7b-instruct": {HW_910B: "atlas800ia2-2x32gb-bf16-vllm-default"},
@@ -78,17 +80,17 @@ CHECKER_VLLM = {
     "max_model_len": {
         "type": "int",
         "min": 1,
-        "max": 131072
+        "max": 1010000
     },
     "max_num_batched_tokens": {
         "type": "int",
         "min": 1,
-        "max": 131072
+        "max": 1010000
     },
     "max_seq_len_to_capture": {
         "type": "int",
         "min": 1,
-        "max": 131072
+        "max": 1010000
     },
     "gpu_memory_utilization": {
         "type": "float",
