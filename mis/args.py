@@ -43,6 +43,7 @@ class GlobalArgs(BaseModel):
     limit_image_per_prompt: int = envs.MIS_LIMIT_IMAGE_PER_PROMPT
     limit_video_per_prompt: int = envs.MIS_LIMIT_VIDEO_PER_PROMPT
     limit_audio_per_prompt: int = envs.MIS_LIMIT_AUDIO_PER_PROMPT
+    total_pixels: int = envs.MIS_TOTAL_PIXELS
 
     uvicorn_log_level: str = envs.UVICORN_LOG_LEVEL
 
