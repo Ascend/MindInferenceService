@@ -204,10 +204,16 @@ def source_components_envs():
 
 
 def source_configuration_envs(engine_optimization_config: dict):
-    config2env_name = "npu_memory_fraction"
-    npu_memory_fraction = engine_optimization_config.pop(config2env_name, None)
-    if config2env_name.upper() not in os.environ and npu_memory_fraction is not None:
-        os.environ[config2env_name.upper()] = str(npu_memory_fraction)
+    config2env_name_list = ["npu_memory_fraction", "vllm_allow_long_max_model_len"]
+    for config2env_name in config2env_name_list:
+        env_from_config = engine_optimization_config.pop(config2env_name, None)
+        if env_from_config is not None:  # if env_from_config is None, there is no need to modify the env variable.
+            if config2env_name.upper() not in os.environ:
+                os.environ[config2env_name.upper()] = str(env_from_config)
+                logger.info(f"{config2env_name.upper()} is set to {env_from_config} from engine optimization config.")
+            else:
+                logger.info(f"Environment variable '{config2env_name.upper()}' is already defined in the environment. "
+                            f"Preserving existing value and skipping configuration override.")
 
 
 ENGINE_ENVS = {
