@@ -1,0 +1,19 @@
+--- /usr/local/lib/python3.11/dist-packages/vllm/config.py	2025-07-29 01:16:52.000000000 +0000
++++ config.py	2025-07-29 06:06:09.235804416 +0000
+@@ -902,6 +902,8 @@
+             # `override_quantization_method` method) must be checked in order
+             # of preference (this is particularly important for GPTQ).
+             overrides = [
++                "awq",
++                "compressed-tensors",
+                 "marlin",
+                 "bitblas",
+                 "gptq_marlin_24",
+@@ -910,6 +912,7 @@
+                 "awq_marlin",
+                 "ipex",
+                 "moe_wna16",
++                "ms-model-slim",
+             ]
+             quantization_methods = [
+                 q for q in supported_quantization if q not in overrides
