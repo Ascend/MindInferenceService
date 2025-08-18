@@ -4,15 +4,22 @@ import signal
 import subprocess
 import sys
 
+from mis import envs
 from mis.args import ARGS
 from mis.constants import MIS_LOCAL_BIN_PATH
 from mis.hub.envpreparation import environment_preparation
 
 
 def main():
-    environment_preparation(ARGS, True)
     process = None
     exit_code = 0
+
+    if envs.MIS_CONFIG_EXPORT:
+        process = subprocess.run([f"{MIS_LOCAL_BIN_PATH}/bin/mis_config_export"], check=False)
+        exit_code = process.returncode
+        sys.exit(exit_code)
+
+    environment_preparation(ARGS, True)
 
     def signal_handler(*_) -> None:
         raise KeyboardInterrupt("terminated")

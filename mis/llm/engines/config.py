@@ -2,7 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 from abc import ABC
 import os
-from typing import Dict, Type, Union
+from typing import Dict, Type, Union, Any
 
 import yaml
 
@@ -268,6 +268,37 @@ class ConfigParser:
         self.mis_config = self.args.mis_config
 
     @staticmethod
+    def _get_range_str(config: Dict[str, Any]):
+        """
+        Get the range string for a configuration parameter based on its type and specified range or valid values.
+
+        :param config: A dictionary containing the configuration details of a parameter.
+        :return: A tuple containing the parameter type and the range string.
+                 The range string describes the valid range or values for the parameter.
+        """
+        param_type = config.get("type", "unknown")
+        range_str = "No range specified"
+
+        if param_type in ["int", "float"]:
+            valid_values = config.get("valid_values", None)
+            if valid_values is not None:
+                range_str = f"Valid values: {valid_values}"
+            else:
+                min_val = config.get("min", None)
+                max_val = config.get("max", None)
+                if min_val is not None and max_val is not None:
+                    range_str = f"Range: [{min_val}, {max_val}]"
+        elif param_type in ["bool", "str_in"]:
+            valid_values = config.get("valid_values", None)
+            if valid_values is not None:
+                range_str = f"Valid values: {valid_values}"
+            else:
+                range_str = "No valid values specified"
+        else:
+            range_str = "Unknown type"
+        return param_type, range_str
+
+    @staticmethod
     def _config_yaml_file_loading(config_file_path: str) -> Dict:
         """
         Load config file.
@@ -279,11 +310,11 @@ class ConfigParser:
                 config = yaml.safe_load(file)
         except FileNotFoundError:
             logger.debug(f"Config file {config_file_path} not found. "
-                           "The engine will be started with default parameters. ")
+                         "The engine will be started with default parameters. ")
             config = None
         except yaml.YAMLError as e:
             logger.error(f"The configuration file {config_file_path} is invalid : {e}, "
-                         f"please check the integrity of the file. ")
+                         "please check the integrity of the file. ")
             raise e
         return config
 
@@ -298,6 +329,20 @@ class ConfigParser:
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
         validator = validator_class(selected_engine_config.get(selected_engine_type))
         return validator.filter_and_validate_config()
+
+    def print_config_ranges(self, checker_dict: Dict[str, Dict[str, Any]] = None) -> None:
+        """
+        Print the configuration parameter range.
+        :param checker_dict: Configuring the Parameter Dictionary
+        """
+        if checker_dict is None:
+            checker_dict = CHECKER_VLLM
+        try:
+            for param, config in checker_dict.items():
+                param_type, range_str = self._get_range_str(config)
+                logger.info(f"Parameter: {param}, Type: {param_type}, {range_str}")
+        except Exception as e:
+            logger.error(f"Error processing in print config ranges: {e}")
 
     def engine_config_loading(self) -> GlobalArgs:
         """

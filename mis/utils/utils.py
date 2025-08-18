@@ -220,3 +220,20 @@ class ContainerIPDetector:
 
         logger.warning("Failed to detect primary IP address")
         return None
+
+
+def check_files_number(files_list: List[str], expected_number: int) -> None:
+    if len(files_list) > expected_number:
+        logger.error(f"Number of files exceeds the maximum allowed count of {expected_number}")
+        raise ValueError(f"Number of files exceeds the maximum allowed count of {expected_number}")
+
+
+def check_file_size(file_path: str, max_file_size: int) -> None:
+    try:
+        file_size = os.path.getsize(file_path)
+    except OSError as e:
+        file_size = 0
+        logger.error(f"Failed to get the size of file {file_path}")
+    if file_size > max_file_size:
+        logger.error(f"File {file_path} exceeds the maximum allowed size of {max_file_size} bytes")
+        raise ValueError(f"File {file_path} exceeds the maximum allowed size of {max_file_size} bytes")
