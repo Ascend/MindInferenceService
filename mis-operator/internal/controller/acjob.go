@@ -45,8 +45,8 @@ func getAcjobListObject() unstructured.UnstructuredList {
 	return acjobList
 }
 
-func constructAcjobLabelsFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
-	switch serverInfo.ServerType {
+func constructAcjobLabelsFromServerInfo(serverType alphav1.ServerType) map[string]string {
+	switch serverType {
 	case alphav1.ServerTypeAtlas800IA2:
 		return map[string]string{
 			"framework":             "pytorch",
@@ -57,8 +57,8 @@ func constructAcjobLabelsFromServerInfo(serverInfo *alphav1.MISServerInfo) map[s
 	}
 }
 
-func constructAcjobSelectorLabelsFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
-	switch serverInfo.ServerType {
+func constructAcjobSelectorLabelsFromServerInfo(serverType alphav1.ServerType) map[string]string {
+	switch serverType {
 	case alphav1.ServerTypeAtlas800IA2:
 		return map[string]string{
 			"ring-controller.atlas": "ascend-910b",
@@ -68,8 +68,8 @@ func constructAcjobSelectorLabelsFromServerInfo(serverInfo *alphav1.MISServerInf
 	}
 }
 
-func constructAcjobNodeSelectorFromServerInfo(serverInfo *alphav1.MISServerInfo) map[string]string {
-	switch serverInfo.ServerType {
+func constructAcjobNodeSelectorFromServerInfo(serverType alphav1.ServerType) map[string]string {
+	switch serverType {
 	case alphav1.ServerTypeAtlas800IA2:
 		return map[string]string{
 			"host-arch":        "huawei-arm",
@@ -80,20 +80,17 @@ func constructAcjobNodeSelectorFromServerInfo(serverInfo *alphav1.MISServerInfo)
 	}
 }
 
-func constructAcjobResourceFromServerInfo(serverInfo *alphav1.MISServerInfo) v1.ResourceRequirements {
-	switch serverInfo.ServerType {
-	case alphav1.ServerTypeAtlas800IA2:
-		return v1.ResourceRequirements{
-			Requests: map[v1.ResourceName]resource.Quantity{
-				"huawei.com/Ascend910": serverInfo.CardNum,
-			},
-			Limits: map[v1.ResourceName]resource.Quantity{
-				"huawei.com/Ascend910": serverInfo.CardNum,
-			},
-		}
-	default:
-		return v1.ResourceRequirements{}
+func constructAcjobResourceFromServerInfo(cardNum resource.Quantity) v1.ResourceRequirements {
+
+	return v1.ResourceRequirements{
+		Requests: map[v1.ResourceName]resource.Quantity{
+			"huawei.com/Ascend910": cardNum,
+		},
+		Limits: map[v1.ResourceName]resource.Quantity{
+			"huawei.com/Ascend910": cardNum,
+		},
 	}
+
 }
 
 func getAcjobCompletionTime(acjob *unstructured.Unstructured) (metav1.Time, error) {

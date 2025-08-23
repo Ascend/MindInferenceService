@@ -34,7 +34,7 @@ const (
 	// MISModelPodVolumeName indicates volume name of used pvc
 	MISModelPodVolumeName = "model-path"
 	// MISModelPodMountPath indicate cache path in MIS images
-	MISModelPodMountPath = "/opt/mis/.cache"
+	MISModelPodMountPath = "/opt/mis-management/"
 
 	// MISModelPodCmd indicate command of download pod
 	MISModelPodCmd = "mis_download"

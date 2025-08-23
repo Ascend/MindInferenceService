@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"k8s.io/api/autoscaling/v2beta2"
+	"k8s.io/api/autoscaling/v2"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -52,7 +52,7 @@ var _ = Describe("MISService Controller", func() {
 			WithStatusSubresource(&v1.Secret{}).
 			WithStatusSubresource(&v1.Service{}).
 			WithStatusSubresource(&monitorv1.ServiceMonitor{}).
-			WithStatusSubresource(&v2beta2.HorizontalPodAutoscaler{}).
+			WithStatusSubresource(&v2.HorizontalPodAutoscaler{}).
 			WithStatusSubresource(ptr.To(getAcjobObject())).
 			Build()
 
@@ -129,81 +129,6 @@ var _ = Describe("MISService Controller", func() {
 		})
 	})
 
-	Context("Test Check MISModel", func() {
-
-		var (
-			testNamespace      string
-			testPVCName        string
-			testMISModelName   string
-			testModelName      string
-			testMISServiceName string
-
-			testMISModel   alphav1.MISModel
-			testMISService alphav1.MISService
-		)
-
-		BeforeEach(func() {
-			testNamespace = "test-namespace"
-			testPVCName = "test-pvc-name"
-			testMISModelName = "test-mis-model-name"
-			testModelName = "test-model-name"
-			testMISServiceName = "test-mis-service-name"
-
-			testMISModel = alphav1.MISModel{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testMISModelName,
-					Namespace: testNamespace,
-				},
-				Spec: alphav1.MISModelSpec{
-					Storage: alphav1.MISModelStorage{
-						PVC: alphav1.MISPVC{
-							Name: testPVCName,
-						},
-					},
-				},
-				Status: alphav1.MISModelStatus{
-					State: alphav1.MISModelStateReady,
-					PVC:   testPVCName,
-					Model: testModelName,
-				},
-			}
-
-			testMISService = alphav1.MISService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      testMISServiceName,
-					Namespace: testNamespace,
-				},
-				Spec: alphav1.MISServiceSpec{
-					MISModel: testMISModelName,
-				},
-			}
-		})
-
-		It("should return err if no MISModel found", func() {
-			err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should requeue if MISModel not ready", func() {
-			testMISModel.Status.State = alphav1.MISModelStateInProgress
-			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
-
-			err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(err).To(HaveOccurred())
-		})
-
-		It("should return true if MISModel found", func() {
-			Expect(testClient.Create(ctx, &testMISModel)).NotTo(HaveOccurred())
-
-			err := reconciler.checkMISModel(ctx, &testMISService)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(testMISService.Status.State).To(Equal(alphav1.MISServiceStateModelReady))
-			Expect(testMISService.Status.PVC).To(Equal(testPVCName))
-			Expect(testMISService.Status.Model).To(Equal(testModelName))
-		})
-	})
-
 	Context("Prepare test for reconcile service, service monitor, hpa", func() {
 
 		var (
@@ -215,7 +140,7 @@ var _ = Describe("MISService Controller", func() {
 			testMISService alphav1.MISService
 			testSvc        v1.Service
 			testSvcMonitor monitorv1.ServiceMonitor
-			testHPA        v2beta2.HorizontalPodAutoscaler
+			testHPA        v2.HorizontalPodAutoscaler
 		)
 
 		BeforeEach(func() {
@@ -247,11 +172,11 @@ var _ = Describe("MISService Controller", func() {
 								Threshold: "0.1",
 							},
 						},
-						Behavior: &v2beta2.HorizontalPodAutoscalerBehavior{
-							ScaleUp: &v2beta2.HPAScalingRules{
-								Policies: []v2beta2.HPAScalingPolicy{
+						Behavior: &v2.HorizontalPodAutoscalerBehavior{
+							ScaleUp: &v2.HPAScalingRules{
+								Policies: []v2.HPAScalingPolicy{
 									{
-										Type:          v2beta2.PodsScalingPolicy,
+										Type:          v2.PodsScalingPolicy,
 										Value:         1,
 										PeriodSeconds: 120,
 									},
@@ -278,12 +203,12 @@ var _ = Describe("MISService Controller", func() {
 				Spec: monitorv1.ServiceMonitorSpec{},
 			}
 
-			testHPA = v2beta2.HorizontalPodAutoscaler{
+			testHPA = v2.HorizontalPodAutoscaler{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      testMISService.GetServiceMonitorName(),
 					Namespace: testNamespace,
 				},
-				Spec: v2beta2.HorizontalPodAutoscalerSpec{},
+				Spec: v2.HorizontalPodAutoscalerSpec{},
 			}
 		})
 
@@ -295,7 +220,7 @@ var _ = Describe("MISService Controller", func() {
 				Expect(testClient.Get(ctx, testSvcNamespaceName, &testSvc)).NotTo(HaveOccurred())
 
 				Expect(testSvc.Spec.Type == testMISService.Spec.ServiceSpec.Type).To(BeTrue())
-				Expect(testSvc.Spec.Ports[0].Port == testMISService.Spec.ServiceSpec.Port).To(BeTrue())
+				Expect(testSvc.Spec.Ports[1].Port == testMISService.Spec.ServiceSpec.Port).To(BeTrue())
 				Expect(utils.MapEqual(testSvc.Annotations, testMISService.Spec.ServiceSpec.Annotations)).To(BeTrue())
 			})
 
@@ -389,11 +314,8 @@ var _ = Describe("MISService Controller", func() {
 					Name:  "MIS_CONFIG",
 					Value: "test-mid-config",
 				}, {
-					Name:  "http_proxy",
-					Value: "http://1.2.3.4:3128",
-				}, {
-					Name:  "https_proxy",
-					Value: "http://1.2.3.4:3128",
+					Name:  "MIS_CACHE_PATH",
+					Value: "/opt/mis-management/test",
 				},
 			}
 
@@ -412,15 +334,14 @@ var _ = Describe("MISService Controller", func() {
 							},
 						},
 					},
-					UserID:  ptr.To[int64](testUserId),
-					GroupID: ptr.To[int64](testGroupId),
-				},
-				Status: alphav1.MISServiceStatus{
 					Image:           testImage,
 					ImagePullSecret: &testImagePullSecret,
 					PVC:             testPVC,
 					Envs:            testEnvs,
+					UserID:          ptr.To[int64](testUserId),
+					GroupID:         ptr.To[int64](testGroupId),
 				},
+				Status: alphav1.MISServiceStatus{},
 			}
 
 		})

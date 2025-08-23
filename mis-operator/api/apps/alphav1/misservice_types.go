@@ -7,8 +7,9 @@ package alphav1
 import (
 	"fmt"
 
-	"k8s.io/api/autoscaling/v2beta2"
+	"k8s.io/api/autoscaling/v2"
 	"k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -16,9 +17,12 @@ import (
 type MISServiceSpec struct {
 	// +optional
 	// TLSSecret name of secret that contains tls cert and key
-	TLSSecret string `json:"tlsSecret,omitempty"`
-	// MISModel name of used MISModel
-	MISModel string `json:"misModel,omitempty"`
+	TLSSecret       string            `json:"tlsSecret,omitempty"`
+	PVC             string            `json:"pvc,omitempty"`
+	CardNum         resource.Quantity `json:"cardNum,omitempty"`
+	Envs            []v1.EnvVar       `json:"envs,omitempty"`
+	Image           string            `json:"image,omitempty"`
+	ImagePullSecret *string           `json:"imagePullSecret,omitempty"`
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:default:=1
 	Replicas int `json:"replicas,omitempty"`
@@ -50,7 +54,7 @@ type HPA struct {
 
 	Metrics *[]Metric `json:"metrics,omitempty"`
 	// +optional
-	Behavior *v2beta2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
+	Behavior *v2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty"`
 }
 
 // Metric indicates metrics used to control replicas of MIS service instance
@@ -66,7 +70,10 @@ type MISSvcSpec struct {
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default:=8000
-	Port        int32             `json:"port,omitempty"`
+	Port int32 `json:"port,omitempty"`
+	// +kubebuilder:validation:Minimum=30000
+	// +kubebuilder:validation:Maximum=32767
+	NodePort    int32             `json:"nodePort,omitempty"`
 	MetricsPort int32             `json:"metricsPort,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
@@ -76,15 +83,9 @@ type MISServiceStatus struct {
 	State      string             `json:"state,omitempty"`
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" 
 protobuf:"bytes,1,rep,name=conditions"`
-	Replicas        int           `json:"replicas,omitempty"`
-	Selector        string        `json:"selector,omitempty"`
-	Model           string        `json:"model,omitempty"`
-	PVC             string        `json:"pvc,omitempty"`
-	MISServerInfo   MISServerInfo `json:"serverInfo,omitempty"`
-	Envs            []v1.EnvVar   `json:"envs,omitempty"`
-	Image           string        `json:"image,omitempty"`
-	ImagePullSecret *string       `json:"imagePullSecret,omitempty"`
-	Running         string        `json:"running,omitempty"`
+	Replicas int    `json:"replicas,omitempty"`
+	Selector string `json:"selector,omitempty"`
+	Running  string `json:"running,omitempty"`
 }
 
 // +kubebuilder:object:root=true
