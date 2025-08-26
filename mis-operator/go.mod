@@ -1,4 +1,4 @@
-module ascend.com/mis-operator
+module hiascend.com/mis-operator
 
 go 1.20
 

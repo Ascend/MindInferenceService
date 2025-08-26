@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
-	"ascend.com/mis-operator/internal/utils"
+	"hiascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/internal/utils"
 )
 
 var _ = Describe("MISService Controller", func() {

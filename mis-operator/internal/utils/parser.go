@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/api/apps/alphav1"
 )
 
 const (

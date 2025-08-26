@@ -23,9 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
-	"ascend.com/mis-operator/internal/controller"
-	"ascend.com/mis-operator/internal/utils"
+	"hiascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/internal/controller"
+	"hiascend.com/mis-operator/internal/utils"
 )
 
 // ControllerParams indicates all params need for start mis-controller
@@ -79,7 +79,7 @@ func createManager(params *ControllerParams) (ctrl.Manager, error) {
 		Metrics:                       metricsServerOptions,
 		HealthProbeBindAddress:        params.probeAddr,
 		LeaderElection:                params.enableLeaderElection,
-		LeaderElectionID:              "a91c60cd.ascend.com",
+		LeaderElectionID:              "a91c60cd.hiascend.com",
 		LeaderElectionReleaseOnCancel: true,
 	})
 	if err != nil {

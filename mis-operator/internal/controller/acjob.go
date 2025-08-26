@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/api/apps/alphav1"
 )
 
 // ReplicaStatus indicates acjob status seperated by Master or Worker

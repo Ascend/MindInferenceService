@@ -4,7 +4,7 @@ Copyright 2025 Huawei Technologies Co., Ltd.
 
 // Package alphav1 contains API Schema definitions for the apps alphav1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=apps.ascend.com
+// +groupName=mis.hiascend.com
 package alphav1
 
 import (
