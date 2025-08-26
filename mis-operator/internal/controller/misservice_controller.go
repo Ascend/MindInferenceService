@@ -13,7 +13,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	monitorv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	"k8s.io/api/autoscaling/v2beta2"
+	"k8s.io/api/autoscaling/v2"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -135,11 +135,6 @@ func (r *MISServiceReconciler) reconcileMISService(
 		return ctrl.Result{}, err
 	}
 
-	if err := r.checkMISModel(ctx, misService); err != nil {
-		logger.Error(err, "Unable to check MISModel status")
-		return ctrl.Result{}, err
-	}
-
 	if err := r.reconcileService(ctx, misService); err != nil {
 		logger.Error(err, "Error occur while create Service")
 		return ctrl.Result{}, err
@@ -198,35 +193,6 @@ func (r *MISServiceReconciler) checkTLSSecret(ctx context.Context, misService *a
 	return nil
 }
 
-// checkMISModel check if MISModel exists, and copy its useful information to MISService.
-func (r *MISServiceReconciler) checkMISModel(ctx context.Context, misService *alphav1.MISService) error {
-	misModel := alphav1.MISModel{}
-	namespaceName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.Spec.MISModel}
-	if err := r.Get(ctx, namespaceName, &misModel); err != nil {
-		if client.IgnoreNotFound(err) != nil {
-			return errors.Wrap(err, "Unable to fetch MISModel")
-		}
-		return errors.Wrap(err, "MISModel not exist")
-	}
-
-	if misModel.Status.State != alphav1.MISModelStateReady {
-		r.updateMISServiceStatusUtil(misService, metav1.ConditionFalse, alphav1.MISServiceConditionModelReady,
-			"ModelPending", "MISModel is not ready")
-		return errors.New("MISModel not ready")
-	}
-
-	misService.Status.State = alphav1.MISServiceStateModelReady
-	misService.Status.Model = misModel.Status.Model
-	misService.Status.PVC = misModel.Status.PVC
-	misService.Status.MISServerInfo = misModel.Status.MISServerInfo
-	misService.Status.Envs = misModel.Spec.Envs
-	misService.Status.Image = misModel.Spec.Image
-	misService.Status.ImagePullSecret = misModel.Spec.ImagePullSecret
-	r.updateMISServiceStatusUtil(misService, metav1.ConditionTrue, alphav1.MISServiceConditionModelReady,
-		"ModelReady", "MISModel is ready")
-	return nil
-}
-
 // reconcileService is responsible for process ServiceSpec in MISService.
 // It will create Service if Service with given name is not exist, and update status of MISService.
 func (r *MISServiceReconciler) reconcileService(ctx context.Context, misService *alphav1.MISService) error {
@@ -268,10 +234,6 @@ func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, 
 		Spec: v1.ServiceSpec{
 			Ports: []v1.ServicePort{
 				{
-					Name: MISServicePortName,
-					Port: misService.Spec.ServiceSpec.Port,
-				},
-				{
 					Name: MISServiceMetricsPortName,
 					Port: misService.Spec.ServiceSpec.MetricsPort,
 				},
@@ -280,6 +242,20 @@ func (r *MISServiceReconciler) constructService(misService *alphav1.MISService, 
 			Type:     misService.Spec.ServiceSpec.Type,
 		},
 	}
+
+	if misService.Spec.ServiceSpec.Type == v1.ServiceTypeNodePort {
+		service.Spec.Ports = append(service.Spec.Ports, v1.ServicePort{
+			Name:     MISServicePortName,
+			Port:     misService.Spec.ServiceSpec.Port,
+			NodePort: misService.Spec.ServiceSpec.NodePort,
+		})
+	} else {
+		service.Spec.Ports = append(service.Spec.Ports, v1.ServicePort{
+			Name: MISServicePortName,
+			Port: misService.Spec.ServiceSpec.Port,
+		})
+	}
+
 	if err := ctrl.SetControllerReference(misService, service, r.Scheme); err != nil {
 		return errors.Wrap(err, "Unable to set controller ref to service")
 	}
@@ -358,7 +334,7 @@ func (r *MISServiceReconciler) reconcileHPA(ctx context.Context, misService *alp
 
 	logger := log.FromContext(ctx)
 
-	hpa := v2beta2.HorizontalPodAutoscaler{}
+	hpa := v2.HorizontalPodAutoscaler{}
 	namespacedName := types.NamespacedName{Namespace: misService.Namespace, Name: misService.GetHPAName()}
 	if err := r.Get(ctx, namespacedName, &hpa); err != nil {
 		if client.IgnoreNotFound(err) != nil {
@@ -382,15 +358,15 @@ func (r *MISServiceReconciler) reconcileHPA(ctx context.Context, misService *alp
 }
 
 func (r *MISServiceReconciler) constructHPA(
-	ctx context.Context, misService *alphav1.MISService, hpa *v2beta2.HorizontalPodAutoscaler) error {
-	*hpa = v2beta2.HorizontalPodAutoscaler{
+	ctx context.Context, misService *alphav1.MISService, hpa *v2.HorizontalPodAutoscaler) error {
+	*hpa = v2.HorizontalPodAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: misService.Namespace,
 			Name:      misService.GetHPAName(),
 			Labels:    r.getStandardLabels(misService),
 		},
-		Spec: v2beta2.HorizontalPodAutoscalerSpec{
-			ScaleTargetRef: v2beta2.CrossVersionObjectReference{
+		Spec: v2.HorizontalPodAutoscalerSpec{
+			ScaleTargetRef: v2.CrossVersionObjectReference{
 				Kind:       misService.Kind,
 				Name:       misService.Name,
 				APIVersion: misService.APIVersion,
@@ -408,10 +384,10 @@ func (r *MISServiceReconciler) constructHPA(
 }
 
 func (r *MISServiceReconciler) resolveMetrics(
-	ctx context.Context, misService *alphav1.MISService) []v2beta2.MetricSpec {
+	ctx context.Context, misService *alphav1.MISService) []v2.MetricSpec {
 	logger := log.FromContext(ctx)
 
-	var metricSpecs []v2beta2.MetricSpec
+	var metricSpecs []v2.MetricSpec
 
 	for _, metric := range *misService.Spec.HPA.Metrics {
 		metricSpec, err := r.getMetricSpecFromMetric(metric)
@@ -425,18 +401,18 @@ func (r *MISServiceReconciler) resolveMetrics(
 	return metricSpecs
 }
 
-func (r *MISServiceReconciler) getMetricSpecFromMetric(metric alphav1.Metric) (v2beta2.MetricSpec, error) {
+func (r *MISServiceReconciler) getMetricSpecFromMetric(metric alphav1.Metric) (v2.MetricSpec, error) {
 
 	value, err := resource.ParseQuantity(metric.Threshold)
 	if err != nil {
 		value = resource.MustParse("0")
 	}
 
-	metricSpec := v2beta2.MetricSpec{
-		Type: v2beta2.PodsMetricSourceType,
-		Pods: &v2beta2.PodsMetricSource{
-			Target: v2beta2.MetricTarget{
-				Type:         v2beta2.AverageValueMetricType,
+	metricSpec := v2.MetricSpec{
+		Type: v2.PodsMetricSourceType,
+		Pods: &v2.PodsMetricSource{
+			Target: v2.MetricTarget{
+				Type:         v2.AverageValueMetricType,
 				AverageValue: &value,
 			},
 		},
@@ -601,7 +577,7 @@ func (r *MISServiceReconciler) constructAcjob(misService *alphav1.MISService, jo
 
 func (r *MISServiceReconciler) constructAcjobLabels(misService *alphav1.MISService) map[string]string {
 	labels := r.getStandardLabels(misService)
-	acjobLabels := constructAcjobLabelsFromServerInfo(&misService.Status.MISServerInfo)
+	acjobLabels := constructAcjobLabelsFromServerInfo(alphav1.ServerTypeAtlas800IA2)
 	for key, value := range acjobLabels {
 		labels[key] = value
 	}
@@ -610,7 +586,7 @@ func (r *MISServiceReconciler) constructAcjobLabels(misService *alphav1.MISServi
 
 func (r *MISServiceReconciler) constructAcjobSelectorLabels(misService *alphav1.MISService) map[string]string {
 	selectorLabels := r.getStandardSelectorLabels(misService)
-	acjobSelectorLabels := constructAcjobSelectorLabelsFromServerInfo(&misService.Status.MISServerInfo)
+	acjobSelectorLabels := constructAcjobSelectorLabelsFromServerInfo(alphav1.ServerTypeAtlas800IA2)
 	for key, value := range acjobSelectorLabels {
 		selectorLabels[key] = value
 	}
@@ -618,7 +594,7 @@ func (r *MISServiceReconciler) constructAcjobSelectorLabels(misService *alphav1.
 }
 
 func (r *MISServiceReconciler) constructMasterReplicas(misService *alphav1.MISService) map[string]interface{} {
-	nodeSelector := constructAcjobNodeSelectorFromServerInfo(&misService.Status.MISServerInfo)
+	nodeSelector := constructAcjobNodeSelectorFromServerInfo(alphav1.ServerTypeAtlas800IA2)
 
 	podSpec := v1.PodSpec{
 		NodeSelector:                  nodeSelector,
@@ -632,9 +608,9 @@ func (r *MISServiceReconciler) constructMasterReplicas(misService *alphav1.MISSe
 	}
 
 	// if ImagePullSecret got from mismodel, then set it to acjob’s running pod
-	if misService.Status.ImagePullSecret != nil && *misService.Status.ImagePullSecret != "" {
+	if misService.Spec.ImagePullSecret != nil && *misService.Spec.ImagePullSecret != "" {
 		podSpec.ImagePullSecrets = []v1.LocalObjectReference{
-			{Name: *misService.Status.ImagePullSecret},
+			{Name: *misService.Spec.ImagePullSecret},
 		}
 	}
 
@@ -656,7 +632,7 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 	return []v1.Container{
 		{
 			Name:  MISServiceAcjobContainerName,
-			Image: misService.Status.Image,
+			Image: misService.Spec.Image,
 
 			ImagePullPolicy: v1.PullIfNotPresent,
 			Env:             r.constructMasterEnvs(misService),
@@ -666,7 +642,7 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 					Name:          MISServiceAcjobPortName,
 				},
 			},
-			Resources:      constructAcjobResourceFromServerInfo(&misService.Status.MISServerInfo),
+			Resources:      constructAcjobResourceFromServerInfo(misService.Spec.CardNum),
 			VolumeMounts:   r.constructVolumeMounts(misService),
 			ReadinessProbe: misService.Spec.ReadinessProbe,
 			LivenessProbe:  misService.Spec.LivenessProbe,
@@ -677,23 +653,12 @@ func (r *MISServiceReconciler) constructMasterContainer(misService *alphav1.MISS
 	}
 }
 
-// constructMasterEnvs use envs from MISModel to construct envs for create acjob, some unavailable envs will be ignored,
-// if TLSSecret is provided, TLS config will be added.
+// constructMasterEnvs if TLSSecret is provided, TLS config will be added.
 func (r *MISServiceReconciler) constructMasterEnvs(misService *alphav1.MISService) []v1.EnvVar {
-	unavailableServiceEnvs := map[string]struct{}{
-		"http_proxy":                    {},
-		"https_proxy":                   {},
-		"HTTP_PROXY":                    {},
-		"HTTPS_PROXY":                   {},
-		"TORCH_DEVICE_BACKEND_AUTOLOAD": {},
-	}
-
 	var envs []v1.EnvVar
 
-	for _, env := range misService.Status.Envs {
-		if _, ok := unavailableServiceEnvs[env.Name]; !ok {
-			envs = append(envs, env)
-		}
+	for i := 0; i < len(misService.Spec.Envs); i++ {
+		envs = append(envs, *misService.Spec.Envs[i].DeepCopy())
 	}
 
 	if misService.Spec.TLSSecret != "" {
@@ -753,7 +718,7 @@ func (r *MISServiceReconciler) constructVolumes(misService *alphav1.MISService) 
 			Name: MISServiceVolumeModel,
 			VolumeSource: v1.VolumeSource{
 				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-					ClaimName: misService.Status.PVC,
+					ClaimName: misService.Spec.PVC,
 				},
 			},
 		},
@@ -916,28 +881,8 @@ func (r *MISServiceReconciler) createIndexTLSSecretForService(mgr ctrl.Manager) 
 	)
 }
 
-// createIndexTLSSecretForService create index for MISModel to accelerate query.
-func (r *MISServiceReconciler) createIndexMISModelForService(mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(
-		context.Background(),
-		&alphav1.MISService{},
-		"misModel",
-		func(o client.Object) []string {
-			misservice, ok := o.(*alphav1.MISService)
-			if !ok {
-				return []string{}
-			}
-			return []string{misservice.Spec.MISModel}
-		},
-	)
-}
-
 func (r *MISServiceReconciler) findMISServiceForIndexTLSSecret(ctx context.Context, obj client.Object) []ctrl.Request {
 	return r.findMISServiceForIndex(ctx, obj, "tlsSecret")
-}
-
-func (r *MISServiceReconciler) findMISServiceForIndexMISModel(ctx context.Context, obj client.Object) []ctrl.Request {
-	return r.findMISServiceForIndex(ctx, obj, "misModel")
 }
 
 // findMISServiceForIndex use index to query MISService. Must use with createIndexTLSSecretForService liked method.
@@ -975,18 +920,13 @@ func (r *MISServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return errors.Wrap(err, "Unable to build index of TLSSecret for MISService")
 	}
 
-	if err := r.createIndexMISModelForService(mgr); err != nil {
-		return errors.Wrap(err, "Unable to build index of MISModel for MISService")
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&alphav1.MISService{}).
 		Named("misservice").
 		Watches(&v1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.findMISServiceForIndexTLSSecret)).
-		Watches(&alphav1.MISModel{}, handler.EnqueueRequestsFromMapFunc(r.findMISServiceForIndexMISModel)).
 		Owns(&v1.Service{}).
 		Owns(&monitorv1.ServiceMonitor{}).
-		Owns(&v2beta2.HorizontalPodAutoscaler{}).
+		Owns(&v2.HorizontalPodAutoscaler{}).
 		Owns(ptr.To(getAcjobObject())).
 		Complete(r)
 }
