@@ -29,7 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/api/apps/alphav1"
 )
 
 // MISServiceReconciler reconciles a MISService object
@@ -54,10 +54,10 @@ func (r *MISServiceReconciler) getStandardSelectorLabels(misService *alphav1.MIS
 	}
 }
 
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=misservices,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=misservices/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=misservices/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=mismodel,verbs=get;list;watch
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=misservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=misservices/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=misservices/finalizers,verbs=update
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=mismodel,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=monitoring.coreos.com,resources=servicemonitors,verbs=get;list;watch

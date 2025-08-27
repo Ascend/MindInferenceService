@@ -26,7 +26,7 @@ const (
 
 const (
 	// MISModelFinalizer indicates if mismodel can be deleted
-	MISModelFinalizer = "finalizer.mismodel.apps.ascend.com"
+	MISModelFinalizer = "finalizer.mismodel.mis.hiascend.com"
 
 	// MISModelPodContainerName indicates container name of download pod
 	MISModelPodContainerName = "downloader"
@@ -45,7 +45,7 @@ const (
 
 const (
 	// MISServiceFinalizer indicates if misservice can be deleted
-	MISServiceFinalizer = "finalizer.misservice.apps.ascend.com"
+	MISServiceFinalizer = "finalizer.misservice.mis.hiascend.com"
 
 	// MISServicePortName indicates mis service‘s port name
 	MISServicePortName = "service-port"

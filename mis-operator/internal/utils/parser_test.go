@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/api/apps/alphav1"
 )
 
 var _ = Describe("parser utils", func() {

@@ -21,8 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"ascend.com/mis-operator/api/apps/alphav1"
-	"ascend.com/mis-operator/internal/utils"
+	"hiascend.com/mis-operator/api/apps/alphav1"
+	"hiascend.com/mis-operator/internal/utils"
 )
 
 // MISModelReconciler reconciles a MISModel object
@@ -47,9 +47,9 @@ func (r *MISModelReconciler) getStandardSelectorLabels(misModel *alphav1.MISMode
 	}
 }
 
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=mismodels,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=mismodels/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=apps.ascend.com,resources=mismodels/finalizers,verbs=update
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=mismodels,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=mismodels/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=mis.hiascend.com,resources=mismodels/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
