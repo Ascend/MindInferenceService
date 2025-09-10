@@ -4,7 +4,7 @@ vllm:
   pipeline_parallel_size: 1
   max_num_seqs: 128
   gpu_memory_utilization: 0.9
-  block_size: 32
+  block_size: 128
   swap_space: 0
   cpu_offload_gb: 0
   scheduling_policy: fcfs
