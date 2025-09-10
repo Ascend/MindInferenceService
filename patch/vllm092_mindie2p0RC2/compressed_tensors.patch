@@ -1,0 +1,82 @@
+--- /usr/local/lib/python3.11/dist-packages/vllm/model_executor/layers/quantization/compressed_tensors/compressed_tensors.py	2025-07-29 01:16:52.000000000 +0000
++++ compressed_tensors.py	2025-07-29 06:06:09.235804416 +0000
+@@ -5,6 +5,7 @@
+ from typing import TYPE_CHECKING, Any, Literal, Optional, cast
+ 
+ import torch
++import torch_npu
+ from compressed_tensors.config import (CompressionFormat,
+                                        SparsityCompressionConfig,
+                                        SparsityStructure)
+@@ -15,14 +16,12 @@
+ 
+ import vllm.envs as envs
+ from vllm.logger import init_logger
+-from vllm.model_executor.layers.fused_moe import FusedMoE
+ from vllm.model_executor.layers.linear import (LinearBase, LinearMethodBase,
+                                                UnquantizedLinearMethod)
++from vllm.model_executor.layers.quantization import register_quantization_config
+ from vllm.model_executor.layers.quantization import QuantizationMethods
+ from vllm.model_executor.layers.quantization.base_config import (  # noqa: E501
+     QuantizationConfig, QuantizeMethodBase)
+-from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors_moe import (  # noqa: E501
+-    CompressedTensorsMoEMethod)
+ from vllm.model_executor.layers.quantization.compressed_tensors.schemes import (
+     W4A16SPARSE24_SUPPORTED_BITS, WNA16_SUPPORTED_BITS, CompressedTensors24,
+     CompressedTensorsScheme, CompressedTensorsW4A4Fp4,
+@@ -46,8 +45,10 @@
+ 
+ SPARSITY_CONFIG_NAME: Literal["sparsity_config"] = "sparsity_config"
+ QUANTIZATION_SCHEME_MAP_TYPE = dict[str, Optional[dict[str, QuantizationArgs]]]
++QUANTIZATION_TYPE = "ascend"
+ 
+ 
++@register_quantization_config(QUANTIZATION_TYPE)
+ class CompressedTensorsConfig(QuantizationConfig):
+ 
+     def __init__(
+@@ -70,6 +71,9 @@
+         self.sparsity_ignore_list = sparsity_ignore_list
+         self.config = config
+ 
++    def __repr__(self) -> str:
++        return "AscendQuantConfigCompressedTensor: \n" + super().__repr__()
++
+     def get_linear_method(self) -> "CompressedTensorsLinearMethod":
+         return CompressedTensorsLinearMethod(self)
+ 
+@@ -81,7 +85,7 @@
+         return 70
+ 
+     def get_name(self) -> QuantizationMethods:
+-        return "compressed-tensors"
++        return QUANTIZATION_TYPE
+ 
+     def apply_vllm_mapper(self, hf_to_vllm_mapper: "WeightsMapper"):
+         self.target_scheme_map = hf_to_vllm_mapper.apply_dict(
+@@ -101,7 +105,9 @@
+         prefix: str,
+     ) -> Optional["QuantizeMethodBase"]:
+         from vllm.attention.layer import Attention  # Avoid circular import
+-
++        from vllm.model_executor.layers.fused_moe import FusedMoE
++        from vllm.model_executor.layers.quantization.compressed_tensors.compressed_tensors_moe import (  # noqa: E501
++    CompressedTensorsMoEMethod)
+         # Check if the layer is skipped for quantization.
+         # TODO (@robertgshaw2): support module names
+         if should_ignore_layer(prefix,
+@@ -121,6 +127,14 @@
+         return None
+ 
+     @classmethod
++    def override_quantization_method(cls, hf_quant_cfg, user_quant) -> Optional[str]:
++        try:
++            import torch_npu
++            return QUANTIZATION_TYPE
++        except:
++            return None
++
++    @classmethod
+     def from_config(cls, config: dict[str, Any]) -> "CompressedTensorsConfig":
+         ignore: list[str] = cast(list[str], config.get("ignore", []))
+         quant_format = cast(str, config.get("format"))

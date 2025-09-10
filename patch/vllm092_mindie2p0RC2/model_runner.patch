@@ -1,0 +1,23 @@
+--- /usr/local/lib/python3.11/dist-packages/vllm_ascend/worker/model_runner.py	2025-07-29 01:31:59.000000000 +0000
++++ model_runner.py	2025-07-29 06:06:09.235804416 +0000
+@@ -862,9 +862,10 @@
+         if self.runner.model_config.uses_mrope:
+             image_grid_thw = mm_kwargs.get("image_grid_thw", None)
+             video_grid_thw = mm_kwargs.get("video_grid_thw", None)
+-            assert image_grid_thw is not None or video_grid_thw is not None, (
++            input_audio_features = mm_kwargs.get("input_audio_features", None)
++            assert image_grid_thw is not None or video_grid_thw is not None or input_audio_features is not None, (
+                 "mrope embedding type requires multi-modal input mapper "
+-                "returns 'image_grid_thw' or 'video_grid_thw'.")
++                "returns 'image_grid_thw' or 'video_grid_thw' or 'input_audio_features'.")
+             second_per_grid_ts = mm_kwargs.get("second_per_grid_ts", None)
+ 
+             hf_config = self.runner.model_config.hf_config
+@@ -884,6 +885,7 @@
+                         second_per_grid_ts=second_per_grid_ts,
+                         context_len=inter_data.context_lens[seq_idx],
+                         seq_len=inter_data.seq_lens[seq_idx],
++                        audio_feature_lengths=seq_group_metadata.multi_modal_data.get("audio_feature_lengths"),
+                     )
+ 
+                 seq_data.mrope_position_delta = mrope_position_delta
