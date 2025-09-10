@@ -11,6 +11,7 @@ mindie-service:
   swap_space: 4
   scheduling_policy: priority
   num_scheduler_steps: 1
+  vllm_use_v1: 0
 engine_type: mindie-service
 model: MindSDK/Qwen2.5-VL-7B-Instruct
 model_type: VLM

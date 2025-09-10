@@ -9,6 +9,7 @@ mindie-service:
   block_size: 32
   swap_space: 8
   scheduling_policy: fcfs
+  vllm_use_v1: 0
 engine_type: mindie-service
 model: MindSDK/Qwen2.5-VL-32B-Instruct
 model_type: VLM
