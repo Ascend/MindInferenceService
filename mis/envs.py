@@ -10,7 +10,7 @@ import mis.constants as constants
 
 if TYPE_CHECKING:
     MIS_CACHE_PATH: str = "/opt/mis/.cache"
-
+    MIS_CONFIGS_PATH: str = "/home/HwHiAiUser/configs/llm"
     MIS_MODEL: str = "DeepSeek-R1-Distill-Qwen-7B"
     MIS_ENGINE_TYPE: str = "vllm"
     MIS_SERVED_MODEL_NAME: Optional[str] = None
@@ -48,6 +48,7 @@ if TYPE_CHECKING:
 
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
+    "MIS_CONFIGS_PATH": lambda: _get_cache_path_from_env("MIS_CONFIGS_PATH", "/home/HwHiAiUser/configs/llm"),
     "MIS_MODEL": lambda: _get_str_from_env("MIS_MODEL", "DeepSeek-R1-Distill-Qwen-7B"),
     "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_SERVED_MODEL_NAME": lambda: _get_str_from_env("MIS_SERVED_MODEL_NAME", None),

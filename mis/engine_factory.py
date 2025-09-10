@@ -6,6 +6,7 @@ from os import path
 from mis import constants
 from mis.logger import init_logger
 from mis.args import GlobalArgs
+from mis.utils.utils import vllm_v1_supported
 
 _LOCAL_LOGGING_INTERVAL_SEC = 5
 
@@ -53,22 +54,30 @@ class VLLMEngine:
 
         engine_config = engine_args.create_engine_config()
 
-        from vllm.engine.metrics import LoggingStatLogger
-        from mis.llm.engines.vllm.metrics import MisPrometheusStatLogger
-
         stat_loggers = None
-        if not args.disable_log_stats:
-            stat_loggers = {
-                "logging": LoggingStatLogger(
-                    local_interval=_LOCAL_LOGGING_INTERVAL_SEC,
-                    vllm_config=engine_config
-                ),
-                "prometheus": MisPrometheusStatLogger(
-                    local_interval=_LOCAL_LOGGING_INTERVAL_SEC,
-                    labels=dict(model_name=engine_config.model_config.served_model_name),
-                    vllm_config=engine_config
-                ),
-            }
+        v1_supported = vllm_v1_supported(engine_config)
+        if not args.disable_log_stats and v1_supported is not None:
+            if v1_supported:
+                from vllm.v1.metrics.loggers import LoggingStatLogger
+                from vllm.v1.metrics.loggers import PrometheusStatLogger
+                stat_loggers = [
+                    PrometheusStatLogger,
+                    LoggingStatLogger
+                ]
+            else:
+                from vllm.engine.metrics import LoggingStatLogger
+                from mis.llm.engines.vllm.metrics import MisPrometheusStatLogger
+                stat_loggers = {
+                    "logging": LoggingStatLogger(
+                        local_interval=_LOCAL_LOGGING_INTERVAL_SEC,
+                        vllm_config=engine_config
+                    ),
+                    "prometheus": MisPrometheusStatLogger(
+                        local_interval=_LOCAL_LOGGING_INTERVAL_SEC,
+                        labels=dict(model_name=engine_config.model_config.served_model_name),
+                        vllm_config=engine_config
+                    ),
+                }
         return AsyncLLMEngine.from_engine_args(engine_args, stat_loggers=stat_loggers)
 
 

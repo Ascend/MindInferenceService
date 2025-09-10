@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 ENABLE_MINICPMV_PATCHES=false
 ENABLE_OMNI_PATCHES=false
 WORKDIR_SUBDIR=""

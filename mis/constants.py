@@ -40,6 +40,8 @@ MIS_LOCAL_BIN_PATH = get_bin_path()
 
 UVICORN_LOG_LEVELS = ["debug", "info", "warning", "error", "critical"]
 
+CONFIG2ENV_NAME_LIST = ["npu_memory_fraction", "vllm_allow_long_max_model_len", "vllm_use_v1"]
+
 SSL_CERT_REQS_TYPES = [int(ssl.CERT_NONE), int(ssl.CERT_OPTIONAL), int(ssl.CERT_REQUIRED)]
 
 ASCEND_PATH = get_ascend_path()
