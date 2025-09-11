@@ -4,7 +4,7 @@ import os
 import shutil
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 from mis.utils.utils import get_model_path
 
@@ -54,6 +54,57 @@ class TestGetModelPath(unittest.TestCase):
 
         with self.assertRaises(PermissionError):
             get_model_path(str(unreadable_dir))
+
+    @patch('os.getuid')
+    @patch('os.stat')
+    def test_owner_check_success(self, mock_stat, mock_getuid):
+        mock_getuid.return_value = 1000
+
+        mock_stat.return_value = MagicMock(st_uid=1000)
+
+        abs_model_path = "/mnt/nfs/data/models/MindSDK/Qwen3-8B"
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('pathlib.Path.is_dir', return_value=True), \
+             patch('pathlib.Path.is_symlink', return_value=False), \
+             patch('os.access', return_value=True), \
+             patch('pathlib.Path.stat', return_value=MagicMock(st_mode=0o40755)):
+
+            result = get_model_path("MindSDK/Qwen3-8B")
+            self.assertEqual(result, abs_model_path)
+
+    @patch('os.getuid')
+    @patch('os.stat')
+    def test_owner_check_failed(self, mock_stat, mock_getuid):
+        mock_getuid.return_value = 1000
+
+        mock_stat.return_value = MagicMock(st_uid=2000)
+
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('pathlib.Path.is_dir', return_value=True), \
+             patch('pathlib.Path.is_symlink', return_value=False), \
+             patch('os.access', return_value=True), \
+             patch('pathlib.Path.stat', return_value=MagicMock(st_mode=0o40755)):
+
+            with self.assertRaises(OSError) as cm:
+                get_model_path("MindSDK/Qwen3-8B")
+            self.assertEqual(str(cm.exception), "Error checking ownership of file path.")
+
+    @patch('os.getuid')
+    @patch('os.stat')
+    def test_owner_check_os_error(self, mock_stat, mock_getuid):
+        mock_getuid.return_value = 1000
+
+        mock_stat.side_effect = OSError("Cannot access file")
+
+        with patch('pathlib.Path.exists', return_value=True), \
+             patch('pathlib.Path.is_dir', return_value=True), \
+             patch('pathlib.Path.is_symlink', return_value=False), \
+             patch('os.access', return_value=True), \
+             patch('pathlib.Path.stat', return_value=MagicMock(st_mode=0o40755)):
+
+            with self.assertRaises(OSError) as cm:
+                get_model_path("MindSDK/Qwen3-8B")
+            self.assertEqual(str(cm.exception), "Error checking ownership of file path.")
 
 
 if __name__ == '__main__':

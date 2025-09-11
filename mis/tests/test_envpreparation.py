@@ -10,7 +10,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 import mis.envs as envs
 from mis.hub.envpreparation import environment_preparation, _is_private_key_encrypted, _enable_envs
 
-MIS_MODEL = "MindSDK/DeepSeek-R1-Distill-Qwen-1.5B"
+MIS_MODEL = "MindSDK/Qwen3-8B"
 
 
 class TestEnvPreparation(unittest.TestCase):

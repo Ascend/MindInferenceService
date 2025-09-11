@@ -149,7 +149,7 @@ class ContainerIPDetector:
 
 def get_model_path(raw_model: str) -> str:
     """Get model path from raw_model.
-    given raw_model a `MindSDK/Deepseek-R1-Distill-Qwen-1.5B` style str, this function will find
+    given raw_model a `MindSDK/Qwen3-8B` style str, this function will find
         absolute path of exist model to that path.
     return this absolute path.
     """
@@ -170,6 +170,15 @@ def get_model_path(raw_model: str) -> str:
     if not os.access(abs_model_path, os.R_OK):
         logger.error("Local model path is not readable.")
         raise PermissionError("Local model path is not readable.")
+
+    try:
+        current_user_id = os.getuid()
+        path_stat = os.stat(abs_model_path)
+        path_owner_id = path_stat.st_uid
+        if current_user_id != path_owner_id:
+            raise PermissionError("File path is not owned by the current user.")
+    except OSError as e:
+        raise OSError("Error checking ownership of file path.") from e
 
     logger.info("Model path is valid and readable.")
     return str(abs_model_path)
