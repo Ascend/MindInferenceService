@@ -7,15 +7,15 @@ vllm:
   max_num_batched_tokens: 16384
   max_seq_len_to_capture: 8192
   gpu_memory_utilization: 0.95
-  block_size: 16
+  block_size: 128
   swap_space: 0
   cpu_offload_gb: 0
   scheduling_policy: priority
   num_scheduler_steps: 1
   disable_async_output_proc: true
   multi_step_stream_outputs: true
-  enable_chunked_prefill: false
-  enable_prefix_caching: false
+  enable_chunked_prefill: true
+  enable_prefix_caching: true
   enforce_eager: true
   quantization: awq
 engine_type: vllm

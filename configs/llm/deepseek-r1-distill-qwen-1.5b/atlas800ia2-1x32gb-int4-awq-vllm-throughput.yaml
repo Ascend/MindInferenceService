@@ -10,8 +10,8 @@ vllm:
   scheduling_policy: fcfs
   disable_async_output_proc: false
   multi_step_stream_outputs: true
-  enable_chunked_prefill: false
-  enable_prefix_caching: false
+  enable_chunked_prefill: true
+  enable_prefix_caching: true
   enforce_eager: true
   quantization: awq
 engine_type: vllm
