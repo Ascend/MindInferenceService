@@ -35,6 +35,11 @@ MIS_CHAT_COMPLETION_WHITELIST = {
     "priority",  # only for V0
     "max_completion_tokens",  # backward compatibility
     "ignore_eos"
+
+    # guided decode params
+    "guided_decoding_backend",
+    "response_format",
+    "guided_json",
 }
 
 
