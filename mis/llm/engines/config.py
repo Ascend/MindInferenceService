@@ -160,8 +160,8 @@ CHECKER_VLLM = {
         "valid_values": (True, False)
     },
     "vllm_use_v1": {
-        "type": "str_in",
-        "valid_values": ("1", "0")
+        "type": "int",
+        "valid_values": (0, 1)
     }
 }
 

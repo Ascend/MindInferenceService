@@ -3,7 +3,7 @@
 import importlib
 import os
 import re
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Tuple
 
 import json
 import socket
@@ -21,7 +21,7 @@ ENV_CONTAINER_VARS = ('CONTAINER_IP', 'POD_IP', 'HOST_IP')
 
 class ConfigChecker:
     @staticmethod
-    def is_value_in_range(name: str, value: Union[int, float], 
+    def is_value_in_range(name: str, value: Union[int, float],
                           min_value: Union[int, float], max_value: Union[int, float]):
         """
         Check if the value is in the range.
@@ -43,12 +43,12 @@ class ConfigChecker:
         return False
 
     @staticmethod
-    def is_value_in_enum(name: str, value: Union[int, str, bool], valid_values: List[Union[int, str, bool]]):
+    def is_value_in_enum(name: str, value: Union[int, str, bool], valid_values: Tuple[Union[int, str, bool]]):
         """
         Check if the value is in the valid values
         :param name: name of the value
         :param value: value to check
-        :param valid_values: list of valid values
+        :param valid_values: tuple of valid values
         :return: True if the value is in the valid values, False otherwise
         """
         if value not in valid_values:
