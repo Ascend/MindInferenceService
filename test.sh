@@ -1,5 +1,8 @@
 #!/bin/bash
 # Copyright 2025 Huawei Technologies Co., Ltd.
+# Author: Mind Inference Service
+# Create: 2025
+# History: NA
 
 set -e
 
@@ -8,33 +11,62 @@ workdir=$(
   pwd
 )
 
-function test_mis_operator() {
+PY_EXE=python3.11
+
+function set_pythonpath() {
+  SITE_DIRS=$($PY_EXE -c "import site; print(site.getsitepackages())")
+  SITE_DIR=$(echo $SITE_DIRS | tr -d '[]' | tr -d \")
+
+  export PYTHONPATH="${SITE_DIR}${PYTHONPATH:+:$PYTHONPATH}"
+
+  echo "PYTHONPATH setting to: "
+  echo "$PYTHONPATH"
+}
+
+function test_mis() {
   # prepare test
-  cd $workdir/mis-operator
-  go mod tidy
+  cd $workdir/mis
 
-  # do test
-  readonly FILE_TEST_RESULT='testMISOperator.txt'
-  readonly FILE_DETAIL_OUTPUT='api.html'
+    # Define the list of dependencies as an array
+  dependencies=(
+    "pytest"
+    "pytest-cov"
+    "pytest-html"
+    "starlette"
+    "vllm"
+    "uvicorn"
+    "cryptography"
+    "transformers==4.52.3"
+  )
 
-  if ! (go test $(go list ./internal/...) -v -race -coverprofile=cover.out > ./$FILE_TEST_RESULT); then
-    echo "*********mis-operator go test cases error*********"
-    cat ./$FILE_TEST_RESULT
+  # Install each dependency individually
+  for dep in "${dependencies[@]}"; do
+    echo "Installing: $dep"
+    python3.11 -m pip install "$dep"
+  done
+
+  # Add the mis module to the Python path
+  export PYTHONPATH=$workdir:$PYTHONPATH
+
+  if ! (python3.11 -m pytest --junit-xml=final.xml --html=./final.html --self-contained-html --durations=5 -vs --cov-branch --cov=./ --cov-report=html --cov-report=xml:coverage.xml .); then
+    echo "*********mis Python test cases error*********"
     exit 1
   else
-    echo $FILE_DETAIL_OUTPUT
-    gocov convert cover.out > gocov.json
-    gocov convert cover.out | gocov-html > $FILE_DETAIL_OUTPUT
-    gotestsum --junitfile unit-tests.xml ./...
+    echo "*********mis Python test cases success*********"
   fi
 
   # move
-  mkdir -p $workdir/coverage/mis-operator
-  rm -rf $workdir/coverage/mis-operator/*
+  mkdir -p $workdir/coverage/mis
+  rm -rf $workdir/coverage/mis/*
 
-  cp $FILE_DETAIL_OUTPUT $workdir/coverage/mis-operator/
-  cp gocov.json $workdir/coverage/mis-operator/
-  cp unit-tests.xml $workdir/coverage/mis-operator/
+  cp -r htmlcov $workdir/coverage/mis
+  cp final.html $workdir/coverage/mis
+  cp final.xml $workdir/coverage/mis
+  cp coverage.xml $workdir/coverage/mis
+  cp .coverage $workdir/coverage/mis
+  rm final.html final.xml coverage.xml .coverage
+  rm -rf htmlcov
 }
 
-test_mis_operator
+set_pythonpath
+test_mis
