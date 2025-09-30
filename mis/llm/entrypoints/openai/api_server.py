@@ -37,6 +37,19 @@ MIS_MODEL_REMOVE_FIELDS = [
 ]
 
 
+@router.get("/openai/v1/models")
+async def show_available_models(raw_request: Request):
+    handler = models(raw_request)
+
+    models_ = await handler.show_available_models()
+    for model_ in models_.data:
+        for field in MIS_MODEL_REMOVE_FIELDS:
+            if hasattr(model_, field):
+                delattr(model_, field)
+    logger.debug("Returning available models.")
+    return JSONResponse(content=models_.model_dump())
+
+
 def _align_non_streaming_response(generator: ChatCompletionResponse) -> None:
     """
     remove stop_reason in vllm response to ensure consistent behavior
