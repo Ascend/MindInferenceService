@@ -9,6 +9,7 @@ from starlette.datastructures import State
 from starlette.responses import JSONResponse
 
 from mis.llm.entrypoints.openai.api_server import (
+    show_available_models,
     create_chat_completions,
     init_openai_app_state,
 )
@@ -55,6 +56,47 @@ class TestApiServer(unittest.TestCase):
             disable_log_requests=False,
             max_log_len=1000
         )
+
+    @patch('mis.llm.entrypoints.openai.api_server.models')
+    def test_show_available_models(self, mock_models):
+        """Test show_available_models endpoint."""
+        mock_response = MagicMock()
+        mock_response.data = [self.set_up_mock_models()]
+        mock_response.model_dump.return_value = {
+            "data": [{
+                "id": "test_id",
+                "created": 123456,
+                "object": "test_object",
+                "owned_by": "test_owner",
+                "max_model_len": 1024
+            }]
+        }
+
+        mock_handler = AsyncMock()
+        mock_handler.show_available_models = AsyncMock(return_value=mock_response)
+        mock_models.return_value = mock_handler
+
+        # Setup request mock
+        mock_request = MagicMock()
+
+        # Create an async function to test
+        async def test_show_models():
+            response = await show_available_models(mock_request)
+            return response
+
+        # Run the async test
+        response = self.run_async(test_show_models())
+
+        # Assertions
+        mock_models.assert_called_once_with(mock_request)
+        mock_handler.show_available_models.assert_awaited_once()
+
+        # Check that the response is a JSONResponse
+        self.assertIsInstance(response, JSONResponse)
+
+        # Check that removed fields are not in the response
+        response_data = response.body
+        self.api_assert_models(response_data)
 
     def api_assert_models(self, response_data):
         self.assertNotIn(b"root", response_data)
