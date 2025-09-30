@@ -30,8 +30,7 @@ def _get_bin_path() -> str:
         return os.path.join(_get_base_path(), ".local")  # non-root：$HOME/.local
 
 
-MIS_MODEL_LIST = ("MindSDK/DeepSeek-R1-Distill-Llama-8B", "MindSDK/DeepSeek-R1-Distill-Qwen-1.5B",
-                  "MindSDK/DeepSeek-R1-Distill-Qwen-7B", "MindSDK/Llama-3.2-3B-Instruct", "MindSDK/Qwen3-8B")
+MIS_MODEL_LIST = ("MindSDK/Qwen3-8B", )
 
 MIS_ENGINE_TYPES = ("vllm",)
 

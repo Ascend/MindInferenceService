@@ -14,10 +14,6 @@ from mis.utils.utils import ConfigChecker, get_soc_name
 logger = init_logger(__name__)
 
 MIS_CONFIG_DEFAULT = {
-    "deepseek-r1-distill-llama-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
-    "deepseek-r1-distill-qwen-1.5b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
-    "deepseek-r1-distill-qwen-7b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
-    "llama-3.2-3b-instruct": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
     "qwen3-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
 }
 

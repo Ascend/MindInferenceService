@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 import mis.constants as constants
 from mis.utils.env_checker import EnvChecker
 
-DEFAULT_MIS_MODEL = "MindSDK/DeepSeek-R1-Distill-Qwen-7B"
+DEFAULT_MIS_MODEL = "MindSDK/Qwen3-8B"
 DEFAULT_MIS_CONFIG = "atlas800ia2-1x32gb-bf16-vllm-default"
 
 if TYPE_CHECKING:

@@ -1,0 +1,19 @@
+vllm:
+  dtype: bfloat16
+  tensor_parallel_size: 1
+  pipeline_parallel_size: 1
+  max_num_seqs: 64
+  max_model_len: 24576
+  max_num_batched_tokens: 24576
+  max_seq_len_to_capture: 24576
+  gpu_memory_utilization: 0.95
+  block_size: 128
+  swap_space: 4
+  cpu_offload_gb: 0
+  scheduling_policy: fcfs
+  multi_step_stream_outputs: true
+  enable_chunked_prefill: true
+  enable_prefix_caching: true
+  enforce_eager: false
+engine_type: vllm
+model: MindSDK/Qwen3-8B
