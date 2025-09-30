@@ -12,7 +12,7 @@ class TestAPIExtensions(unittest.TestCase):
     def setUp(self):
         self.valid_params = {
             "messages": [{"role": "user", "content": "test"}],
-            "model": "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+            "model": "MindSDK/Qwen3-8B",
             "invalid_param": "invalid_value"
         }
         # Capture logs during testing
@@ -61,7 +61,7 @@ class TestAPIExtensions(unittest.TestCase):
         """Test initialization with valid parameters."""
         kwargs = {
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+            "model": "MindSDK/Qwen3-8B",
             "temperature": 0.7,
             "max_completion_tokens": 100,
             "stream": True
@@ -80,7 +80,7 @@ class TestAPIExtensions(unittest.TestCase):
         """Test initialization with unsupported parameters."""
         kwargs = {
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+            "model": "MindSDK/Qwen3-8B",
             "unsupported_param": "value",
             "another_unsupported": 123
         }
@@ -98,7 +98,7 @@ class TestAPIExtensions(unittest.TestCase):
         """Test parameter validation with valid values."""
         kwargs = {
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+            "model": "MindSDK/Qwen3-8B",
             "temperature": 1.5,
             "frequency_penalty": 0.5,
             "presence_penalty": -1.2,
@@ -119,7 +119,7 @@ class TestAPIExtensions(unittest.TestCase):
         """Test parameter validation with type errors."""
         kwargs = {
             "messages": [{"role": "user", "content": "Hello"}],
-            "model": "MindSDK/DeepSeek-R1-Distill-Qwen-7B",
+            "model": "MindSDK/Qwen3-8B",
             "max_completion_tokens": "150",
             "temperature": "0.8",
         }
