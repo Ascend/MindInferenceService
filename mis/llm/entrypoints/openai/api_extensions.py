@@ -6,10 +6,10 @@ from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 
 from mis.constants import MIS_MODEL_LIST
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import ConfigChecker
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 # MIS chat completion supported fields
 MIS_CHAT_COMPLETION_WHITELIST = {

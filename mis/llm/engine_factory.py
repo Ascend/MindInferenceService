@@ -4,9 +4,9 @@ from typing import Type
 
 from mis import constants
 from mis.args import GlobalArgs
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 
 class AutoEngine:

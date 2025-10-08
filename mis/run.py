@@ -6,9 +6,9 @@ import sys
 
 from mis.args import ARGS
 from mis.hub.envpreparation import environment_preparation
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 
 def main() -> None:

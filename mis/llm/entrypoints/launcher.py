@@ -23,12 +23,12 @@ from mis import constants
 from mis.args import ARGS, GlobalArgs
 from mis.hub.envpreparation import environment_preparation
 from mis.llm.engine_factory import AutoEngine
-from mis.logger import init_logger
 from mis.llm.entrypoints.middleware import (RateLimitConfig, RequestSizeLimitMiddleware,
                                             ConcurrencyLimitMiddleware, RateLimitMiddleware,
                                             )
+from mis.logger import init_logger, LogType
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 TIMEOUT_KEEP_ALIVE = 5
 
