@@ -3,6 +3,7 @@
 import ipaddress
 import os
 from pathlib import Path
+from typing import Tuple
 
 MAX_PATH_LEN = 128
 
@@ -64,14 +65,14 @@ class EnvChecker:
 
     @staticmethod
     def check_int(name: str, num: int,
-                  min_value: int = None, max_value: int = None, valid_values: tuple[int] = None) -> None:
+                  min_value: int = None, max_value: int = None, valid_values: Tuple[int] = None) -> None:
         """Check the validity of an integer value.
         Args:
             name (str): The name of the environment variable.
             num (int): The integer value to check.
             min_value (int, optional): The minimum allowed value. Defaults to None.
             max_value (int, optional): The maximum allowed value. Defaults to None.
-            valid_values (tuple[int], optional): A tuple of valid values. Defaults to None.
+            valid_values (Tuple[int], optional): A tuple of valid values. Defaults to None.
         Raises:
             ValueError: If the value is less than the minimum allowed value.
             ValueError: If the value is greater than the maximum allowed value.
@@ -85,12 +86,12 @@ class EnvChecker:
             raise ValueError(f"ENV {name} not in {valid_values}")
 
     @staticmethod
-    def check_str_in(name: str, value: str, valid_values: tuple[str] = None) -> None:
+    def check_str_in(name: str, value: str, valid_values: Tuple[str] = None) -> None:
         """Check the validity of a string value.
         Args:
             name (str): The name of the environment variable.
             value (str): The string value to check.
-            valid_values (tuple[str], optional): A tuple of valid values. Defaults to None.
+            valid_values (Tuple[str], optional): A tuple of valid values. Defaults to None.
         Raises:
             ValueError: If the value is not in the list of valid values.
         """
