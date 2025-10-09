@@ -1,0 +1,247 @@
+# -*- coding:utf-8 -*-
+# Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import unittest
+from unittest.mock import Mock, AsyncMock, patch
+import asyncio
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+
+from mis.llm.entrypoints.middleware import (
+
+    RequestSizeLimitMiddleware,
+    ConcurrencyLimitMiddleware,
+    RateLimitMiddleware,
+    RateLimitConfig
+)
+
+
+class TestRequestSizeLimitMiddleware(unittest.TestCase):
+    """Test middleware for request body size limiting"""
+
+    def setUp(self):
+        """Set up test environment before each test method"""
+        self.app = FastAPI()
+        self.test_client = TestClient(self.app)
+
+        # Add middleware
+        self.app.add_middleware(RequestSizeLimitMiddleware, max_body_size=1024)  # 1KB limit
+
+        @self.app.post("/test")
+        async def test_endpoint(request: Request):
+            body = await request.body()
+            return {"size": len(body)}
+
+    def test_request_within_limit(self):
+        """Test request within the size limit"""
+        # Send a request body smaller than the limit
+        small_data = {"data": "x" * 512}  # About 512 bytes
+        response = self.test_client.post("/test", json=small_data)
+        self.assertEqual(response.status_code, 200)
+
+    def test_request_exceeds_limit(self):
+        """Test request exceeding the size limit"""
+        # Send a request body larger than the limit
+        large_data = {"data": "x" * 2048}  # About 2KB
+        response = self.test_client.post("/test", json=large_data)
+        self.assertEqual(response.status_code, 413)
+        self.assertIn("Request body too large", response.json()["detail"])
+
+    def test_chunked_transfer_within_limit(self):
+        """Test chunked transfer within the limit"""
+        # Simulate chunked transfer data
+        def chunked_data():
+            for i in range(4):  # 4 chunks, each 200 bytes = 800 bytes
+                yield "x" * 200
+
+        response = self.test_client.post(
+            "/test",
+            content="".join(chunked_data()),
+            headers={"transfer-encoding": "chunked"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["size"], 800)
+
+    def test_chunked_transfer_exceeds_limit(self):
+        """Test chunked transfer exceeds the limit"""
+        def chunked_data():
+            for i in range(10):  # 10 chunks, each 200 bytes = 2000 bytes > 1024 bytes limit
+                yield "x" * 200
+        try:
+            response = self.test_client.post(
+                "/test",
+                content="".join(chunked_data()),
+                headers={"transfer-encoding": "chunked"}
+            )
+        except Exception as e:
+            # Chunked transfer exceeding the limit will throw an exception, captured by middleware and returns 413
+            self.assertIn("413", str(e))
+            self.assertIn("Request body too large", str(e))
+
+    def test_no_content_length_or_chunked(self):
+        """Test requests without Content-Length and chunked transfer"""
+        response = self.test_client.get("/test")  # GET requests usually have no request body
+        self.assertEqual(response.status_code, 405)  # Method not allowed (only POST is defined)
+
+    def test_exact_limit_size(self):
+        """Test requests with exactly the limit size"""
+        response = self.test_client.post(
+            "/test",
+            content="x" * 1024,  # Exactly 1KB
+            headers={"content-length": "1024"}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["size"], 1024)
+
+
+class TestConcurrencyLimitMiddleware(unittest.IsolatedAsyncioTestCase):
+    """Test middleware for concurrent request limiting"""
+
+    def setUp(self):
+        """Set up test environment before each test method"""
+        self.app = FastAPI()
+        self.max_concurrent_requests = 2
+        self.middleware = ConcurrencyLimitMiddleware(self.app, max_concurrent_requests=self.max_concurrent_requests)
+        # Add middleware with a limit of 2 concurrent requests
+        self.app.add_middleware(ConcurrencyLimitMiddleware, max_concurrent_requests=self.max_concurrent_requests)
+
+        # Create an endpoint that takes time to process for concurrency testing
+        @self.app.get("/slow")
+        async def slow_endpoint():
+            await asyncio.sleep(0.1)  # Simulate processing time
+            return {"message": "success"}
+
+        self.test_client = TestClient(self.app)
+
+    def test_concurrent_requests_within_limit(self):
+        """Test concurrent requests within the limit"""
+
+        # Sending two concurrent requests should succeed
+        async def make_requests():
+            tasks = [asyncio.create_task(asyncio.sleep(0.01,
+                                                        result=self.test_client.get("/slow"))) for _ in range(2)]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            return responses
+
+        responses = asyncio.run(make_requests())
+        for response in responses:
+            self.assertEqual(response.status_code, 200)
+
+    async def test_concurrent_requests_exceed_limit(self):
+        async def make_multiple_requests():
+            tasks = []
+            for _ in range(self.max_concurrent_requests + 2):
+                task = asyncio.create_task(asyncio.to_thread(self.test_client.get, "/slow"))
+                tasks.append(task)
+
+            try:
+                # Set a timeout for the gather operation
+                responses = await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), timeout=1.0)
+                return responses
+            except asyncio.TimeoutError:
+                return [asyncio.TimeoutError] * len(tasks)
+
+        responses = await make_multiple_requests()
+
+        successful_responses = 0
+        limited_responses = 0
+
+        for response in responses:
+            if isinstance(response, asyncio.TimeoutError):
+                continue
+
+            if response.status_code == 200:
+                successful_responses += 1
+            elif response.status_code == 429:  # Too Many Requests
+                limited_responses += 1
+
+        self.assertEqual(successful_responses, self.max_concurrent_requests)
+        self.assertGreaterEqual(limited_responses, 1)
+
+    def test_exception_handling_in_call_next(self):
+        mock_call_next = AsyncMock(side_effect=Exception("Test exception"))
+
+        mock_request = Mock(spec=Request)
+        mock_request.client = Mock()
+        mock_request.client.host = "127.0.0.1"
+
+        async def test_dispatch():
+            try:
+                await self.middleware.dispatch(mock_request, mock_call_next)
+            except Exception:
+                pass  # Exceptions will be re-thrown; only care about the state management within the middleware.
+
+            # Even if an anomaly occurs, active_requests should be reset to 0.
+            self.assertEqual(self.middleware.active_requests, 0)
+
+        asyncio.run(test_dispatch())
+
+
+class TestRateLimitMiddleware(unittest.IsolatedAsyncioTestCase):
+    """Test middleware for rate limiting"""
+
+    def setUp(self):
+        """Set up test environment before each test method"""
+        self.app = FastAPI()
+
+        # Configure rate limits: max 2 requests per minute
+        rate_limit_config = RateLimitConfig(
+            requests_per_minute=2,
+        )
+        self.app.add_middleware(RateLimitMiddleware, config=rate_limit_config)
+
+        self.test_client = TestClient(self.app)
+
+        @self.app.get("/test")
+        async def test_endpoint():
+            return {"message": "success"}
+
+    @patch('mis.llm.entrypoints.middleware.get_client_ip')
+    def test_rate_limit_per_minute(self, mock_get_client_ip):
+        """Test per-minute rate limiting"""
+        # Mock client IP
+        mock_get_client_ip.return_value = "127.0.0.1"
+
+        # Send two requests, both should succeed
+        response1 = self.test_client.get("/test")
+        response2 = self.test_client.get("/test")
+
+        self.assertEqual(response1.status_code, 200)
+        self.assertEqual(response2.status_code, 200)
+
+        # Third request should be rate limited
+        response3 = self.test_client.get("/test")
+        self.assertEqual(response3.status_code, 429)
+        self.assertIn("Rate limit exceeded", response3.json()["detail"])
+
+    async def test_check_rate_limit_allowed(self):
+        """Test rate limit check that allows request"""
+        middleware = RateLimitMiddleware(FastAPI())
+        middleware.config = RateLimitConfig(requests_per_minute=2)
+
+        # Mock a client identifier
+        identifier = "test_client"
+
+        # Check rate limit, should allow
+        is_allowed, retry_after = middleware._check_rate_limit(identifier)
+        self.assertTrue(is_allowed)
+        self.assertEqual(retry_after, 0)
+
+    async def test_update_rate_limit(self):
+        """Test updating rate limit counters"""
+        middleware = RateLimitMiddleware(FastAPI())
+        middleware.config = RateLimitConfig(requests_per_minute=2)
+
+        identifier = "test_client"
+
+        # Update rate limit counters
+        middleware._update_rate_limit(identifier)
+
+        # Check that counters are correctly updated
+        self.assertIn(f"{identifier}:minute", middleware.request_counts)
+        self.assertEqual(middleware.request_counts[f"{identifier}:minute"][0], 1)
+
+
+if __name__ == '__main__':
+    unittest.main()

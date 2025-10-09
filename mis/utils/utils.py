@@ -6,6 +6,8 @@ import socket
 from pathlib import Path
 from typing import Union, Optional, Tuple
 
+from fastapi import Request
+
 import mis.envs as envs
 from mis.constants import HW_910B, IP_ALL_ZERO
 from mis.logger import init_logger
@@ -133,11 +135,10 @@ class ContainerIPDetector:
             logger.info("Using provided IP")
             return ip_current
 
-        # Fallback to hostname IP
+            # Fallback to hostname IP
         primary_ip = cls._get_hostname_ip()
         if primary_ip:
             return primary_ip
-
         # Fallback to environment variable IP
         primary_ip = cls._get_container_ip_from_env()
         if primary_ip:
@@ -182,3 +183,21 @@ def get_model_path(raw_model: str) -> str:
 
     logger.info("Model path is valid and readable.")
     return str(abs_model_path)
+
+
+def get_client_ip(request: Request) -> str:
+    """Get client IP address
+    Args:
+        request: The request object from which to extract the client IP address.
+    """
+    if not isinstance(request, Request):
+        logger.error("Invalid request type")
+        raise TypeError("Invalid request type")
+    # Check X-Forwarded-For header
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        client_ip = forwarded_for.split(",")[0].strip()
+    else:
+        # Check X-Real-IP header
+        client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
+    return client_ip

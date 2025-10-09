@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
     MIS_HOST: Optional[str] = None
     MIS_PORT: int = 8000
+    MIS_ENABLE_DOS_PROTECTION: bool = True
     MIS_SSL_KEYFILE: Optional[str] = None
     MIS_SSL_CERTFILE: Optional[str] = None
     MIS_SSL_CA_CERT: Optional[str] = None
@@ -35,6 +36,7 @@ environment_variables: Dict[str, Callable[[], Any]] = {
 
     "MIS_HOST": lambda: _get_ip_address_from_env("MIS_HOST", None),
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),
+    "MIS_ENABLE_DOS_PROTECTION": lambda: _get_bool_from_env("MIS_ENABLE_DOS_PROTECTION", True),
     "MIS_SSL_KEYFILE": lambda: _get_file_from_env("MIS_SSL_KEYFILE", None),
     "MIS_SSL_CERTFILE": lambda: _get_file_from_env("MIS_SSL_CERTFILE", None),
     "MIS_SSL_CA_CERT": lambda: _get_file_from_env("MIS_SSL_CA_CERT", None),
@@ -94,7 +96,7 @@ def _get_ip_address_from_env(name: str, default: Optional[str] = None) -> Option
 
 
 def _get_ssl_cert_reqs() -> Optional[int]:
-    return _get_int_from_env("MIS_SSL_CERT_REQS", int(ssl.CERT_NONE), valid_values=constants.SSL_CERT_REQS_TYPES)
+    return _get_int_from_env("MIS_SSL_CERT_REQS", int(ssl.CERT_REQUIRED), valid_values=constants.SSL_CERT_REQS_TYPES)
 
 
 def __getattr__(name: str) -> Any:

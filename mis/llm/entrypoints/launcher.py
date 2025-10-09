@@ -2,6 +2,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import asyncio
 import signal
+import ssl
 import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -23,6 +24,9 @@ from mis.args import ARGS, GlobalArgs
 from mis.hub.envpreparation import environment_preparation
 from mis.llm.engine_factory import AutoEngine
 from mis.logger import init_logger
+from mis.llm.entrypoints.middleware import (RateLimitConfig, RequestSizeLimitMiddleware,
+                                            ConcurrencyLimitMiddleware, RateLimitMiddleware,
+                                            )
 
 logger = init_logger(__name__)
 
@@ -30,7 +34,33 @@ TIMEOUT_KEEP_ALIVE = 5
 
 
 @asynccontextmanager
+async def lifespan(app: FastAPI) -> None:
+    """
+    An async context manager that handles the application's startup and shutdown events.
+    Args:
+        app (FastAPI): The FastAPI application instance.
+    Yields:
+        None: Control is yielded back to the application to run.
+    """
+    logger.info("Application is starting up.")
+    yield
+    logger.info("Application is shutting down.")
+    if hasattr(app.state, "rate_limit_middleware"):
+        logger.info("Shutting down rate limit middleware.")
+        await app.state.rate_limit_middleware.shutdown()
+
+
+@asynccontextmanager
 async def _build_engine_client_from_args(args: GlobalArgs) -> EngineClient:
+    """
+    Context manager to build and manage the engine client from the given arguments.
+
+    Args:
+        args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
+
+    Yields:
+        EngineClient: The initialized engine client.
+    """
     engine_client: Optional[EngineClient] = None
     try:
         engine_client = AutoEngine.from_config(args)
@@ -41,33 +71,82 @@ async def _build_engine_client_from_args(args: GlobalArgs) -> EngineClient:
 
 
 def _build_app(args: GlobalArgs) -> FastAPI:
-    if args.disable_fastapi_docs:
-        logger.info("Disabling FastAPI documentation")
-        app = FastAPI(openapi_url=None,
-                      docs_url=None,
-                      redoc_url=None,
-                      lifespan=lifespan)
+    """
+    Build the FastAPI application based on the given arguments.
+
+    Args:
+        args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
+
+    Returns:
+        FastAPI: The configured FastAPI application.
+    """
+    logger.debug("Disabling FastAPI documentation")
+    app = FastAPI(openapi_url=None,
+                  docs_url=None,
+                  redoc_url=None,
+                  lifespan=lifespan)
+    if args.enable_dos_protection:
+        # Add request size limiting middleware using configured limit
+        app.add_middleware(RequestSizeLimitMiddleware, max_body_size=constants.MAX_REQUEST_BODY_SIZE)
+
+        # Add concurrent request limiting middleware using configured limit
+        app.add_middleware(ConcurrencyLimitMiddleware, max_concurrent_requests=constants.MAX_CONCURRENT_REQUESTS)
+
+        # Add rate limiting middleware
+        rate_limit_config = RateLimitConfig(
+            requests_per_minute=getattr(args, 'rate_limit_per_minute', constants.RATE_LIMIT_PER_MINUTE),
+        )
+
+        rate_limit_middleware = RateLimitMiddleware(app, config=rate_limit_config)
+        app.add_middleware(rate_limit_middleware.__class__, config=rate_limit_config)
+
+        logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
     else:
-        logger.info("Enabling FastAPI documentation")
-        app = FastAPI(lifespan=lifespan)
+        logger.warning("Middleware is disabled by MIS_ENABLE_DOS_PROTECTION=False")
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(_: FastAPI, exc: RequestValidationError) -> JSONResponse:
+        logger.warning(f"Request validation error")
         error = ErrorResponse(message=str(exc),
                               type="BadRequestError",
                               code=HTTPStatus.BAD_REQUEST)
         return JSONResponse(content=error.model_dump(),
                             status_code=HTTPStatus.BAD_REQUEST)
 
+    @app.exception_handler(Exception)
+    async def internal_exception_handler(_, exc):
+        logger.error(f"Internal server error: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={
+                "message": "Internal Server Error",
+                "details": str(exc)
+            },
+        )
+
+    from mis.llm.entrypoints.openai.api_server import router as openai_router
+    app.include_router(openai_router)
+
     return app
 
 
 async def _init_app_state(engine_client: EngineClient, model_config: ModelConfig,
                           app: FastAPI, args: GlobalArgs) -> None:
+    """
+    Initialize the application state with the given engine client, model configuration, and arguments.
+
+    Args:
+        engine_client (EngineClient): The engine client.
+        model_config (ModelConfig): The model configuration.
+        app (FastAPI): The FastAPI application.
+        args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
+    """
     if args.engine_type in constants.MIS_ENGINE_TYPES:
         logger.info("Initializing OpenAI app state")
         from mis.llm.entrypoints.openai.api_server import router, init_openai_app_state
-        app.include_router(router)
+        logger.info(f"Check if the route has been registered.")
+        if not any(router.prefix in r.path for r in router.routes):
+            app.include_router(router)
         await init_openai_app_state(engine_client, model_config, app.state, args)
     else:
         logger.error(f"Available EngineType is in {constants.MIS_ENGINE_TYPES}")
@@ -122,6 +201,7 @@ async def _run_server(args: GlobalArgs) -> None:
             ssl_ca_certs=args.ssl_ca_certs,
             ssl_cert_reqs=args.ssl_cert_reqs,
             ssl_ciphers=constants.MIS_SSL_CIPHERS,
+            ssl_version=ssl.PROTOCOL_TLSv1_2,
             fd=sock.fileno() if sys.platform.startswith("darwin") else None
         )
 
@@ -162,6 +242,7 @@ async def _run(args: GlobalArgs) -> None:
 
 
 def main() -> None:
+    """Main entry point for the application."""
     args = environment_preparation(ARGS)
     uvloop.run(_run(args))
 

@@ -19,6 +19,7 @@ class GlobalArgs(BaseModel):
     # server
     host: Optional[str] = envs.MIS_HOST
     port: int = envs.MIS_PORT
+    enable_dos_protection: bool = envs.MIS_ENABLE_DOS_PROTECTION
     ssl_keyfile: Optional[str] = envs.MIS_SSL_KEYFILE
     ssl_certfile: Optional[str] = envs.MIS_SSL_CERTFILE
     ssl_ca_certs: Optional[str] = envs.MIS_SSL_CA_CERT
@@ -27,7 +28,6 @@ class GlobalArgs(BaseModel):
     max_log_len: Optional[int] = envs.MIS_MAX_LOG_LEN
     disable_log_requests: bool = constants.MIS_DISABLE_LOG_REQUESTS
     disable_log_stats: bool = constants.MIS_DISABLE_LOG_STATS
-    disable_fastapi_docs: bool = constants.MIS_DISABLE_FASTAPI_DOCS
 
     uvicorn_log_level: str = envs.UVICORN_LOG_LEVEL
 
