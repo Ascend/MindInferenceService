@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
 
 from mis.llm.entrypoints.middleware import (
-
+    RequestTimeoutMiddleware,
     RequestSizeLimitMiddleware,
     ConcurrencyLimitMiddleware,
     RateLimitMiddleware,
@@ -241,6 +241,143 @@ class TestRateLimitMiddleware(unittest.IsolatedAsyncioTestCase):
         # Check that counters are correctly updated
         self.assertIn(f"{identifier}:minute", middleware.request_counts)
         self.assertEqual(middleware.request_counts[f"{identifier}:minute"][0], 1)
+
+
+class FastAPIAppWithTimeout:
+    """
+    FastAPI application example with timeout handling
+    """
+
+    def __init__(self, request_timeout_in_sec: int = 1):
+        self.app = FastAPI()
+        self.app.add_middleware(RequestTimeoutMiddleware, request_timeout_in_sec=request_timeout_in_sec)
+
+        @self.app.get("/slow")
+        async def slow_endpoint():
+            await asyncio.sleep(1.5)  # Simulate a slow response
+            return {"message": "Hello World"}
+
+        @self.app.get("/fast")
+        async def fast_endpoint():
+            return {"message": "Hello World"}
+
+
+class TestRequestTimeoutMiddleware(unittest.TestCase):
+    """
+    Test class for request timeout middleware
+    """
+
+    def setUp(self):
+        """
+        Test initialization
+        """
+        self.fast_app = FastAPIAppWithTimeout(request_timeout_in_sec=1)
+        self.client = TestClient(self.fast_app.app)
+
+    def test_fast_request_not_timeout(self):
+        """
+        Test that a fast request does not timeout
+        """
+        response = self.client.get("/fast")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {"message": "Hello World"})
+
+    def test_slow_request_timeout(self):
+        """
+        Test that a slow request times out
+        """
+        response = self.client.get("/slow")
+        self.assertEqual(response.status_code, 408)
+        self.assertEqual(response.json(), {'detail': '[IP: testclient] Request timeout'})
+
+    def test_middleware_initialization(self):
+        """
+        Test middleware initialization
+        """
+        app = FastAPI()
+        middleware = RequestTimeoutMiddleware(app, request_timeout_in_sec=5)
+        self.assertEqual(middleware.timeout, 5.0)
+
+    async def test_dispatch_with_timeout_error(self):
+        """
+        Test dispatch method handling timeout error
+        """
+        app = FastAPI()
+        middleware = RequestTimeoutMiddleware(app, request_timeout_in_sec=0)
+
+        # Simulate a call_next function that will timeout
+        async def slow_call_next(request):
+            await asyncio.sleep(1)
+            return JSONResponse(content={"message": "OK"})
+
+        # Create a mock request
+        request = Mock(spec=Request)
+
+        # Execute dispatch method
+        response = await middleware.dispatch(request, slow_call_next)
+
+        # Verify timeout response is returned
+        self.assertEqual(response.status_code, 408)
+        self.assertEqual(response.body, b'{"detail":"Request timeout"}')
+
+    async def test_dispatch_without_timeout(self):
+        """
+        Test dispatch method under normal conditions
+        """
+        app = FastAPI()
+        middleware = RequestTimeoutMiddleware(app, request_timeout_in_sec=1)
+
+        # Simulate a normal call_next function
+        async def normal_call_next(request):
+            return JSONResponse(content={"message": "OK"})
+
+        # Create a mock request
+        request = Mock(spec=Request)
+
+        # Execute dispatch method
+        response = await middleware.dispatch(request, normal_call_next)
+
+        # Verify normal response is returned
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.body, b'{"message":"OK"}')
+
+
+class TestRequestTimeoutIntegration(unittest.TestCase):
+    """
+    Integration test class for request timeout
+    """
+
+    def setUp(self):
+        """
+        Test initialization with longer timeout to ensure test stability
+        """
+        self.fast_app = FastAPIAppWithTimeout(request_timeout_in_sec=1)
+        self.client = TestClient(self.fast_app.app)
+
+    def test_multiple_fast_requests(self):
+        """
+        Test that multiple fast requests are processed normally
+        """
+        for i in range(5):
+            response = self.client.get("/fast")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json(), {"message": "Hello World"})
+
+    def test_mixed_requests(self):
+        """
+        Test mixed fast and slow requests
+        """
+        # Send a fast request first
+        fast_response = self.client.get("/fast")
+        self.assertEqual(fast_response.status_code, 200)
+
+        # Send a slow request, which should timeout
+        slow_response = self.client.get("/slow")
+        self.assertEqual(slow_response.status_code, 408)
+
+        # Send another fast request to confirm the service is working
+        fast_response2 = self.client.get("/fast")
+        self.assertEqual(fast_response2.status_code, 200)
 
 
 if __name__ == '__main__':

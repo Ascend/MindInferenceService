@@ -70,7 +70,7 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
                  encoding: str = None, delay: bool = False, log_dir: str = MIS_LOG_PATH) -> None:
         """Initialize the RotatingFileWithArchiveHandler.
         Args:
-            filepath (str): Name of the log file
+            filepath (str): Log file path
             mode (str): File mode for opening the log file
             max_bytes (int): Maximum size of log file before rotation
             backup_count (int): Maximum number of backup files to keep

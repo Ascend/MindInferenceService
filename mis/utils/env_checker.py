@@ -17,10 +17,10 @@ class EnvChecker:
             name (str): The name of the environment variable.
             cache_path (str): The path to the cache directory.
         Raises:
-            PermissionError: If the cache path is not owned by the current user.
-            ValueError: If the cache path is not an absolute path, exceeds the maximum length, is a symlink, or a file.
-            ValueError: If the total size of the cache directory exceeds the maximum allowed size.
-            OSError: If there is an error checking the ownership of the local cache path.
+            ValueError: If the cache path is not an absolute path.
+            ValueError: If the length of the cache path exceeds the maximum allowed length.
+            ValueError: If the cache path is a symlink.
+            ValueError: If the cache path exists but is a file.
         """
         path = Path(cache_path)
         if not path.is_absolute():
@@ -43,6 +43,8 @@ class EnvChecker:
             ValueError: If the file path is a symlink.
             FileNotFoundError: If the file does not exist.
             ValueError: If the file path is not a file.
+            PermissionError: If the owner of the file path is not the current user.
+            OSError: If an error occurs when checking file path ownership.
         """
         path = Path(file)
         abs_path = path.absolute()

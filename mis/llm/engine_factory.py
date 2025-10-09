@@ -62,8 +62,8 @@ class VLLMEngine:
             from vllm.engine.arg_utils import AsyncEngineArgs
             from vllm.engine.async_llm_engine import AsyncLLMEngine
         except ImportError as e:
-            logger.error(f"Failed to import AsyncLLMEngine: {e}")
-            raise ImportError(f"Failed to import AsyncLLMEngine: {e}") from e
+            logger.error(f"Failed to import required modules from vllm: {e}")
+            raise ImportError(f"Failed to import required modules from vllm: {e}") from e
         try:
             engine_args = AsyncEngineArgs(model=args.model,
                                           served_model_name=args.served_model_name,

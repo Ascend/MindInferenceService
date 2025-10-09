@@ -19,14 +19,14 @@ logger = init_logger(__name__, log_type=LogType.OPERATION)
 logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
 
 MINUTE_SECONDS = 60
-CLEANUP_INTERVAL_SECONDS = 600
+CLEANUP_INTERVAL_SECONDS = 300
 
 
 @dataclass
 class RateLimitConfig:
     """Rate limiting configuration"""
     requests_per_minute: int = constants.RATE_LIMIT_PER_MINUTE
-    cleanup_interval: int = 60  # Cleanup interval in seconds
+    cleanup_interval: int = 600  # Cleanup interval in seconds
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
@@ -227,7 +227,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=429,
                     content={
-                        "detail": "[IP: {client_ip}] Rate limit exceeded",
+                        "detail": f"[IP: {client_ip}] Rate limit exceeded",
                         "retry_after": retry_after
                     }
                 )
@@ -332,3 +332,63 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         _ = self._update_or_check_window(identifier, 'minute',
                                          current_time, 'requests_per_minute')
+
+
+class RequestTimeoutMiddleware(BaseHTTPMiddleware):
+    """Middleware for setting a timeout on incoming requests (production-grade implementation)"""
+    def __init__(self, app: FastAPI, request_timeout_in_sec: int = constants.REQUEST_TIMEOUT_IN_SEC):
+        """
+        Initialize the middleware with the given FastAPI app and request timeout in seconds.
+        Args:
+            app (FastAPI): The FastAPI application.
+            request_timeout_in_sec (int): The maximum allowed time (in seconds) for a request to be processed.
+                                          Default is defined by `constants.REQUEST_TIMEOUT_IN_SEC`.
+        """
+        super().__init__(app)
+        self.timeout = request_timeout_in_sec
+
+    async def dispatch(self, request: Request, call_next: callable) -> JSONResponse:
+        """
+        Dispatch the request and enforce the timeout limit.
+        Args:
+            request (Request): The incoming request.
+            call_next (Callable): The next middleware or route handler.
+        Returns:
+            Response: The response from the next middleware or route handler if request is processed within the timeout.
+        Raises:
+            asyncio.TimeoutError: If the request processing exceeds the timeout.
+        """
+        client_ip = get_client_ip(request)
+        task = asyncio.create_task(call_next(request))
+        try:
+            # Using asyncio.wait_for to set a Timeout
+            response = await asyncio.wait_for(task, timeout=self.timeout)
+            return response
+        except asyncio.TimeoutError:
+            task.cancel()
+            try:
+                # Wait for the task cleanup to complete.
+                await task
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                logger.error(f"[IP: {client_ip}] Error during task cleanup after timeout: {e}")
+
+            logger.warning(f"[IP: {client_ip}] Request timeout after {self.timeout} seconds")
+            return JSONResponse(
+                status_code=408,
+                content={"detail": f"[IP: {client_ip}] Request timeout"}
+            )
+        except Exception as e:
+            # If the task is still running, cancel it.
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                except Exception as cleanup_error:
+                    logger.error(f"[IP: {client_ip}] Error during task cleanup after exception: {cleanup_error}")
+
+            logger.error(f"[IP: {client_ip}] Error processing request: {e}")
+            raise e
