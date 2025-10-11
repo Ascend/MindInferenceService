@@ -93,7 +93,6 @@ class MISChatCompletionRequest(ChatCompletionRequest):
             else:
                 logger.warning(f"MIS chat completion ignore invalid param.")
         self._remove_invalid_messages(used_kwargs)
-        self._set_default_field(used_kwargs)
         validated_kwargs = self._validate_parameters(used_kwargs)
         super().__init__(**validated_kwargs)
         logger.debug("MISChatCompletionRequest initialized successfully.")
@@ -106,9 +105,12 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         logger.debug("Removing invalid messages from request.")
         roles = ("system", "assistant", "user")
         message_keys_keep = ("role", "content")
-        if "messages" not in kwargs or not isinstance(kwargs["messages"], list):
-            logger.warning("No valid messages found in request.")
-            return
+        if "messages" not in kwargs:
+            logger.error("Can't find any message in request")
+            raise ValueError("Can't find any message in request")
+        if not isinstance(kwargs["messages"], list):
+            logger.error(f"Messages must be a list, but get {type(kwargs['messages'])}")
+            raise TypeError(f"Messages must be a list, but get {type(kwargs['messages'])}")
         new_messages = []
         for message in kwargs["messages"]:
             if not isinstance(message, dict) or not isinstance(message.get("content"), str):
@@ -123,15 +125,6 @@ class MISChatCompletionRequest(ChatCompletionRequest):
             raise ValueError("MIS chat completions require at least one valid message")
         kwargs["messages"] = new_messages
         logger.debug("Invalid messages removed successfully.")
-
-    @staticmethod
-    def _set_default_field(kwargs: Dict[str, Any]) -> None:
-        logger.debug("Setting default fields for request.")
-        if "stream_options" in kwargs and \
-                isinstance(kwargs["stream_options"], dict) and "continuous_usage_stats" in kwargs["stream_options"]:
-            logger.warning("MIS chat completions ignore stream_options.continuous_usage_stats")
-            kwargs["stream_options"]["continuous_usage_stats"] = None
-        logger.debug("Default fields set successfully.")
 
     @staticmethod
     def _validate_range(param_name: str, value: Union[int, float], validator: Dict[str, Any]) -> Optional[Any]:
