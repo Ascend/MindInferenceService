@@ -87,269 +87,219 @@ class TestAPIExtensions(unittest.TestCase):
             {"role": "invalid", "content": "test"},
             {"role": "test", "content": "test"}
         ]
-        with pytest.raises(ValueError), \
-                patch('mis.llm.entrypoints.openai.api_extensions.logger.error') as mock_logger:
+        with pytest.raises(ValueError) as exc_info:
             MISChatCompletionRequest(messages=test_messages)
-            mock_logger.assert_called_once_with("MIS chat completions require at least one valid message")
+        assert str(exc_info.value) == "MIS chat completions require at least one valid message"
 
     def test_frequency_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = "1.5"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.frequency_penalty, 0.0)
-            mock_logger.assert_any_call("Unsupported type for frequency_penalty, expected: float")
-            mock_logger.assert_any_call("Invalid value for parameter frequency_penalty, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for frequency_penalty, expected: float"
 
     def test_frequency_penalty_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = -3.0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.frequency_penalty, 0.0)
-            mock_logger.assert_any_call("frequency_penalty must be between -2.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter frequency_penalty, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for frequency_penalty: -3.0 not in [-2.0, 2.0]"
 
     def test_frequency_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = 2.1
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.frequency_penalty, 0.0)
-            mock_logger.assert_any_call("frequency_penalty must be between -2.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter frequency_penalty, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for frequency_penalty: 2.1 not in [-2.0, 2.0]"
 
     def test_max_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = "1024"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_tokens)
-            mock_logger.assert_any_call("Unsupported type for max_tokens, expected: int")
-            mock_logger.assert_any_call("Invalid value for parameter max_tokens, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for max_tokens, expected: int"
 
     def test_max_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = 0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_tokens)
-            mock_logger.assert_any_call("max_tokens must be between 1 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter max_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for max_tokens: 0 not in [1, 64000]"
 
     def test_max_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = 64001
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_tokens)
-            mock_logger.assert_any_call("max_tokens must be between 1 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter max_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for max_tokens: 64001 not in [1, 64000]"
 
     def test_messages_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["messages"] = '[{"role": "user", "content": "Hello"}]'
-        with pytest.raises(TypeError), \
-                patch('mis.llm.entrypoints.openai.api_extensions.logger.error') as mock_logger:
+        with pytest.raises(TypeError) as exc_info:
             MISChatCompletionRequest(**kwargs)
-            mock_logger.assert_called_once_with("Messages must be a list, but get <class 'str'>")
+        assert str(exc_info.value) == "Messages must be a list, but get <class 'str'>"
 
     def test_messages_without(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs.pop("messages")
-        with pytest.raises(ValueError), \
-                patch('mis.llm.entrypoints.openai.api_extensions.logger.error') as mock_logger:
+        with pytest.raises(ValueError) as exc_info:
             MISChatCompletionRequest(**kwargs)
-            mock_logger.assert_called_once_with("Can't find any message in request")
+        assert str(exc_info.value) == "Can't find any message in request"
 
     def test_min_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = "1"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.min_tokens, 0)
-            mock_logger.assert_any_call("Unsupported type for min_tokens, expected: int")
-            mock_logger.assert_any_call("Invalid value for parameter min_tokens, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for min_tokens, expected: int"
 
     def test_min_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = -1
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.min_tokens, 0)
-            mock_logger.assert_any_call("min_tokens must be between 0 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter min_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for min_tokens: -1 not in [0, 64000]"
 
     def test_min_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = 64001
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.min_tokens, 0)
-            mock_logger.assert_any_call("min_tokens must be between 0 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter min_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for min_tokens: 64001 not in [0, 64000]"
 
     def test_model_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["model"] = 1
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.model)
-            mock_logger.assert_any_call("Unsupported type for model, expected: str")
-            mock_logger.assert_any_call("Invalid value for parameter model, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for model, expected: str"
 
     def test_model_invalid_value(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["model"] = "MindSDK/Qwen3-0.6B"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.model)
-            mock_logger.assert_any_call("Invalid value for model: expected one of ('MindSDK/Qwen3-8B',).")
-            mock_logger.assert_any_call("Invalid value for parameter model, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for model: MindSDK/Qwen3-0.6B not in ('MindSDK/Qwen3-8B',)"
 
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = "0.0"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.presence_penalty, 0.0)
-            mock_logger.assert_any_call("Unsupported type for presence_penalty, expected: float")
-            mock_logger.assert_any_call("Invalid value for parameter presence_penalty, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for presence_penalty, expected: float"
 
     def test_presence_penalty_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = -3.0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.presence_penalty, 0.0)
-            mock_logger.assert_any_call("presence_penalty must be between -2.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter presence_penalty, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for presence_penalty: -3.0 not in [-2.0, 2.0]"
 
     def test_presence_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = 2.1
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertEqual(request.presence_penalty, 0.0)
-            mock_logger.assert_any_call("presence_penalty must be between -2.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter presence_penalty, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for presence_penalty: 2.1 not in [-2.0, 2.0]"
 
     def test_seed_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = "1234"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.seed)
-            mock_logger.assert_any_call("Unsupported type for seed, expected: int")
-            mock_logger.assert_any_call("Invalid value for parameter seed, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for seed, expected: int"
 
     def test_seed_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = -9223372036854775809
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.seed)
-            mock_logger.assert_any_call("seed must be between -9223372036854775808 and 9223372036854775807.")
-            mock_logger.assert_any_call("Invalid value for parameter seed, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for seed: -9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
 
     def test_seed_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = 9223372036854775809
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.seed)
-            mock_logger.assert_any_call("seed must be between -9223372036854775808 and 9223372036854775807.")
-            mock_logger.assert_any_call("Invalid value for parameter seed, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for seed: 9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
 
     def test_stream_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
-        kwargs["stream"] = "True"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertFalse(request.stream)
-            mock_logger.assert_any_call("Unsupported type for stream, expected: bool")
-            mock_logger.assert_any_call("Invalid value for parameter stream, value ignored.")
+        kwargs["stream"] = "True123"
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for stream, expected: bool"
 
     def test_temperature_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = "0.7"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.temperature)
-            mock_logger.assert_any_call("Unsupported type for temperature, expected: float")
-            mock_logger.assert_any_call("Invalid value for parameter temperature, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for temperature, expected: float"
 
     def test_temperature_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = -1.0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.temperature)
-            mock_logger.assert_any_call("temperature must be between 0.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter temperature, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for temperature: -1.0 not in [0.0, 2.0]"
 
     def test_temperature_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = 3.0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.temperature)
-            mock_logger.assert_any_call("temperature must be between 0.0 and 2.0.")
-            mock_logger.assert_any_call("Invalid value for parameter temperature, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for temperature: 3.0 not in [0.0, 2.0]"
 
     def test_top_p_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = "0.5"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.top_p)
-            mock_logger.assert_any_call("Unsupported type for top_p, expected: float")
-            mock_logger.assert_any_call("Invalid value for parameter top_p, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for top_p, expected: float"
 
     def test_top_p_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = 1e-9
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.top_p)
-            mock_logger.assert_any_call("top_p must be between 1e-08 and 1.0.")
-            mock_logger.assert_any_call("Invalid value for parameter top_p, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for top_p: 1e-09 not in [1e-08, 1.0]"
 
     def test_top_p_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = 2.0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.top_p)
-            mock_logger.assert_any_call("top_p must be between 1e-08 and 1.0.")
-            mock_logger.assert_any_call("Invalid value for parameter top_p, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for top_p: 2.0 not in [1e-08, 1.0]"
 
     def test_max_completion_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = "100"
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_completion_tokens)
-            mock_logger.assert_any_call("Unsupported type for max_completion_tokens, expected: int")
-            mock_logger.assert_any_call("Invalid value for parameter max_completion_tokens, value ignored.")
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Unsupported type for max_completion_tokens, expected: int"
 
     def test_max_completion_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = 0
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_completion_tokens)
-            mock_logger.assert_any_call("max_completion_tokens must be between 1 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter max_completion_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for max_completion_tokens: 0 not in [1, 64000]"
 
     def test_max_completion_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = 64001
-        with patch('mis.llm.entrypoints.openai.api_extensions.logger.warning') as mock_logger:
-            request = MISChatCompletionRequest(**kwargs)
-            self.assertIsNone(request.max_completion_tokens)
-            mock_logger.assert_any_call("max_completion_tokens must be between 1 and 64000.")
-            mock_logger.assert_any_call("Invalid value for parameter max_completion_tokens, value ignored.")
+        with pytest.raises(ValueError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for max_completion_tokens: 64001 not in [1, 64000]"
+
+    def test_max_completion_tokens_None(self):
+        kwargs = copy.deepcopy(self.valid_params)
+        kwargs["max_completion_tokens"] = None
+        with pytest.raises(TypeError) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "Invalid value for max_completion_tokens: None"
 
     def test_model_post_init_with_top_logprobs(self):
         params = {

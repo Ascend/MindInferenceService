@@ -135,19 +135,19 @@ class MISChatCompletionRequest(ChatCompletionRequest):
 
         if min_value is not None and max_value is not None:
             if min_value > max_value:
-                logger.warning(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
-                return value
+                logger.error(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
+                raise ValueError(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
             if not ConfigChecker.is_value_in_range(param_name, value, min_value, max_value):
-                logger.warning(f"{param_name} must be between {min_value} and {max_value}.")
-                return None
+                logger.error(f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]")
+                raise ValueError(f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]")
         elif min_value is not None:
             if value < min_value:
-                logger.warning(f"{param_name} must be greater than or equal to {min_value}")
-                return None
+                logger.error(f"Invalid value for {param_name}: {value} < min({min_value})")
+                raise ValueError(f"Invalid value for {param_name}: {value} < min({min_value})")
         elif max_value is not None:
             if value > max_value:
-                logger.warning(f"{param_name} must be less than or equal to {max_value}")
-                return None
+                logger.error(f"Invalid value for {param_name}: {value} > max({max_value})")
+                raise ValueError(f"Invalid value for {param_name}: {value} > max({max_value})")
         logger.debug(f"Parameter {param_name} validated range successfully.")
         return value
 
@@ -157,9 +157,8 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         if isinstance(value, bool) or (isinstance(value, str) and value.lower() in ['true', 'false']):
             logger.info(f"Parameter {param_name} is valid.")
             return value
-        else:
-            logger.warning(f"Invalid type for {param_name}: expected bool")
-            return None
+        logger.error(f"Invalid type for {param_name}: expected bool")
+        raise TypeError(f"Invalid type for {param_name}: expected bool")
 
     @staticmethod
     def _validate_enum(param_name: str, value: Any, validator: Dict[str, Any]) -> Optional[Any]:
@@ -168,8 +167,8 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         if valid_values is not None:
             if ConfigChecker.is_value_in_enum(param_name, value, valid_values):
                 return value
-        logger.warning(f"Invalid value for {param_name}: expected one of {valid_values}.")
-        return None
+        logger.error(f"Invalid value for {param_name}: {value} not in {valid_values}")
+        raise ValueError(f"Invalid value for {param_name}: {value} not in {valid_values}")
 
     def model_post_init(self, __context: Any) -> None:
         if getattr(self, "top_logprobs", None) == 0:
@@ -197,8 +196,8 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         elif expected_type == str and isinstance(value, expected_type):
             value = self._validate_enum(param_name, value, validator)
         else:
-            value = None
-            logger.warning(f"Unsupported type for {param_name}, expected: {expected_type.__name__}")
+            logger.error(f"Unsupported type for {param_name}, expected: {expected_type.__name__}")
+            raise TypeError(f"Unsupported type for {param_name}, expected: {expected_type.__name__}")
         logger.debug(f"Parameter {param_name} validated successfully.")
         return value
 
@@ -216,19 +215,14 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         validated_kwargs = {}
 
         for key, value in kwargs.items():
+            if value is None:
+                logger.error(f"Invalid value for {key}: None")
+                raise TypeError(f"Invalid value for {key}: None")
             # If the parameter has validation rules, validate it
             if key in MIS_CHAT_COMPLETION_FIELD_VALIDATORS:
                 validator = MIS_CHAT_COMPLETION_FIELD_VALIDATORS[key]
-                try:
-                    validated_value = self._validate_single_parameter(key, value, validator)
-                except (ValueError, TypeError) as e:
-                    validated_value = None
-                    logger.warning(f"Parameter validation failed: {e}. Ignoring parameter {key}.")
-
-                if validated_value is not None:
-                    validated_kwargs[key] = validated_value
-                else:
-                    logger.warning(f"Invalid value for parameter {key}, value ignored.")
+                validated_value = self._validate_single_parameter(key, value, validator)
+                validated_kwargs[key] = validated_value
             else:
                 # Parameters without validation rules are used directly
                 validated_kwargs[key] = value
