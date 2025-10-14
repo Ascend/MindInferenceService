@@ -1,13 +1,14 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
+import sys
 from abc import ABC
 from typing import Callable, Dict, Optional, Type, Union
 
 import yaml
 
 from mis.args import GlobalArgs
-from mis.constants import HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_CONFIGS_PATH, MIS_MAX_CONFIG_SIZE
+from mis.constants import HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE
 from mis.logger import init_logger
 from mis.utils.utils import ConfigChecker, get_soc_name
 
@@ -190,10 +191,30 @@ class ConfigParser:
         self._check_all_args_valid()
 
         self.model_type = self.args.model.split('/')[-1]
-        self.model_folder_path = os.path.join(MIS_CONFIGS_PATH, self.model_type.lower())
+        self.model_folder_path = os.path.join(self._get_configs_root(), "configs", "llm", self.model_type.lower())
         self.engine_type = self.args.engine_type
         self.mis_config = self.args.mis_config
         logger.debug(f"ConfigParser initialized successfully")
+
+    @staticmethod
+    def _get_configs_root():
+        """Get the root path of configs, which may be at the same level as the startup script or one level above it."""
+        try:
+            if not sys.argv[0]:
+                logger.error("Failed to get the script path.")
+                raise Exception("Failed to get the script path.")
+            script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+            parent_dir = os.path.dirname(script_dir)
+            configs_dir = os.path.join(script_dir, "configs")
+            if not os.path.isdir(configs_dir):
+                script_dir = parent_dir
+        except OSError as e:
+            logger.error(f"Failed to get the configs root directory: {e}")
+            raise OSError("Failed to get the configs root directory.") from e
+        if script_dir is None:
+            logger.error("Failed to get the configs root directory.")
+            raise Exception("Failed to get the configs root directory.")
+        return script_dir
 
     @staticmethod
     def _config_attr_update(selected_engine_type: str, selected_engine_config: Dict) -> Dict:
@@ -201,7 +222,7 @@ class ConfigParser:
         Update the attributes of the selected engine.
         :param selected_engine_type: The type of the selected engine.
         :param selected_engine_config: The configuration of the selected engine.
-        :return: updated config dictionary. 
+        :return: updated config dictionary.
         """
         logger.debug(f"Updating attributes for engine type: {selected_engine_type}.")
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
@@ -238,13 +259,9 @@ class ConfigParser:
         """
         logger.debug(f"Loading configuration: {self.mis_config}.")
         try:
-            current_user_id = os.getuid()
-            path_stat = os.stat(config_file_path)
-            path_owner_id = path_stat.st_uid
-            if current_user_id != path_owner_id:
-                logger.error(f"The configuration {self.mis_config} is not owned by the current user.")
-                raise Exception("The configuration file is not owned by the current user.")
-
+            if not os.path.isfile(config_file_path):
+                logger.error(f"The configuration {self.mis_config} does not exist.")
+                raise Exception("The configuration file does not exist.")
             if os.path.islink(config_file_path):
                 logger.error(f"The configuration {self.mis_config} is a symbolic link.")
                 raise Exception("The configuration file is a symbolic link.")

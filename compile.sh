@@ -41,6 +41,8 @@ function compile_mis() {
   cp -r dist/* "$workdir/output/mis/"
 
   cp -r configs "$workdir/output/mis/"
+
+  cp script/run/* "$workdir/output"
 }
 
 function package() {
@@ -57,8 +59,8 @@ function package() {
   find ./ -name "*.pyz" -exec chmod 550 {} \;
 
   cd ..
-
-  tar -zcvf "$target_name" "$package_dir"
+  find ./ -type f -path "*.sh" -exec chmod 500 {} \;
+  tar -zcvf "$target_name" -C "$package_dir" .
 
   rm -rf "$package_dir"
 }

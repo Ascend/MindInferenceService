@@ -34,8 +34,6 @@ MIS_MODEL_LIST = ("MindSDK/Qwen3-8B", )
 
 MIS_ENGINE_TYPES = ("vllm",)
 
-MIS_CONFIGS_PATH = "/home/HwHiAiUser/configs/llm"
-
 MIS_CONFIGS_LIST = ("atlas800ia2-1x32gb-bf16-vllm-default",
                     "atlas800ia2-1x32gb-bf16-vllm-latency",
                     "atlas800ia2-1x32gb-bf16-vllm-throughput"
