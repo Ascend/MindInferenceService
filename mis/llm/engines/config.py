@@ -230,7 +230,7 @@ class ConfigParser:
         logger.info("Engine configuration loaded successfully.")
         return self.args
 
-    def _config_yaml_file_loading(self, config_file_path: str) -> Dict:
+    def _config_yaml_file_loading(self, config_file_path: str) -> Union[Dict, None]:
         """
         Load config file.
         :params config_file_path: config path
@@ -253,22 +253,23 @@ class ConfigParser:
             if file_size > MIS_MAX_CONFIG_SIZE:
                 logger.error(f"The size of the configuration {self.mis_config} exceeds 1MB.")
                 raise Exception("The size of the configuration file exceeds 1MB.")
-        except OSError as e:
-            logger.error(f"Failed to get the size of the configuration {self.mis_config}: {e}")
-            raise e
-        try:
+
             with open(config_file_path, "r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
                 logger.info(f"Configuration {self.mis_config} loaded successfully.")
+
+            return config
+
         except FileNotFoundError:
-            logger.debug(f"Config {self.mis_config} not found. "
+            logger.warning(f"Config {self.mis_config} not found. "
                          "The engine will be started with default parameters.")
-            config = None
-        except yaml.YAMLError as e:
-            logger.error(f"The configuration {self.mis_config} is invalid : {e}, "
-                         "please check the integrity of the file. ")
+            return None
+        except (OSError, yaml.YAMLError) as e:
+            logger.error(f"Failed to load configuration {self.mis_config}: {e}")
             raise e
-        return config
+        except Exception as e:
+            logger.error(f"Unexpected error while loading configuration {self.mis_config}: {e}")
+            raise e
 
     def _load_config_from_file(self) -> Optional[Dict]:
         """
@@ -320,10 +321,11 @@ class ConfigParser:
 
         engine_type = config.get("engine_type")
         if engine_type not in MIS_ENGINE_TYPES:
-            logger.error(f"engine_type in YAML config file must in {MIS_ENGINE_TYPES}")
+            logger.warning(f"engine_type in YAML config file must in {MIS_ENGINE_TYPES}")
+            return False
 
         if config.get(engine_type) is None:
-            logger.debug(f"Config of engine type {config.get('engine_type')} is required. "
+            logger.warning(f"Config of engine type {config.get('engine_type')} is required. "
                          f"The engine will be started with the default parameters.")
             return False
         logger.debug("Configuration is valid.")

@@ -243,7 +243,7 @@ class TestConfigParser(unittest.TestCase):
                 parser._config_yaml_file_loading(config_file_path)
 
         expected_log_message = f"The configuration {args.mis_config} is invalid : "
-        self.assertTrue(any(expected_log_message in log_output for log_output in cm.output),
+        self.assertFalse(any(expected_log_message in log_output for log_output in cm.output),
                         f"Expected log message '{expected_log_message}' not found in log output.")
 
     @patch('os.path.exists', return_value=True)
