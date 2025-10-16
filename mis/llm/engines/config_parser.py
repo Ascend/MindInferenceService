@@ -2,13 +2,13 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 import sys
-from abc import ABC
-from typing import Callable, Dict, Optional, Type, Union
+from typing import Dict, Optional, Union
 
 import yaml
 
 from mis.args import GlobalArgs
 from mis.constants import HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE
+from mis.llm.engines.config_validator import AbsEngineConfigValidator
 from mis.logger import init_logger
 from mis.utils.utils import ConfigChecker, get_soc_name
 
@@ -17,165 +17,6 @@ logger = init_logger(__name__)
 MIS_CONFIG_DEFAULT = {
     "qwen3-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},
 }
-
-CHECKER_VLLM = {
-    "dtype": {
-        "type": "str_in",
-        "valid_values": ("bfloat16",)
-    },
-    "tensor_parallel_size": {
-        "type": "int",
-        "valid_values": (1, 2, 4, 8)
-    },
-    "pipeline_parallel_size": {
-        "type": "int",
-        "valid_values": (1,)
-    },
-    "distributed_executor_backend": {
-        "type": "str_in",
-        "valid_values": ("mp",)
-    },
-    "max_num_seqs": {
-        "type": "int",
-        "min": 1,
-        "max": 512
-    },
-    "max_model_len": {
-        "type": "int",
-        "min": 1,
-        "max": 64000
-    },
-    "max_num_batched_tokens": {
-        "type": "int",
-        "min": 1,
-        "max": 64000
-    },
-    "max_seq_len_to_capture": {
-        "type": "int",
-        "min": 1,
-        "max": 64000
-    },
-    "gpu_memory_utilization": {
-        "type": "float",
-        "min": 0.0,
-        "max": 1.0
-    },
-    "block_size": {
-        "type": "int",
-        "valid_values": (16, 32, 64, 128)
-    },
-    "swap_space": {
-        "type": "int",
-        "min": 0,
-        "max": 1024,
-    },
-    "cpu_offload_gb": {
-        "type": "int",
-        "min": 0,
-        "max": 1024
-    },
-    "scheduling_policy": {
-        "type": "str_in",
-        "valid_values": ("fcfs", "priority")
-    },
-    "num_scheduler_steps": {
-        "type": "int",
-        "min": 1,
-        "max": 1024
-    },
-    "enable_chunked_prefill": {
-        "type": "bool",
-        "valid_values": (True, False)
-    },
-    "enable_prefix_caching": {
-        "type": "bool",
-        "valid_values": (True, False)
-    },
-    "multi_step_stream_outputs": {
-        "type": "bool",
-        "valid_values": (True, False)
-    },
-    "enforce_eager": {
-        "type": "bool",
-        "valid_values": (True, False)
-    },
-}
-
-
-class AbsEngineConfigValidator(ABC):
-    _engine_config_validation: Dict[str, Type["AbsEngineConfigValidator"]] = {}
-
-    def __init__(self, config: Dict, checkers: Dict) -> None:
-        """
-        Initialize the AbsEngineConfigValidator class.
-        :param config: The configuration dictionary.
-        :param checkers: The checker dictionary OF selected engine.
-        """
-        self.config = config
-        self.checkers = checkers
-        diff_config = set(self.config.keys()) - set(self.checkers.keys())
-        if diff_config:
-            # Check if the backend configuration keywords for inference are updated with the version
-            logger.debug(f"Configuration keys {diff_config} are not supported. ")
-        self.config_update: Dict = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
-
-    @classmethod
-    def register(cls, engine_type: str) -> Callable:
-        """
-        Register an engine configuration validator.
-        :param engine_type: Engine type.
-        """
-
-        def decorator(subclass):
-            cls._engine_config_validation[engine_type] = subclass
-            return subclass
-
-        return decorator
-
-    @classmethod
-    def get_validator(cls, engine_type: str) -> Type["AbsEngineConfigValidator"]:
-        """
-        Get the engine configuration validator.
-        :param engine_type: Engine type.
-        :return: Engine configuration validator class.
-        """
-        return cls._engine_config_validation.get(engine_type)
-
-    def filter_and_validate_config(self) -> Dict:
-        """
-        Filter and validate the configuration.
-        :return: Right configuration.
-        """
-        logger.debug("Filtering and validating configuration.")
-        valid_config = {}
-        for key, value in self.config_update.items():
-            checker = self.checkers.get(key)
-
-            is_valid = True
-            if "valid_values" in checker:
-                is_valid = ConfigChecker.is_value_in_enum(key, value, checker.get("valid_values"))
-            elif "min" in checker and "max" in checker:
-                is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
-
-            if is_valid:
-                logger.debug(f"Configuration item {key} is valid.")
-                valid_config[key] = value
-        logger.debug("Configuration filtered and validated successfully.")
-        return valid_config
-
-
-@AbsEngineConfigValidator.register("vllm")
-class VLLMEngineConfigValidator(AbsEngineConfigValidator):
-    """
-    VLLM engine configuration validator.
-    """
-
-    def __init__(self, config: Dict) -> None:
-        """
-        vLLM Engine configuration validator initialization.
-        :param config: Configuration parameters.
-        """
-        super().__init__(config, CHECKER_VLLM)
 
 
 class ConfigParser:
@@ -204,10 +45,6 @@ class ConfigParser:
                 logger.error("Failed to get the script path.")
                 raise Exception("Failed to get the script path.")
             script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
-            parent_dir = os.path.dirname(script_dir)
-            configs_dir = os.path.join(script_dir, "configs")
-            if not os.path.isdir(configs_dir):
-                script_dir = parent_dir
         except OSError as e:
             logger.error(f"Failed to get the configs root directory: {e}")
             raise OSError("Failed to get the configs root directory.") from e
@@ -262,6 +99,14 @@ class ConfigParser:
             if not os.path.isfile(config_file_path):
                 logger.error(f"The configuration {self.mis_config} does not exist.")
                 raise Exception("The configuration file does not exist.")
+
+            current_user_id = os.getuid()
+            path_stat = os.stat(config_file_path)
+            path_owner_id = path_stat.st_uid
+            if current_user_id != path_owner_id:
+                logger.error(f"The configuration {self.mis_config} is not owned by the current user.")
+                raise Exception("The configuration file is not owned by the current user.")
+
             if os.path.islink(config_file_path):
                 logger.error(f"The configuration {self.mis_config} is a symbolic link.")
                 raise Exception("The configuration file is a symbolic link.")
