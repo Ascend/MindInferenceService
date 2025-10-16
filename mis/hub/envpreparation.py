@@ -10,10 +10,10 @@ import mis.constants as constants
 import mis.envs as envs
 from mis.args import GlobalArgs
 from mis.llm.engines.config_parser import ConfigParser
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import ContainerIPDetector, get_model_path
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 arch = platform.machine()
 cxx_abi = 1 if torch.compiled_with_cxx11_abi() else 0

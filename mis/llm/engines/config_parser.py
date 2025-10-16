@@ -9,10 +9,10 @@ import yaml
 from mis.args import GlobalArgs
 from mis.constants import HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE
 from mis.llm.engines.config_validator import AbsEngineConfigValidator
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import ConfigChecker, get_soc_name
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 MIS_CONFIG_DEFAULT = {
     "qwen3-8b": {HW_910B: "atlas800ia2-1x32gb-bf16-vllm-default"},

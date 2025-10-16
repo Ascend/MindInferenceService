@@ -12,11 +12,11 @@ from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from mis import constants
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip
 
-logger = init_logger(__name__)
-logger_service = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.OPERATION)
+logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
 
 MINUTE_SECONDS = 60
 CLEANUP_INTERVAL_SECONDS = 600

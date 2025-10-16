@@ -10,9 +10,9 @@ from fastapi import Request
 
 import mis.envs as envs
 from mis.constants import HW_910B, IP_ALL_ZERO
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 ENV_CONTAINER_VARS = ('CONTAINER_IP', 'POD_IP', 'HOST_IP')
 

@@ -24,11 +24,11 @@ from mis.llm.entrypoints.openai.api_extensions import (
     MISChatCompletionRequest,
     MISOpenAIServingChat
 )
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip
 
-logger = init_logger(__name__)
-logger_service = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.OPERATION)
+logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
 
 router = APIRouter()
 
@@ -42,6 +42,7 @@ MIS_MODEL_REMOVE_FIELDS = [
 @router.get("/openai/v1/models")
 async def show_available_models(raw_request: Request):
     client_ip = get_client_ip(raw_request)
+    logger.debug(f"[IP: {client_ip}] Handling request to show available models.")
     handler = models(raw_request)
 
     models_ = await handler.show_available_models()
@@ -111,6 +112,7 @@ async def create_chat_completions(request: MISChatCompletionRequest,
     generator = await handler.create_chat_completion(request, raw_request)
 
     if isinstance(generator, ErrorResponse):
+        logger.error(f"[IP: {client_ip}] - Error in chat completion")
         return JSONResponse(content=generator.model_dump(),
                             status_code=generator.code)
 

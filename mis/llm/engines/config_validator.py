@@ -3,10 +3,10 @@
 from abc import ABC
 from typing import Callable, Dict, Type, Union
 
-from mis.logger import init_logger
+from mis.logger import init_logger, LogType
 from mis.utils.utils import ConfigChecker
 
-logger = init_logger(__name__)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 TYPE_MAPPING = {
     "int": int,
