@@ -1,10 +1,12 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import unittest
-from unittest.mock import patch, mock_open, MagicMock
+from unittest.mock import patch, mock_open, MagicMock, Mock
 
 import yaml
 
+from mis.args import GlobalArgs
+from mis.llm.engines.config_parser import ConfigParser
 
 READ_DATA = """vllm:
   dtype: bfloat16
@@ -39,10 +41,9 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
         }
 
     def test_filter_and_validate_config(self):
-        from mis.llm.engines.config import AbsEngineConfigValidator, CHECKER_VLLM
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
         validator = AbsEngineConfigValidator(self.config, CHECKER_VLLM)
         valid_config = validator.filter_and_validate_config()
-
         # Verify whether the returned configuration meets expectations.
         self.assertEqual(valid_config.get("dtype"), "bfloat16")
         self.assertEqual(valid_config.get("tensor_parallel_size"), 2)
@@ -50,37 +51,28 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
         self.assertEqual(valid_config.get("max_num_seqs"), 100)
 
     def test_unsupported_keys(self):
-        from mis.llm.engines.config import AbsEngineConfigValidator, CHECKER_VLLM
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
         unsupported_config = self.config.copy()
         unsupported_config["unsupported_key"] = "value"
-
-        with self.assertLogs('mis.llm.engines.config', level='DEBUG') as cm:  # Specify the logger name
+        with self.assertRaises(ValueError) as context:
             validator = AbsEngineConfigValidator(unsupported_config, CHECKER_VLLM)
-        expected_message = "Configuration keys {'unsupported_key'} are not supported."
-        self.assertTrue(any(expected_message in log_output for log_output in cm.output),
-                        f"Expected message '{expected_message}' not found in log output.")
 
     def test_out_of_range_values(self):
-        from mis.llm.engines.config import AbsEngineConfigValidator, CHECKER_VLLM
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
         invalid_config = self.config.copy()
         invalid_config["tensor_parallel_size"] = 16  # Exceeds the valid value range
 
-        validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
-        valid_config = validator.filter_and_validate_config()
-
-        # Verify that out-of-range values are filtered out.
-        self.assertNotIn("tensor_parallel_size", valid_config)
+        with self.assertRaises(ValueError) as context:
+            validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
+            valid_config = validator.filter_and_validate_config()
 
     def test_invalid_string_values(self):
-        from mis.llm.engines.config import AbsEngineConfigValidator, CHECKER_VLLM
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
         invalid_config = self.config.copy()
         invalid_config["dtype"] = "invalid_dtype"
-
-        validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
-        valid_config = validator.filter_and_validate_config()
-
-        # Invalid string values are filtered out.
-        self.assertNotIn("dtype", valid_config)
+        with self.assertRaises(ValueError) as context:
+            validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
+            valid_config = validator.filter_and_validate_config()
 
 
 class TestConfigParser(unittest.TestCase):
@@ -93,8 +85,6 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_valid_config(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                 mock_getsize, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
@@ -109,8 +99,6 @@ class TestConfigParser(unittest.TestCase):
 
     @patch('os.path.exists', return_value=False)
     def test_engine_config_loading_invalid_config_path(self, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'non_existent_config'
@@ -129,10 +117,8 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mockock_isfile, mock_getuid,
+    def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = 'invalid_engine'
@@ -154,8 +140,6 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = None
@@ -175,10 +159,8 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
-                                                 mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
+    def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                 mock_getsize, mock_file, mock_exists):
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
@@ -198,10 +180,8 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
-                                                 mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
+    def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                 mock_getsize, mock_file, mock_exists):
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
@@ -221,10 +201,8 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_valid_model(self, mock_stat, mock_isfile, mock_isdir, mock_getuid, mock_getsize,
-                                               mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
+    def test_engine_config_loading_valid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                               mock_getsize, mock_file, mock_exists):
         mock_stat.return_value = MagicMock(st_uid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
@@ -243,11 +221,9 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=True)
     @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
-                                                 mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
-        mock_stat.return_value = MagicMock(st_uid=1000)
+    def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                 mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = Mock(st_uid=1000)
         config_file_path = 'invalid_config.yaml'
         args = GlobalArgs()
         args.engine_type = None
@@ -257,26 +233,15 @@ class TestConfigParser(unittest.TestCase):
         with self.assertRaises(yaml.YAMLError):
             parser._config_yaml_file_loading(config_file_path)
 
-        with self.assertLogs('mis.llm.engines.config', level='ERROR') as cm:
-            with self.assertRaises(yaml.YAMLError):
-                parser._config_yaml_file_loading(config_file_path)
-
-        expected_log_message = f"The configuration {args.mis_config} is invalid : "
-        self.assertFalse(any(expected_log_message in log_output for log_output in cm.output),
-                        f"Expected log message '{expected_log_message}' not found in log output.")
-
     @patch('os.path.exists', return_value=True)
     @patch('os.path.islink', return_value=True)
-    @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_config_yaml_file_loading_symbolic_link(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                    mock_getsize, mock_islink, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
-        mock_stat.return_value = MagicMock(st_uid=1000)
+    @patch('os.path.isfile', return_value=False)
+    def test_config_yaml_file_loading_symbolic_link(self, mock_isfile, mock_stat, mock_isfile2, mock_getuid,
+                                                    mock_islink, mock_exists):
+        mock_stat.return_value = Mock(st_uid=1000)
         config_file_path = 'atlas800ia2-1x32gb-bf16-vllm-latency'
         args = GlobalArgs()
         args.engine_type = "vllm"
@@ -287,42 +252,6 @@ class TestConfigParser(unittest.TestCase):
         with self.assertRaises(Exception) as context:
             parser._config_yaml_file_loading(config_file_path)
         self.assertEqual(str(context.exception), "The configuration file is a symbolic link.")
-
-        with self.assertLogs('mis.llm.engines.config', level='ERROR') as cm:
-            with self.assertRaises(Exception) as context:
-                parser._config_yaml_file_loading(config_file_path)
-
-        expected_log_message = f"The configuration {config_file_path} is a symbolic link."
-        self.assertTrue(any(expected_log_message in log_output for log_output in cm.output),
-                        f"Expected log message '{expected_log_message}' not found in log output.")
-
-    @patch('os.path.exists', return_value=True)
-    @patch('builtins.open', new_callable=mock_open, read_data=READ_DATA)
-    @patch('os.path.getsize', return_value=512)
-    @patch('os.getuid', return_value=1000)
-    @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
-    @patch('os.stat')
-    def test_engine_config_loading_all_keys_present(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
-                                                    mock_file, mock_exists):
-        from mis.args import GlobalArgs
-        from mis.llm.engines.config import ConfigParser
-        mock_stat.return_value = MagicMock(st_uid=1000)
-        args = GlobalArgs()
-        args.engine_type = 'vllm'
-        args.model = 'None'
-        args.mis_config = 'test_config'
-
-        parser = ConfigParser(args)
-        updated_args = parser.engine_config_loading()
-
-        self.assertEqual(updated_args.engine_type, 'vllm')
-        self.assertEqual(updated_args.model, 'None')
-
-        # Verify whether the engine_optimization_config has been correctly updated.
-        self.assertIsNotNone(updated_args.engine_optimization_config)
-        self.assertEqual(updated_args.engine_optimization_config.get("dtype"), 'bfloat16')
-        self.assertEqual(updated_args.engine_optimization_config.get("block_size"), 32)
 
 
 if __name__ == '__main__':

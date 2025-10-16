@@ -9,7 +9,7 @@ import torch
 import mis.constants as constants
 import mis.envs as envs
 from mis.args import GlobalArgs
-from mis.llm.engines.config import ConfigParser
+from mis.llm.engines.config_parser import ConfigParser
 from mis.logger import init_logger
 from mis.utils.utils import ContainerIPDetector, get_model_path
 
