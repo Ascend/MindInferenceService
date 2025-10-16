@@ -2,19 +2,16 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 import re
-import socket
 from pathlib import Path
-from typing import Union, Optional, Tuple
+from typing import Union, Tuple
 
 from fastapi import Request
 
 import mis.envs as envs
-from mis.constants import HW_910B, IP_ALL_ZERO
+from mis.constants import HW_910B
 from mis.logger import init_logger, LogType
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
-
-ENV_CONTAINER_VARS = ('CONTAINER_IP', 'POD_IP', 'HOST_IP')
 
 
 class ConfigChecker:
@@ -97,55 +94,6 @@ def get_soc_name() -> Union[str, None]:
         return HW_910B
     else:
         logger.info("No matching SOC found")
-        return None
-
-
-class ContainerIPDetector:
-    """Detects the container's IP address at environment preparation."""
-
-    @staticmethod
-    def _get_hostname_ip() -> Optional[str]:
-        """Get IP address using the hostname method."""
-        try:
-            hostname = socket.gethostname()
-            ip = socket.gethostbyname(hostname)
-            logger.info("IP obtained through hostname")
-            return ip
-        except Exception as e:
-            logger.warning("Failed to obtain IP through hostname")
-            return None
-
-    @staticmethod
-    def _get_container_ip_from_env() -> Optional[str]:
-        """Get container IP from environment variables."""
-        # Some container orchestration systems set these environment variables
-        env_vars = ENV_CONTAINER_VARS
-        for var in env_vars:
-            ip = os.environ.get(var)
-            if ip:
-                logger.info("IP obtained from environment variable")
-                return ip
-        logger.info("Failed to obtain IP from environment variables")
-        return None
-
-    @classmethod
-    def get_ip(cls, ip_current: Optional[str]) -> Optional[str]:
-        """Run IP detection and return the primary IP."""
-        if ip_current is not None and ip_current != IP_ALL_ZERO:
-            logger.info("Using provided IP")
-            return ip_current
-
-        # Fallback to hostname IP
-        primary_ip = cls._get_hostname_ip()
-        if primary_ip:
-            return primary_ip
-
-        # Fallback to environment variable IP
-        primary_ip = cls._get_container_ip_from_env()
-        if primary_ip:
-            return primary_ip
-
-        logger.warning("Failed to detect primary IP address")
         return None
 
 

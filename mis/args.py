@@ -17,7 +17,7 @@ class GlobalArgs(BaseModel):
     mis_config: str = envs.MIS_CONFIG
 
     # server
-    host: Optional[str] = constants.MIS_HOST
+    host: str = constants.MIS_HOST
     port: int = envs.MIS_PORT
     enable_dos_protection: bool = envs.MIS_ENABLE_DOS_PROTECTION
     log_level: str = envs.MIS_LOG_LEVEL

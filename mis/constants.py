@@ -1,7 +1,5 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-import ssl
-
 MIS_MODEL_LIST = ("Qwen3-8B", )
 
 MIS_ENGINE_TYPES = ("vllm",)
@@ -24,8 +22,6 @@ MIS_DISABLE_LOG_STATS = True
 UVICORN_LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 
 HW_910B = "910B"
-
-IP_ALL_ZERO = "0.0.0.0"
 
 SOURCE_COMPONENTS_ENVS = ("VLLM_DO_NOT_TRACK", "HF_DATASETS_OFFLINE", "HF_HUB_OFFLINE", "TRANSFORMERS_OFFLINE")
 

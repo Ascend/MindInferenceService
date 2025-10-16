@@ -39,6 +39,14 @@ environment_variables: Dict[str, Callable[[], Any]] = {
 
 
 def _get_bool_from_env(name: str, default: Optional[bool]) -> Optional[bool]:
+    """
+    Get a boolean value from the environment variable.
+    Args:
+        name (str): The name of the environment variable.
+        default (Optional[bool]): The default value to return if the environment variable is not set.
+    Returns:
+        Optional[bool]: The boolean value of the environment variable or the default value.
+    """
     if name not in os.environ:
         return default
     return os.environ[name].lower() in ["true", "1"]
@@ -46,6 +54,17 @@ def _get_bool_from_env(name: str, default: Optional[bool]) -> Optional[bool]:
 
 def _get_int_from_env(name: str, default: Optional[int],
                       min_value: int = None, max_value: int = None, valid_values: tuple[int] = None) -> Optional[int]:
+    """
+    Get an integer value from the environment variable.
+    Args:
+        name (str): The name of the environment variable.
+        default (Optional[int]): The default value to return if the environment variable is not set.
+        min_value (int, optional): The minimum allowed value. Defaults to None.
+        max_value (int, optional): The maximum allowed value. Defaults to None.
+        valid_values (tuple[int], optional): A tuple of valid values. Defaults to None.
+    Returns:
+        Optional[int]: The integer value of the environment variable or the default value.
+    """
     if name not in os.environ:
         return default
     try:
@@ -57,6 +76,15 @@ def _get_int_from_env(name: str, default: Optional[int],
 
 
 def _get_str_from_env(name: str, default: Optional[str], valid_values: tuple[str] = None) -> Optional[str]:
+    """
+    Get a string value from the environment variable.
+    Args:
+        name (str): The name of the environment variable.
+        default (Optional[str]): The default value to return if the environment variable is not set.
+        valid_values (tuple[str], optional): A tuple of valid string values. Defaults to None.
+    Returns:
+        Optional[str]: The string value of the environment variable or the default value.
+    """
     if name not in os.environ:
         return default
     value = os.environ[name]
@@ -65,16 +93,36 @@ def _get_str_from_env(name: str, default: Optional[str], valid_values: tuple[str
 
 
 def _get_cache_path_from_env(name: str, default: str) -> str:
+    """
+    Get a cache path from the environment variable.
+    Args:
+        name (str): The name of the environment variable.
+        default (str): The default value to return if the environment variable is not set.
+    Returns:
+        str: The validated cache path from the environment variable or the default value.
+    """
     cache_path = _get_str_from_env(name, default)
     EnvChecker.check_cache_path(name, cache_path)
     return cache_path
 
 
 def __getattr__(name: str) -> Any:
+    """
+    Dynamically retrieve an environment variable function.
+    Args:
+        name (str): The name of the attribute to retrieve.
+    Returns:
+        Any: The function associated with the environment variable.
+    """
     if name in environment_variables:
         return environment_variables[name]()
     raise AttributeError(f"module {__name__!r} has no attributes {name!r}")
 
 
 def __dir__() -> list[str]:
+    """
+    Return a list of environment variable names available in the module.
+    Returns:
+        list[str]: A list of environment variable names.
+    """
     return list(environment_variables.keys())
