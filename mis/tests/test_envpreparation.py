@@ -62,6 +62,7 @@ class TestEnvPreparation(unittest.TestCase):
         args.served_model_name = None
         args.engine_optimization_config = {}
         args.mis_config = "mis_config"
+
         with mock.patch('mis.utils.utils.Path.exists', return_value=True), \
                 mock.patch('mis.utils.utils.Path.is_dir', return_value=True), \
                 mock.patch('mis.utils.utils.os.access', return_value=True):

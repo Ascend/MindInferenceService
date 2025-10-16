@@ -2,10 +2,14 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 import unittest
+from unittest.mock import MagicMock
+
+from fastapi import Request
 
 from mis.utils.utils import (
     ConfigChecker,
-    ContainerIPDetector
+    ContainerIPDetector,
+    get_client_ip
 )
 
 
@@ -78,6 +82,41 @@ class TestFileOperations(unittest.TestCase):
         if os.path.exists(self.test_json_path):
             os.remove(self.test_json_path)
 
+
+class TestGetClientIP(unittest.TestCase):
+    def test_get_client_ip_with_x_forwarded_for(self):
+        """Test getting client IP from X-Forwarded-For header"""
+
+        # Create mock request
+        request = MagicMock(spec=Request)
+        request.headers = {"X-Forwarded-For": "192.168.1.100, 10.0.0.1"}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+
+        ip = get_client_ip(request)
+        self.assertEqual(ip, "192.168.1.100")
+
+    def test_get_client_ip_with_x_real_ip(self):
+        """Test getting client IP from X-Real-IP header"""
+        # Create mock request
+        request = MagicMock(spec=Request)
+        request.headers = {"X-Real-IP": "192.168.1.100"}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+
+        ip = get_client_ip(request)
+        self.assertEqual(ip, "192.168.1.100")
+
+    def test_get_client_ip_with_client_host(self):
+        """Test getting client IP from request.client.host"""
+        # Create mock request
+        request = MagicMock(spec=Request)
+        request.headers = {}
+        request.client = MagicMock()
+        request.client.host = "127.0.0.1"
+
+        ip = get_client_ip(request)
+        self.assertEqual(ip, "127.0.0.1")
 
 if __name__ == "__main__":
     unittest.main()

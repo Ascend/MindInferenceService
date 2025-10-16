@@ -3,8 +3,9 @@
 import asyncio
 import os
 import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import create_autospec, patch, MagicMock, AsyncMock
 
+from fastapi import Request
 from starlette.datastructures import State
 from starlette.responses import JSONResponse
 
@@ -77,7 +78,8 @@ class TestApiServer(unittest.TestCase):
         mock_models.return_value = mock_handler
 
         # Setup request mock
-        mock_request = MagicMock()
+        mock_request = create_autospec(Request)
+        mock_request.app.state.request_timeout = 10
 
         # Create an async function to test
         async def test_show_models():
@@ -122,8 +124,12 @@ class TestApiServer(unittest.TestCase):
         mock_base_instance.create_error_response.return_value = mock_error_response
         mock_base.return_value = mock_base_instance
 
-        mock_request = MagicMock()
-        mock_raw_request = MagicMock()
+        mock_request = create_autospec(Request)
+        mock_raw_request = create_autospec(Request)
+
+        mock_raw_request.app = create_autospec(object)
+        mock_raw_request.app.state = create_autospec(object)
+        mock_raw_request.app.state.request_timeout = 10
 
         # Create an async function to test
         async def test_create_chat():
@@ -152,8 +158,12 @@ class TestApiServer(unittest.TestCase):
         mock_handler.create_chat_completion = AsyncMock(return_value=mock_error_response)
         mock_chat.return_value = mock_handler
 
-        mock_request = MagicMock()
-        mock_raw_request = MagicMock()
+        mock_request = create_autospec(Request)
+        mock_raw_request = create_autospec(Request)
+
+        mock_raw_request.app = create_autospec(object)
+        mock_raw_request.app.state = create_autospec(object)
+        mock_raw_request.app.state.request_timeout = 10
 
         # Create an async function to test
         async def test_create_chat():
@@ -186,8 +196,12 @@ class TestApiServer(unittest.TestCase):
         mock_handler.create_chat_completion = AsyncMock(return_value=mock_chat_response)
         mock_chat.return_value = mock_handler
 
-        mock_request = MagicMock()
-        mock_raw_request = MagicMock()
+        mock_request = create_autospec(Request)
+        mock_raw_request = create_autospec(Request)
+
+        mock_raw_request.app = create_autospec(object)
+        mock_raw_request.app.state = create_autospec(object)
+        mock_raw_request.app.state.request_timeout = 10
 
         # Create an async function to test
         async def test_create_chat():
@@ -211,8 +225,12 @@ class TestApiServer(unittest.TestCase):
         mock_handler.create_chat_completion = AsyncMock(return_value=mock_generator)
         mock_chat.return_value = mock_handler
 
-        mock_request = MagicMock()
-        mock_raw_request = MagicMock()
+        mock_request = create_autospec(Request)
+        mock_raw_request = create_autospec(Request)
+
+        mock_raw_request.app = create_autospec(object)
+        mock_raw_request.app.state = create_autospec(object)
+        mock_raw_request.app.state.request_timeout = 10
 
         # Create an async function to test
         async def test_create_chat():

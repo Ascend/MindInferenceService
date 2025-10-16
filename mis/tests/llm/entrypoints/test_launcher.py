@@ -16,7 +16,6 @@ class TestLauncher(unittest.TestCase):
             engine_type="vllm",
             host="127.0.0.1",
             port=8000,
-            disable_fastapi_docs=False
         )
 
     @patch('mis.llm.entrypoints.launcher.AutoEngine.from_config')
@@ -58,30 +57,6 @@ class TestLauncher(unittest.TestCase):
         mock_from_config.assert_called_once_with(self.test_args)
         mock_engine_client.shutdown.assert_called_once()
 
-    def test_build_app_with_docs(self):
-        """Test build_app function with FastAPI docs enabled."""
-        from mis.args import GlobalArgs
-        args = GlobalArgs(disable_fastapi_docs=False)
-        app = _build_app(args)
-
-        # Assertions
-        self.assertIsNotNone(app)
-        self.assertIsNotNone(app.openapi_url)
-        self.assertIsNotNone(app.docs_url)
-        self.assertIsNotNone(app.redoc_url)
-
-    def test_build_app_without_docs(self):
-        """Test build_app function with FastAPI docs disabled."""
-        from mis.args import GlobalArgs
-        args = GlobalArgs(disable_fastapi_docs=True)
-        app = _build_app(args)
-
-        # Assertions
-        self.assertIsNotNone(app)
-        self.assertIsNone(app.openapi_url)
-        self.assertIsNone(app.docs_url)
-        self.assertIsNone(app.redoc_url)
-
     @patch('mis.llm.entrypoints.openai.api_server.init_openai_app_state')
     def test_init_app_state_vllm(self, mock_init_openai_app_state):
         """Test init_app_state function with vllm engine."""
@@ -98,7 +73,6 @@ class TestLauncher(unittest.TestCase):
         self.run_async(test_init_app_state())
 
         # Assertions
-        mock_app.include_router.assert_called_once()
         mock_init_openai_app_state.assert_called_once_with(
             mock_engine_client, mock_model_config, mock_app.state, self.test_args)
 

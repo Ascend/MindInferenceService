@@ -25,8 +25,10 @@ from mis.llm.entrypoints.openai.api_extensions import (
     MISOpenAIServingChat
 )
 from mis.logger import init_logger
+from mis.utils.utils import get_client_ip
 
 logger = init_logger(__name__)
+logger_service = init_logger(__name__)
 
 router = APIRouter()
 
@@ -39,6 +41,7 @@ MIS_MODEL_REMOVE_FIELDS = [
 
 @router.get("/openai/v1/models")
 async def show_available_models(raw_request: Request):
+    client_ip = get_client_ip(raw_request)
     handler = models(raw_request)
 
     models_ = await handler.show_available_models()
@@ -46,43 +49,43 @@ async def show_available_models(raw_request: Request):
         for field in MIS_MODEL_REMOVE_FIELDS:
             if hasattr(model_, field):
                 delattr(model_, field)
-    logger.debug("Returning available models.")
+    logger.debug(f"[IP: {client_ip}] Returning available models.")
     return JSONResponse(content=models_.model_dump())
 
 
-def _align_non_streaming_response(generator: ChatCompletionResponse) -> None:
+def _align_non_streaming_response(generator: ChatCompletionResponse, client_ip: str) -> None:
     """
     remove stop_reason in vllm response to ensure consistent behavior
     """
-    logger.debug("Aligning non-streaming response")
+    logger.debug(f"[IP: {client_ip}] Aligning non-streaming response")
     for choice in generator.choices:
         del choice.stop_reason
-    logger.debug("Non-streaming response aligned")
+    logger.debug(f"[IP: {client_ip}] Non-streaming response aligned")
 
 
-async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
+async def _align_streaming_response(generator: AsyncGenerator[str, None], client_ip: str) -> AsyncGenerator[str, None]:
     """
     remove stop_reason in vllm stream response to ensure consistent behavior
     """
-    logger.info("Aligning streaming response")
+    logger.info(f"[IP: {client_ip}] Aligning streaming response")
     async for content in generator:
         if "stop_reason" in content:
             try:
                 content_dict = json.loads(content[len("data: "):])
             except json.JSONDecodeError:
-                logger.warning("Failed to parse JSON content")
+                logger.warning(f"[IP: {client_ip}] Failed to parse JSON content")
                 yield content
                 continue
 
             if not isinstance(content_dict, dict):
-                logger.warning("Content is not a dictionary")
+                logger.warning(f"[IP: {client_ip}] Content is not a dictionary")
                 yield content
                 continue
 
             try:
                 content_obj = ChatCompletionStreamResponse(**content_dict)
             except ValidationError:
-                logger.warning("Validation error in content object")
+                logger.warning(f"[IP: {client_ip}] Validation error in content object")
                 yield content
                 continue
 
@@ -92,16 +95,17 @@ async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> Asy
             yield f"data: {content_obj.model_dump_json(exclude_unset=True)}\n\n"
         else:
             yield content
-    logger.info("Streaming response aligned")
+    logger.info(f"[IP: {client_ip}] Streaming response aligned")
 
 
 @router.post("/openai/v1/chat/completions")
 async def create_chat_completions(request: MISChatCompletionRequest,
                                   raw_request: Request):
-    logger.debug("Handling request to create chat completions.")
+    client_ip = get_client_ip(raw_request)
+    logger.debug(f"[IP: {client_ip}] Handling request to create chat completions.")
     handler = chat(raw_request)
     if handler is None:
-        logger.error("The model does not support Chat Completions API")
+        logger.error(f"[IP: {client_ip}] The model does not support Chat Completions API")
         return base(raw_request).create_error_response(message="The model does not support Chat Completions API")
 
     generator = await handler.create_chat_completion(request, raw_request)
@@ -111,12 +115,12 @@ async def create_chat_completions(request: MISChatCompletionRequest,
                             status_code=generator.code)
 
     elif isinstance(generator, ChatCompletionResponse):
-        logger.debug("Handling non-streaming response")
-        _align_non_streaming_response(generator)
+        logger.debug(f"[IP: {client_ip}] Handling non-streaming response")
+        _align_non_streaming_response(generator, client_ip)
         return JSONResponse(content=generator.model_dump())
 
-    logger.info("Handling streaming response")
-    generator = _align_streaming_response(generator)
+    logger.info(f"[IP: {client_ip}] Handling streaming response")
+    generator = _align_streaming_response(generator, client_ip)
     return StreamingResponse(content=generator, media_type="text/event-stream")
 
 
@@ -126,7 +130,7 @@ async def init_openai_app_state(
         state: State,
         args: GlobalArgs
 ) -> None:
-    logger.info("Initializing OpenAI app state.")
+    logger_service.info("Initializing OpenAI app state.")
     if args.served_model_name is not None:
         served_model_names = [args.served_model_name]
     else:
@@ -142,7 +146,7 @@ async def init_openai_app_state(
         for name in served_model_names
     ]
 
-    logger.info("Registering openai_serving_models.")
+    logger_service.info("Registering openai_serving_models.")
     # register openai_serving_models, will be use by function `models`
     state.openai_serving_models = OpenAIServingModels(
         engine_client=engine_client,
@@ -150,7 +154,7 @@ async def init_openai_app_state(
         base_model_paths=base_model_paths,
     )
 
-    logger.info("Registering openai_serving_chat.")
+    logger_service.info("Registering openai_serving_chat.")
     # register openai_serving_chat, will be use by function `chat`
     state.openai_serving_chat = MISOpenAIServingChat(
         engine_client,
@@ -162,7 +166,7 @@ async def init_openai_app_state(
         chat_template_content_format="auto",
     )
 
-    logger.info("Registering openai_serving_tokenization.")
+    logger_service.info("Registering openai_serving_tokenization.")
     # register openai_serving_tokenization, will be use by function `base`
     state.openai_serving_tokenization = OpenAIServingTokenization(
         engine_client,
@@ -174,4 +178,4 @@ async def init_openai_app_state(
     )
 
     state.task = model_config.task
-    logger.info("OpenAI app state initialized")
+    logger_service.info("OpenAI app state initialized")
