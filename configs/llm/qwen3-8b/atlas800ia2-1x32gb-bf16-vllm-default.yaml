@@ -12,4 +12,4 @@ vllm:
   cpu_offload_gb: 0
   scheduling_policy: fcfs
 engine_type: vllm
-model: MindSDK/Qwen3-8B
+model: Qwen3-8B

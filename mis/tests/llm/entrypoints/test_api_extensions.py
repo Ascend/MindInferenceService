@@ -18,7 +18,7 @@ class TestAPIExtensions(unittest.TestCase):
             "max_tokens": 1024,
             "messages": [{"role": "user", "content": "Hello"}],
             "min_tokens": 1,
-            "model": "MindSDK/Qwen3-8B",
+            "model": "Qwen3-8B",
             "presence_penalty": 0.0,
             "seed": 1234,
             "stream": True,
@@ -177,10 +177,10 @@ class TestAPIExtensions(unittest.TestCase):
 
     def test_model_invalid_value(self):
         kwargs = copy.deepcopy(self.valid_params)
-        kwargs["model"] = "MindSDK/Qwen3-0.6B"
+        kwargs["model"] = "Qwen3-0.6B"
         with pytest.raises(ValueError) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for model: MindSDK/Qwen3-0.6B not in ('MindSDK/Qwen3-8B',)"
+        assert str(exc_info.value) == "Invalid value for model: Qwen3-0.6B not in ('Qwen3-8B',)"
 
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -304,7 +304,7 @@ class TestAPIExtensions(unittest.TestCase):
     def test_model_post_init_with_top_logprobs(self):
         params = {
             "messages": [{"role": "user", "content": "test"}],
-            "model": "MindSDK/Qwen3-8B",
+            "model": "Qwen3-8B",
             "top_logprobs": 0
         }
         with patch("mis.llm.entrypoints.openai.api_extensions.MISChatCompletionRequest._validate_parameters", return_value=params):
@@ -316,7 +316,7 @@ class TestAPIExtensions(unittest.TestCase):
     def test_model_post_init_without_top_logprobs(self):
         params = {
             "messages": [{"role": "user", "content": "test"}],
-            "model": "MindSDK/Qwen3-8B",
+            "model": "Qwen3-8B",
             "top_logprobs": 5,
             "logprobs" : True
         }

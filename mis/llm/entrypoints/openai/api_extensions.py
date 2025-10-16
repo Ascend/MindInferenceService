@@ -153,9 +153,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
 
     @staticmethod
     def _validate_bool(param_name: str, value: Any) -> Union[bool, str, None]:
-        logger.info(f"Validating boolean parameter {param_name}.")
+        logger.debug(f"Validating boolean parameter {param_name}.")
         if isinstance(value, bool) or (isinstance(value, str) and value.lower() in ['true', 'false']):
-            logger.info(f"Parameter {param_name} is valid.")
+            logger.debug(f"Parameter {param_name} is valid.")
             return value
         logger.error(f"Invalid type for {param_name}: expected bool")
         raise TypeError(f"Invalid type for {param_name}: expected bool")

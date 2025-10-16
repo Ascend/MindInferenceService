@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 import mis.constants as constants
 from mis.utils.env_checker import EnvChecker
 
-DEFAULT_MIS_MODEL = "MindSDK/Qwen3-8B"
+DEFAULT_MIS_MODEL = "Qwen3-8B"
 DEFAULT_MIS_CONFIG = "atlas800ia2-1x32gb-bf16-vllm-default"
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     MIS_SSL_KEYFILE: Optional[str] = None
     MIS_SSL_CERTFILE: Optional[str] = None
     MIS_SSL_CA_CERT: Optional[str] = None
-    MIS_SSL_CERT_REQS: int = ssl.CERT_NONE
+    MIS_SSL_CERT_REQS: int = ssl.CERT_REQUIRED
     MIS_LOG_LEVEL: str = "INFO"
     MIS_MAX_LOG_LEN: Optional[int] = None
 
