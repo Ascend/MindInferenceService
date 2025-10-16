@@ -88,8 +88,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_valid_config(self, mock_stat, mock_getuid, mock_getsize, mock_exists):
+    def test_engine_config_loading_valid_config(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                mock_getsize, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -123,9 +126,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: invalid_engine\nmodel: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_getuid, mock_getsize,
-                                                       mock_file, mock_exists):
+    def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mockock_isfile, mock_getuid,
+                                                       mock_getsize, mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -144,9 +149,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='model: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_getuid, mock_getsize,
-                                                       mock_file, mock_exists):
+    def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                       mock_getsize, mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -165,8 +172,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_missing_model(self, mock_stat, mock_getuid, mock_getsize, mock_file, mock_exists):
+    def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
+                                                 mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -185,8 +195,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\nmodel: invalid_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_model(self, mock_stat, mock_getuid, mock_getsize, mock_file, mock_exists):
+    def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
+                                                 mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -205,8 +218,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\nmodel: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_valid_model(self, mock_stat, mock_getuid, mock_getsize, mock_file, mock_exists):
+    def test_engine_config_loading_valid_model(self, mock_stat, mock_isfile, mock_isdir, mock_getuid, mock_getsize,
+                                               mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -224,8 +240,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='key: value: invalid')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_getuid, mock_getsize, mock_file, mock_exists):
+    def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
+                                                 mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -250,9 +269,11 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.islink', return_value=True)
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_config_yaml_file_loading_symbolic_link(self, mock_stat, mock_getuid, mock_getsize,
-                                                    mock_islink, mock_exists):
+    def test_config_yaml_file_loading_symbolic_link(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                    mock_getsize, mock_islink, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
         mock_stat.return_value = MagicMock(st_uid=1000)
@@ -279,8 +300,10 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data=READ_DATA)
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
     @patch('os.stat')
-    def test_engine_config_loading_all_keys_present(self, mock_stat, mock_getuid, mock_getsize,
+    def test_engine_config_loading_all_keys_present(self, mock_stat, mock_isdir, mock_isfile, mock_getuid, mock_getsize,
                                                     mock_file, mock_exists):
         from mis.args import GlobalArgs
         from mis.llm.engines.config import ConfigParser
