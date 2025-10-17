@@ -19,6 +19,7 @@ class GlobalArgs(BaseModel):
     # server
     host: Optional[str] = envs.MIS_HOST
     port: int = envs.MIS_PORT
+    enable_https: bool = envs.MIS_ENABLE_HTTPS
     enable_dos_protection: bool = envs.MIS_ENABLE_DOS_PROTECTION
     ssl_keyfile: Optional[str] = envs.MIS_SSL_KEYFILE
     ssl_certfile: Optional[str] = envs.MIS_SSL_CERTFILE

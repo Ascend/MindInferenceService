@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import asyncio
 import json
 from typing import AsyncGenerator
 
@@ -20,6 +21,7 @@ from vllm.entrypoints.openai.serving_models import BaseModelPath, OpenAIServingM
 from vllm.entrypoints.openai.serving_tokenization import OpenAIServingTokenization
 
 from mis.args import GlobalArgs
+from mis.constants import REQUEST_TIMEOUT_IN_SEC
 from mis.llm.entrypoints.openai.api_extensions import (
     MISChatCompletionRequest,
     MISOpenAIServingChat
@@ -45,13 +47,27 @@ async def show_available_models(raw_request: Request):
     logger.debug(f"[IP: {client_ip}] Handling request to show available models.")
     handler = models(raw_request)
 
-    models_ = await handler.show_available_models()
-    for model_ in models_.data:
+    try:
+        if raw_request.app.state.request_timeout:
+            available_models = await asyncio.wait_for(
+                handler.show_available_models(),
+                timeout=raw_request.app.state.request_timeout
+            )
+        else:
+            available_models = await handler.show_available_models()
+    except asyncio.TimeoutError:
+        logger.error(f"[IP: {client_ip}] Request timeout")
+        return JSONResponse(
+            status_code=408,
+            content={"detail": f"[IP: {client_ip}] Request timeout"}
+        )
+
+    for model_ in available_models.data:
         for field in MIS_MODEL_REMOVE_FIELDS:
             if hasattr(model_, field):
                 delattr(model_, field)
     logger.debug(f"[IP: {client_ip}] Returning available models.")
-    return JSONResponse(content=models_.model_dump())
+    return JSONResponse(content=available_models.model_dump())
 
 
 def _align_non_streaming_response(generator: ChatCompletionResponse, client_ip: str) -> None:
@@ -109,7 +125,20 @@ async def create_chat_completions(request: MISChatCompletionRequest,
         logger.error(f"[IP: {client_ip}] The model does not support Chat Completions API")
         return base(raw_request).create_error_response(message="The model does not support Chat Completions API")
 
-    generator = await handler.create_chat_completion(request, raw_request)
+    try:
+        if raw_request.app.state.request_timeout:
+            generator = await asyncio.wait_for(
+                handler.create_chat_completion(request, raw_request),
+                timeout=raw_request.app.state.request_timeout
+            )
+        else:
+            generator = await handler.create_chat_completion(request, raw_request)
+    except asyncio.TimeoutError:
+        logger.error(f"[IP: {client_ip}] Request timeout")
+        return JSONResponse(
+            status_code=408,
+            content={"detail": f"[IP: {client_ip}] Request timeout"}
+        )
 
     if isinstance(generator, ErrorResponse):
         logger.error(f"[IP: {client_ip}] - Error in chat completion")
@@ -180,4 +209,5 @@ async def init_openai_app_state(
     )
 
     state.task = model_config.task
+    state.request_timeout = REQUEST_TIMEOUT_IN_SEC
     logger_service.info("OpenAI app state initialized")

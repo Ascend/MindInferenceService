@@ -135,10 +135,11 @@ class ContainerIPDetector:
             logger.info("Using provided IP")
             return ip_current
 
-            # Fallback to hostname IP
+        # Fallback to hostname IP
         primary_ip = cls._get_hostname_ip()
         if primary_ip:
             return primary_ip
+
         # Fallback to environment variable IP
         primary_ip = cls._get_container_ip_from_env()
         if primary_ip:

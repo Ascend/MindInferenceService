@@ -25,7 +25,7 @@ from mis.hub.envpreparation import environment_preparation
 from mis.llm.engine_factory import AutoEngine
 from mis.llm.entrypoints.middleware import (RateLimitConfig, RequestSizeLimitMiddleware,
                                             ConcurrencyLimitMiddleware, RateLimitMiddleware,
-                                            )
+                                            RequestTimeoutMiddleware)
 from mis.logger import init_logger, LogType
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
@@ -99,6 +99,7 @@ def _build_app(args: GlobalArgs) -> FastAPI:
 
         rate_limit_middleware = RateLimitMiddleware(app, config=rate_limit_config)
         app.add_middleware(rate_limit_middleware.__class__, config=rate_limit_config)
+        app.add_middleware(RequestTimeoutMiddleware, request_timeout_in_sec=constants.REQUEST_TIMEOUT_IN_SEC)
 
         logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
     else:
