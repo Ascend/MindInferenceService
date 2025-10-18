@@ -1,7 +1,9 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+
 from typing import Any, ClassVar, Dict, Optional, Union
 
+from fastapi import HTTPException
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 
@@ -107,10 +109,15 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         message_keys_keep = ("role", "content")
         if "messages" not in kwargs:
             logger.error("Can't find any message in request")
-            raise ValueError("Can't find any message in request")
+            raise HTTPException(
+                status_code=400,
+                detail="Can't find any message in request"
+            )
         if not isinstance(kwargs["messages"], list):
             logger.error(f"Messages must be a list, but get {type(kwargs['messages'])}")
-            raise TypeError(f"Messages must be a list, but get {type(kwargs['messages'])}")
+            raise HTTPException(status_code=400,
+            detail=f"Messages must be a list, but get {type(kwargs['messages'])}")
+
         new_messages = []
         for message in kwargs["messages"]:
             if not isinstance(message, dict) or not isinstance(message.get("content"), str):
@@ -122,7 +129,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
                 logger.warning("MIS chat completions only accept role in [system, assistant, user]")
         if not new_messages:
             logger.error("MIS chat completions require at least one valid message")
-            raise ValueError("MIS chat completions require at least one valid message")
+            raise HTTPException(status_code=400,
+                                detail="MIS chat completions require at least one valid message"
+                                )
         kwargs["messages"] = new_messages
         logger.debug("Invalid messages removed successfully.")
 
@@ -136,18 +145,26 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         if min_value is not None and max_value is not None:
             if min_value > max_value:
                 logger.error(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
-                raise ValueError(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
+                raise HTTPException(status_code=400,
+                                    detail=f"Invalid range for {param_name}: min({min_value}) > max({max_value})"
+                                    )
             if not ConfigChecker.is_value_in_range(param_name, value, min_value, max_value):
                 logger.error(f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]")
-                raise ValueError(f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]")
+                raise HTTPException(status_code=400,
+                                    detail=f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]"
+                                    )
         elif min_value is not None:
             if value < min_value:
                 logger.error(f"Invalid value for {param_name}: {value} < min({min_value})")
-                raise ValueError(f"Invalid value for {param_name}: {value} < min({min_value})")
+                raise HTTPException(status_code=400,
+                                    detail=f"Invalid value for {param_name}: {value} < min({min_value})"
+                                    )
         elif max_value is not None:
             if value > max_value:
                 logger.error(f"Invalid value for {param_name}: {value} > max({max_value})")
-                raise ValueError(f"Invalid value for {param_name}: {value} > max({max_value})")
+                raise HTTPException(status_code=400,
+                                    detail=f"Invalid value for {param_name}: {value} > max({max_value})"
+                                    )
         logger.debug(f"Parameter {param_name} validated range successfully.")
         return value
 
@@ -158,7 +175,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
             logger.debug(f"Parameter {param_name} is valid.")
             return value
         logger.error(f"Invalid type for {param_name}: expected bool")
-        raise TypeError(f"Invalid type for {param_name}: expected bool")
+        raise HTTPException(status_code=400,
+                            detail=f"Invalid type for {param_name}: expected bool"
+                            )
 
     @staticmethod
     def _validate_enum(param_name: str, value: Any, validator: Dict[str, Any]) -> Optional[Any]:
@@ -168,7 +187,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
             if ConfigChecker.is_value_in_enum(param_name, value, valid_values):
                 return value
         logger.error(f"Invalid value for {param_name}: {value} not in {valid_values}")
-        raise ValueError(f"Invalid value for {param_name}: {value} not in {valid_values}")
+        raise HTTPException(status_code=400,
+                            detail=f"Invalid value for {param_name}: {value} not in {valid_values}"
+                            )
 
     def model_post_init(self, __context: Any) -> None:
         if getattr(self, "top_logprobs", None) == 0:
@@ -197,7 +218,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
             value = self._validate_enum(param_name, value, validator)
         else:
             logger.error(f"Unsupported type for {param_name}, expected: {expected_type.__name__}")
-            raise TypeError(f"Unsupported type for {param_name}, expected: {expected_type.__name__}")
+            raise HTTPException(status_code=400,
+                                detail=f"Unsupported type for {param_name}, expected: {expected_type.__name__}"
+                                )
         logger.debug(f"Parameter {param_name} validated successfully.")
         return value
 
@@ -217,7 +240,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         for key, value in kwargs.items():
             if value is None:
                 logger.error(f"Invalid value for {key}: None")
-                raise TypeError(f"Invalid value for {key}: None")
+                raise HTTPException(status_code=400,
+                                    detail=f"Invalid value for {key}: None"
+                                    )
             # If the parameter has validation rules, validate it
             if key in MIS_CHAT_COMPLETION_FIELD_VALIDATORS:
                 validator = MIS_CHAT_COMPLETION_FIELD_VALIDATORS[key]

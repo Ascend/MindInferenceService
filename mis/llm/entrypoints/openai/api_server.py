@@ -1,11 +1,13 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import asyncio
-from http import HTTPStatus
+import importlib.metadata
 import json
+from http import HTTPStatus
 from typing import AsyncGenerator
 
 from fastapi import APIRouter, Request
+from packaging import version
 from pydantic import ValidationError
 from starlette.datastructures import State
 from starlette.responses import JSONResponse, StreamingResponse
@@ -40,6 +42,13 @@ router = APIRouter()
 MIS_MODEL_REMOVE_FIELDS = [
     "root", "parent", "permission"
 ]
+
+
+def get_vllm_version():
+    try:
+        return importlib.metadata.version("vllm")
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 @router.get("/openai/v1/models")
@@ -144,8 +153,18 @@ async def create_chat_completions(request: MISChatCompletionRequest,
 
     if isinstance(generator, ErrorResponse):
         logger.error(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' {generator.code} Error in chat completion")
-        return JSONResponse(content=generator.model_dump(),
-                            status_code=generator.code)
+        vllm_version = get_vllm_version()
+        if vllm_version is None:
+            return JSONResponse(
+                status_code=400,
+                content={"detail": f"[IP: {client_ip}] Can not get version of vllm"}
+            )
+        elif version.parse(vllm_version) > version.parse("0.10.0"):
+            return JSONResponse(content=generator.model_dump(),
+                                status_code=generator.error.code)
+        else:
+            return JSONResponse(content=generator.model_dump(),
+                                status_code=generator.code)
 
     elif isinstance(generator, ChatCompletionResponse):
         _align_non_streaming_response(generator)
