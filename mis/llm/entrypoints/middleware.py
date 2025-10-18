@@ -4,6 +4,7 @@ import asyncio
 import time
 from collections import defaultdict
 from dataclasses import dataclass
+from http import HTTPStatus
 from typing import Dict, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException
@@ -69,6 +70,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             Response or None: Returns a 413 JSON response if the size is over the limit, otherwise None.
         """
         client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         transfer_encoding = request.headers.get("transfer-encoding", "")
         is_chunked = "chunked" in transfer_encoding.lower()
 
@@ -78,11 +80,12 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         if content_length and not is_chunked:
             content_length = int(content_length)
             if content_length > self.max_body_size:
-                logger.warning(f"[IP: {client_ip}] Request body too large: {content_length} bytes, "
+                logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
+                               f"Request body too large: {content_length} bytes, "
                                f"limit: {self.max_body_size} bytes")
                 return JSONResponse(
-                    status_code=413,
-                    content={"detail": f"[IP: {client_ip}] Request body too large. "
+                    status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                    content={"detail": f"Request body too large. "
                                        f"Maximum size: {self.max_body_size} bytes"}
                 )
         return None
@@ -94,6 +97,7 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             request (Request): The incoming HTTP request.
         """
         client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         transfer_encoding = request.headers.get("transfer-encoding", "")
         is_chunked = "chunked" in transfer_encoding.lower()
 
@@ -108,11 +112,12 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             async for chunk in original_stream:
                 total_size += len(chunk)
                 if total_size > self.max_body_size:
-                    logger.warning(f"[IP: {client_ip}] Chunked request body too large: {total_size} bytes, "
+                    logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
+                                   f"Chunked request body too large: {total_size} bytes, "
                                    f"limit: {self.max_body_size} bytes")
                     raise HTTPException(
-                        status_code=413,
-                        detail=f"[IP: {client_ip}] The request body is too large. "
+                        status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                        detail=f"The request body is too large. "
                                f"Maximum size: {self.max_body_size} bytes"
                     )
                 yield chunk
@@ -148,20 +153,20 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
         """
         # Check if maximum concurrent requests exceeded
         client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         async with self.lock:
             if self.active_requests >= self.max_concurrent_requests:
                 logger.warning(
-                    f"[IP: {client_ip}] Too many concurrent requests: "
+                    f"[IP: {client_ip}] '{url}' {HTTPStatus.TOO_MANY_REQUESTS.value} Too many concurrent requests: "
                     f"{self.active_requests}, limit: {self.max_concurrent_requests}")
                 return JSONResponse(
-                    status_code=429,
+                    status_code=HTTPStatus.TOO_MANY_REQUESTS,
                     content={
-                        "detail": f"[IP: {client_ip}] Too many requests. "
+                        "detail": f"Too many requests. "
                                   f"Maximum concurrent requests: {self.max_concurrent_requests}"}
                 )
             self.active_requests += 1
-            logger.info(f"[IP: {client_ip}] Request started, "
-                        f"active requests: {self.active_requests}")
+            logger_service.debug(f"Request started, active requests: {self.active_requests}")
 
         try:
             # Use semaphore to control concurrency
@@ -170,13 +175,16 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
                     response = await call_next(request)
                     return response
                 except Exception as e:
-                    logger.error(f"[IP: {client_ip}] Error processing request: {e}")
-                    raise e
+                    logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                                 f"Error processing request: {e}")
+                    return JSONResponse(
+                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                        content={"detail": "An internal server error occurred."}
+                    )
         finally:
             async with self.lock:
                 self.active_requests -= 1
-                logger.debug(f"[IP: {client_ip}] Request finished, "
-                             f"active requests: {self.active_requests}")
+                logger_service.debug(f"Request finished, active requests: {self.active_requests}")
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -218,16 +226,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             JSONResponse: The response from the next middleware or route handler.
         """
         client_ip = get_client_ip(request)
-
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         # Check rate limit
         async with self._counts_lock:
             is_allowed, retry_after = self._check_rate_limit(client_ip)
             if not is_allowed:
-                logger.warning(f"[IP: {client_ip}] Rate limit exceeded")
+                logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.TOO_MANY_REQUESTS.value} Rate limit exceeded")
                 return JSONResponse(
-                    status_code=429,
+                    status_code=HTTPStatus.TOO_MANY_REQUESTS,
                     content={
-                        "detail": f"[IP: {client_ip}] Rate limit exceeded",
+                        "detail": f"Rate limit exceeded",
                         "retry_after": retry_after
                     }
                 )
@@ -359,6 +367,7 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             asyncio.TimeoutError: If the request processing exceeds the timeout.
         """
         client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         task = asyncio.create_task(call_next(request))
         try:
             # Using asyncio.wait_for to set a Timeout
@@ -372,12 +381,18 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             except asyncio.CancelledError:
                 pass
             except Exception as e:
-                logger.error(f"[IP: {client_ip}] Error during task cleanup after timeout: {e}")
+                logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                             f"Error during task cleanup after timeout: {e}")
+                return JSONResponse(
+                    status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                    content={"detail": "Request timeout and cleanup failed"}
+                )
 
-            logger.warning(f"[IP: {client_ip}] Request timeout after {self.timeout} seconds")
+            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_TIMEOUT.value} "
+                           f"Request timeout after {self.timeout} seconds")
             return JSONResponse(
-                status_code=408,
-                content={"detail": f"[IP: {client_ip}] Request timeout"}
+                status_code=HTTPStatus.REQUEST_TIMEOUT,
+                content={"detail": f"Request timeout"}
             )
         except Exception as e:
             # If the task is still running, cancel it.
@@ -388,7 +403,16 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
                 except asyncio.CancelledError:
                     pass
                 except Exception as cleanup_error:
-                    logger.error(f"[IP: {client_ip}] Error during task cleanup after exception: {cleanup_error}")
+                    logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                                 f"Error during task cleanup after exception: {cleanup_error}")
+                    return JSONResponse(
+                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                        content={"detail": "Request failed and cleanup failed"}
+                    )
 
-            logger.error(f"[IP: {client_ip}] Error processing request: {e}")
-            raise e
+            logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                         f"Error processing request: {e}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "An internal server error occurred"}
+            )

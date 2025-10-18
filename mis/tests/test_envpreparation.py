@@ -8,9 +8,9 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 import mis.envs as envs
-from mis.hub.envpreparation import environment_preparation, _is_private_key_encrypted, _enable_envs
+from mis.hub.envpreparation import environment_preparation, _is_private_key_encrypted
 
-MIS_MODEL = "MindSDK/Qwen3-8B"
+MIS_MODEL = "Qwen3-8B"
 
 
 class TestEnvPreparation(unittest.TestCase):
@@ -26,19 +26,6 @@ class TestEnvPreparation(unittest.TestCase):
                 os.environ[key] = value
             else:
                 os.environ.pop(key, None)
-
-    def test_enable_envs(self):
-        test_envs = {
-            "TEST_ENV": "test_value",
-            "LD_LIBRARY_PATH": "/path/to/lib",
-            "PYTHONPATH": "/path/to/python",
-            "PATH": "/path/to/bin",
-        }
-        _enable_envs(test_envs)
-        self.assertEqual(os.environ["TEST_ENV"], "test_value")
-        self.assertIn("/path/to/lib", os.environ["LD_LIBRARY_PATH"].split(":"))
-        self.assertIn("/path/to/python", os.environ["PYTHONPATH"].split(":"))
-        self.assertIn("/path/to/bin", os.environ["PATH"].split(":"))
 
     @mock.patch('os.path.exists')
     @mock.patch('os.path.isdir')
@@ -66,9 +53,8 @@ class TestEnvPreparation(unittest.TestCase):
         with mock.patch('mis.utils.utils.Path.exists', return_value=True), \
                 mock.patch('mis.utils.utils.Path.is_dir', return_value=True), \
                 mock.patch('mis.utils.utils.os.access', return_value=True):
-            prepared_args = environment_preparation(args, resolve_env=True)
+            prepared_args = environment_preparation(args)
         self.assertEqual(prepared_args.served_model_name, MIS_MODEL)
-        self.assertEqual(os.environ["VLLM_LOGGING_LEVEL"], envs.MIS_LOG_LEVEL)
 
 
 class TestIsPrivateKeyEncrypted(unittest.TestCase):

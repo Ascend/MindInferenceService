@@ -288,7 +288,7 @@ class TestRequestTimeoutMiddleware(unittest.TestCase):
         """
         response = self.client.get("/slow")
         self.assertEqual(response.status_code, 408)
-        self.assertEqual(response.json(), {'detail': '[IP: testclient] Request timeout'})
+        self.assertEqual(response.json(), {'detail': 'Request timeout'})
 
     def test_middleware_initialization(self):
         """

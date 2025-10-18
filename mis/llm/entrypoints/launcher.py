@@ -9,7 +9,7 @@ from http import HTTPStatus
 from typing import Optional
 
 import uvloop
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from vllm.config import ModelConfig
@@ -27,8 +27,10 @@ from mis.llm.entrypoints.middleware import (RateLimitConfig, RequestSizeLimitMid
                                             ConcurrencyLimitMiddleware, RateLimitMiddleware,
                                             RequestTimeoutMiddleware)
 from mis.logger import init_logger, LogType
+from mis.utils.utils import get_client_ip
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
+logger_operation = init_logger(__name__+".operation", log_type=LogType.OPERATION)
 
 TIMEOUT_KEEP_ALIVE = 5
 
@@ -106,17 +108,23 @@ def _build_app(args: GlobalArgs) -> FastAPI:
         logger.warning("Middleware is disabled by MIS_ENABLE_DOS_PROTECTION=False")
 
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(_: FastAPI, exc: RequestValidationError) -> JSONResponse:
-        logger.warning(f"Request validation error")
+    async def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
         error = ErrorResponse(message=str(exc),
                               type="BadRequestError",
                               code=HTTPStatus.BAD_REQUEST)
+        logger_operation.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Request validation error "
+                               f"{error.model_dump()}")
         return JSONResponse(content=error.model_dump(),
                             status_code=HTTPStatus.BAD_REQUEST)
 
     @app.exception_handler(Exception)
-    async def internal_exception_handler(_, exc):
-        logger.error(f"Internal server error: {exc}", exc_info=True)
+    async def internal_exception_handler(request: Request, exc: Exception):
+        client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
+        logger_operation.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                               f"Internal server error: {exc}")
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={

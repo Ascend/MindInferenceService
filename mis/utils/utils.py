@@ -151,7 +151,7 @@ class ContainerIPDetector:
 
 def get_model_path(raw_model: str) -> str:
     """Get model path from raw_model.
-    given raw_model a `MindSDK/Qwen3-8B` style str, this function will find
+    given raw_model a `Qwen3-8B` style str, this function will find
         absolute path of exist model to that path.
     return this absolute path.
     """

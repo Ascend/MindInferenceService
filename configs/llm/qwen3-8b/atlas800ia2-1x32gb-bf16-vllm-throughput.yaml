@@ -16,4 +16,4 @@ vllm:
   enable_prefix_caching: true
   enforce_eager: false
 engine_type: vllm
-model: MindSDK/Qwen3-8B
+model: Qwen3-8B

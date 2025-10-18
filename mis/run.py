@@ -4,8 +4,6 @@ import signal
 import subprocess
 import sys
 
-from mis.args import ARGS
-from mis.hub.envpreparation import environment_preparation
 from mis.logger import init_logger, LogType
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
@@ -16,8 +14,6 @@ def main() -> None:
     """
     process = None
     exit_code = 0
-
-    environment_preparation(ARGS, True)
 
     def signal_handler(*_) -> None:
         logger.error("receive signal, terminated")
@@ -32,7 +28,7 @@ def main() -> None:
             ("import sys; sys.path.insert(0, sys.argv[1]);"
              "from mis.llm.entrypoints.launcher import _run_server,"
              "environment_preparation, ARGS;"
-             "import uvloop; args = environment_preparation(ARGS, True);"
+             "import uvloop; args = environment_preparation(ARGS);"
              "uvloop.run(_run_server(args))"),
             sys.argv[0]
         ]
