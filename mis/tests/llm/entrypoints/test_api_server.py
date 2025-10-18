@@ -1,11 +1,14 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import asyncio
+import importlib
+import importlib.metadata
 import os
 import unittest
 from unittest.mock import create_autospec, patch, MagicMock, AsyncMock
 
 from fastapi import Request
+from packaging import version
 from starlette.datastructures import State
 from starlette.responses import JSONResponse
 
@@ -14,6 +17,13 @@ from mis.llm.entrypoints.openai.api_server import (
     create_chat_completions,
     init_openai_app_state,
 )
+
+
+def get_vllm_version():
+    try:
+        return importlib.metadata.version("vllm")
+    except importlib.metadata.PackageNotFoundError:
+        return None
 
 
 class TestApiServer(unittest.TestCase):
@@ -120,7 +130,16 @@ class TestApiServer(unittest.TestCase):
         mock_chat.return_value = None
         mock_base_instance = MagicMock()
         from vllm.entrypoints.openai.protocol import ErrorResponse
-        mock_error_response = ErrorResponse(message="test error", type="test_type", error="test error", code=400)
+        vllm_version = get_vllm_version()
+        if vllm_version is None:
+            raise Exception("vLLM package is not installed.")
+        elif version.parse(vllm_version) > version.parse("0.10.0"):
+            from vllm.entrypoints.openai.protocol import ErrorInfo
+            mock_error_response = ErrorResponse(error=ErrorInfo(
+                message="test error", type="test_type", error="test error", code=400
+            ))
+        else:
+            mock_error_response = ErrorResponse(message="test error", type="test_type", error="test error", code=400)
         mock_base_instance.create_error_response.return_value = mock_error_response
         mock_base.return_value = mock_base_instance
 
@@ -146,7 +165,12 @@ class TestApiServer(unittest.TestCase):
             message="The model does not support Chat Completions API"
         )
         self.assertIsInstance(response, ErrorResponse)
-        self.assertEqual(response.code, 400)
+        vllm_version = get_vllm_version()
+        if version.parse(vllm_version) > version.parse("0.10.0"):
+            self.assertEqual(response.error.code, 400)
+        else:
+            self.assertEqual(response.code, 400)
+
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
     def test_create_chat_completions_with_error_response(self, mock_chat):
@@ -154,7 +178,15 @@ class TestApiServer(unittest.TestCase):
         # Setup mocks
         mock_handler = AsyncMock()
         from vllm.entrypoints.openai.protocol import ErrorResponse
-        mock_error_response = ErrorResponse(message="test error", type="test_type", error="test error", code=404)
+        vllm_version = get_vllm_version()
+        if vllm_version is None:
+            raise Exception("vLLM package is not installed.")
+        elif version.parse(vllm_version) > version.parse("0.10.0"):
+            mock_error_response = ErrorResponse(error=ErrorInfo(
+                message="test error", type="test_type", error="test error", code=404
+            ))
+        else:
+            mock_error_response = ErrorResponse(message="test error", type="test_type", error="test error", code=404)
         mock_handler.create_chat_completion = AsyncMock(return_value=mock_error_response)
         mock_chat.return_value = mock_handler
 

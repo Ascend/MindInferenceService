@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import patch
 
 import pytest
+from fastapi import HTTPException
 
 from mis.llm.entrypoints.openai.api_extensions import MISChatCompletionRequest
 
@@ -87,219 +88,219 @@ class TestAPIExtensions(unittest.TestCase):
             {"role": "invalid", "content": "test"},
             {"role": "test", "content": "test"}
         ]
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(messages=test_messages)
-        assert str(exc_info.value) == "MIS chat completions require at least one valid message"
+        assert str(exc_info.value) == "400: MIS chat completions require at least one valid message"
 
     def test_frequency_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = "1.5"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for frequency_penalty, expected: float"
+        assert str(exc_info.value) == "400: Unsupported type for frequency_penalty, expected: float"
 
     def test_frequency_penalty_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = -3.0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for frequency_penalty: -3.0 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: -3.0 not in [-2.0, 2.0]"
 
     def test_frequency_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = 2.1
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for frequency_penalty: 2.1 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: 2.1 not in [-2.0, 2.0]"
 
     def test_max_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = "1024"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for max_tokens, expected: int"
+        assert str(exc_info.value) == "400: Unsupported type for max_tokens, expected: int"
 
     def test_max_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = 0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for max_tokens: 0 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_tokens: 0 not in [1, 64000]"
 
     def test_max_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = 64001
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for max_tokens: 64001 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_tokens: 64001 not in [1, 64000]"
 
     def test_messages_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["messages"] = '[{"role": "user", "content": "Hello"}]'
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Messages must be a list, but get <class 'str'>"
+        assert str(exc_info.value) == "400: Messages must be a list, but get <class 'str'>"
 
     def test_messages_without(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs.pop("messages")
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Can't find any message in request"
+        assert str(exc_info.value) == "400: Can't find any message in request"
 
     def test_min_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = "1"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for min_tokens, expected: int"
+        assert str(exc_info.value) == "400: Unsupported type for min_tokens, expected: int"
 
     def test_min_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = -1
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for min_tokens: -1 not in [0, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for min_tokens: -1 not in [0, 64000]"
 
     def test_min_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = 64001
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for min_tokens: 64001 not in [0, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for min_tokens: 64001 not in [0, 64000]"
 
     def test_model_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["model"] = 1
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for model, expected: str"
+        assert str(exc_info.value) == "400: Unsupported type for model, expected: str"
 
     def test_model_invalid_value(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["model"] = "Qwen3-0.6B"
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for model: Qwen3-0.6B not in ('Qwen3-8B',)"
+        assert str(exc_info.value) == "400: Invalid value for model: Qwen3-0.6B not in ('Qwen3-8B',)"
 
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = "0.0"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for presence_penalty, expected: float"
+        assert str(exc_info.value) == "400: Unsupported type for presence_penalty, expected: float"
 
     def test_presence_penalty_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = -3.0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for presence_penalty: -3.0 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for presence_penalty: -3.0 not in [-2.0, 2.0]"
 
     def test_presence_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = 2.1
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for presence_penalty: 2.1 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for presence_penalty: 2.1 not in [-2.0, 2.0]"
 
     def test_seed_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = "1234"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for seed, expected: int"
+        assert str(exc_info.value) == "400: Unsupported type for seed, expected: int"
 
     def test_seed_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = -9223372036854775809
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for seed: -9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
+        assert str(exc_info.value) == "400: Invalid value for seed: -9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
 
     def test_seed_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = 9223372036854775809
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for seed: 9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
+        assert str(exc_info.value) == "400: Invalid value for seed: 9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
 
     def test_stream_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["stream"] = "True123"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for stream, expected: bool"
+        assert str(exc_info.value) == "400: Unsupported type for stream, expected: bool"
 
     def test_temperature_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = "0.7"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for temperature, expected: float"
+        assert str(exc_info.value) == "400: Unsupported type for temperature, expected: float"
 
     def test_temperature_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = -1.0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for temperature: -1.0 not in [0.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for temperature: -1.0 not in [0.0, 2.0]"
 
     def test_temperature_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = 3.0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for temperature: 3.0 not in [0.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for temperature: 3.0 not in [0.0, 2.0]"
 
     def test_top_p_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = "0.5"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for top_p, expected: float"
+        assert str(exc_info.value) == "400: Unsupported type for top_p, expected: float"
 
     def test_top_p_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = 1e-9
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for top_p: 1e-09 not in [1e-08, 1.0]"
+        assert str(exc_info.value) == "400: Invalid value for top_p: 1e-09 not in [1e-08, 1.0]"
 
     def test_top_p_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = 2.0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for top_p: 2.0 not in [1e-08, 1.0]"
+        assert str(exc_info.value) == "400: Invalid value for top_p: 2.0 not in [1e-08, 1.0]"
 
     def test_max_completion_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = "100"
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Unsupported type for max_completion_tokens, expected: int"
+        assert str(exc_info.value) == "400: Unsupported type for max_completion_tokens, expected: int"
 
     def test_max_completion_tokens_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = 0
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for max_completion_tokens: 0 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: 0 not in [1, 64000]"
 
     def test_max_completion_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = 64001
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for max_completion_tokens: 64001 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: 64001 not in [1, 64000]"
 
     def test_max_completion_tokens_None(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = None
-        with pytest.raises(TypeError) as exc_info:
+        with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "Invalid value for max_completion_tokens: None"
+        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: None"
 
     def test_model_post_init_with_top_logprobs(self):
         params = {
