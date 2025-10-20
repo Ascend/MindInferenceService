@@ -14,7 +14,7 @@ if [ "$current_user" != "root" ]; then
     install_info_dir=$home_dir/Ascend
 fi
 
-PACKAGE_LOG_NAME=Mis
+PACKAGE_LOG_NAME=MIS
 LOG_SIZE_THRESHOLD=$((10*1024*1024))
 declare -A paramDict=()               # 参数个数统计
 version_number=""
@@ -22,7 +22,7 @@ mxSDKManufactureName=""
 mxSDKNewName=""
 archName="aarch64"
 
-info_record_path="${HOME}/log/Mis"
+info_record_path="${HOME}/log/mis"
 info_record_file="deployment.log"
 
 #标识符
