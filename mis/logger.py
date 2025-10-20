@@ -18,7 +18,7 @@ from mis import envs
 
 MIS_LOG_LEVEL = envs.MIS_LOG_LEVEL
 MIS_LOG_PREFIX = "log_mis_disk_"
-MIS_LOG_PATH = "/home/HwHiAiUser/tmp/log"
+MIS_LOG_PATH = os.path.join(os.path.expanduser('~'), "log", "mis")
 DEFAULT_UMASK = 0o027
 MIS_CALLER_INSPECT_DEPTH = 20
 MIS_MAX_ARCHIVE_COUNT = 5
@@ -465,7 +465,7 @@ def init_logger(name: str, log_dir: Optional[str] = None,
         log_type (LogType): Used to log type, where DEFAULT, OPERATION, and SERVICE.
     """
     if log_dir is None:
-        log_dir = os.path.join(os.path.expanduser('~'), "tmp", "log")
+        log_dir = os.path.join(os.path.expanduser('~'), "log", "mis")
     if not isinstance(name, str) or not isinstance(log_dir, str):
         raise ValueError("Invalid logger name or log directory")
     if log_dir is not None and not isinstance(log_dir, str):

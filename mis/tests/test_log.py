@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 from mis.logger import init_logger, _filter_invalid_chars
 
-MIS_LOG_PATH = "/tmp/log"
+MIS_LOG_PATH = "/log/mis"
 
 
 class TestLogger(unittest.TestCase):
