@@ -103,6 +103,27 @@ class TestLogger(unittest.TestCase):
             logger.info('This is a info message to check permissions')
             mock_chmod.assert_called_with(rotated_log_files[0], 0o640)
 
+    def test_set_file_permissions_with_permission_error(self):
+        """Test _set_file_permissions when PermissionError occurs"""
+        from mis.logger import RotatingFileWithArchiveHandler
+
+        handler = RotatingFileWithArchiveHandler(
+            os.path.join(self.temp_log_dir, "test.log"),
+            log_dir=self.temp_log_dir
+        )
+
+        test_file = os.path.join(self.temp_log_dir, "test_permission.log")
+        with open(test_file, 'w') as f:
+            f.write("test content")
+
+        # Mock os.chmod to raise PermissionError
+        with patch('os.chmod', side_effect=PermissionError("Operation not permitted")):
+            with self.assertRaises(PermissionError) as context:
+                handler._set_file_permissions(test_file, is_archive=False)
+
+            self.assertIn("Error setting permissions for log file", str(context.exception))
+            self.assertIn("Operation not permitted", str(context.exception))
+
     def test_log_file_owner(self):
         from mis.logger import init_logger
         with patch('os.chown') as mock_chown:
@@ -110,6 +131,26 @@ class TestLogger(unittest.TestCase):
             rotated_log_files = [os.path.join(self.temp_log_dir, f) for f in os.listdir(self.temp_log_dir)]
             logger.info('This is a info message to check owner')
             mock_chown.assert_called_with(rotated_log_files[0], os.getuid(), -1)
+
+    def test_set_file_permissions_owner_error(self):
+        """Test _set_file_permissions when _set_file_owner raises PermissionError"""
+        from mis.logger import RotatingFileWithArchiveHandler
+
+        handler = RotatingFileWithArchiveHandler(
+            os.path.join(self.temp_log_dir, "test.log"),
+            log_dir=self.temp_log_dir
+        )
+
+        test_file = os.path.join(self.temp_log_dir, "test_owner.log")
+        with open(test_file, 'w') as f:
+            f.write("test content")
+
+        # Mock _set_file_owner to raise PermissionError
+        with patch.object(handler, '_set_file_owner', side_effect=PermissionError("Cannot change owner")):
+            with self.assertRaises(PermissionError) as context:
+                handler._set_file_permissions(test_file, is_archive=True)
+
+            self.assertIn("Error setting permissions for log file", str(context.exception))
 
     def test_call_stack_filter(self):
         from mis.logger import init_logger
