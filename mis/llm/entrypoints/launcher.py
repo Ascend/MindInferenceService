@@ -2,7 +2,6 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import asyncio
 import signal
-import ssl
 import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
@@ -166,7 +165,7 @@ async def _run_server(args: GlobalArgs) -> None:
     """Starts the completions server using the vLLM engine.
 
     This function sets up a server socket, configures signal handling, builds the engine client, initializes the FastAPI
-    application, and serves HTTP/HTTPS requests. It also handles graceful shutdown of the server.
+    application, and serves HTTP requests. It also handles graceful shutdown of the server.
 
     Args:
         args: global args containing all configuration resolved by MIS.
@@ -205,12 +204,6 @@ async def _run_server(args: GlobalArgs) -> None:
             sock=sock,
             log_level=args.uvicorn_log_level,
             timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
-            ssl_keyfile=args.ssl_keyfile,
-            ssl_certfile=args.ssl_certfile,
-            ssl_ca_certs=args.ssl_ca_certs,
-            ssl_cert_reqs=args.ssl_cert_reqs,
-            ssl_ciphers=constants.MIS_SSL_CIPHERS,
-            ssl_version=ssl.PROTOCOL_TLSv1_2,
             fd=sock.fileno() if sys.platform.startswith("darwin") else None
         )
 

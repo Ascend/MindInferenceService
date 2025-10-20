@@ -17,14 +17,9 @@ class GlobalArgs(BaseModel):
     mis_config: str = envs.MIS_CONFIG
 
     # server
-    host: Optional[str] = envs.MIS_HOST
+    host: Optional[str] = constants.MIS_HOST
     port: int = envs.MIS_PORT
-    enable_https: bool = envs.MIS_ENABLE_HTTPS
     enable_dos_protection: bool = envs.MIS_ENABLE_DOS_PROTECTION
-    ssl_keyfile: Optional[str] = envs.MIS_SSL_KEYFILE
-    ssl_certfile: Optional[str] = envs.MIS_SSL_CERTFILE
-    ssl_ca_certs: Optional[str] = envs.MIS_SSL_CA_CERT
-    ssl_cert_reqs: int = envs.MIS_SSL_CERT_REQS
     log_level: str = envs.MIS_LOG_LEVEL
     max_log_len: Optional[int] = envs.MIS_MAX_LOG_LEN
     disable_log_requests: bool = constants.MIS_DISABLE_LOG_REQUESTS
