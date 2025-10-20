@@ -364,9 +364,8 @@ function check_owner()
 
   owner=$(stat -c "%U" "$_local_path")
 
-  if [ ! "$owner" = "$(whoami)" ]; then
+  if [ "$owner" != "$(whoami)" ]; then
     ms_log "Error: Current user is not owner at $_local_path"
-    echo "Error: Current user is not owner at $_local_path"
     exit 1
   fi
 }
@@ -425,6 +424,7 @@ function untar_file() {
     if [ ! -d $install_path ]; then
       mkdir -p $install_path
     fi
+    check_owner $install_path
 
     if test x"${install_flag}" = xy; then
       handle_EULA "install"
@@ -445,7 +445,7 @@ function untar_file() {
     fi
     check_owner ${install_path}/${misManufactureName}/${new_version_info}
 
-    tar -xzf "${files}" -C "${install_path}/${misManufactureName}/${new_version_info}"
+    tar -xzf "${files}" -C "${install_path}/${misManufactureName}/${new_version_info}" --no-same-owner
     cp "$SELF_DIR"/uninstall.sh "${install_path}/${misManufactureName}/${new_version_info}"
     if test $? -ne 0; then
       ms_log "Error: Failed to extract files to ${install_path}/${misManufactureName}/${new_version_info}"
@@ -494,6 +494,8 @@ function untar_file() {
       print "ERROR" "Can't find ${last_install_path}/${misManufactureName}, uninstall mis failed."
       exit 1
     fi
+
+    check_owner ${last_install_path}
 
     rm -rf "${last_install_path}/${misManufactureName}"
     if test $? -ne 0; then

@@ -19,6 +19,18 @@ if [ "${IP_N}" = "" ]; then
    IP_N="localhost"
 fi
 
+function check_owner()
+{
+  _local_path=$1
+
+  owner=$(stat -c "%U" "$_local_path")
+
+  if [ "$owner" != "$(whoami)" ]; then
+    echo "Error: Current user is not owner at $_local_path"
+    exit 1
+  fi
+}
+
 function rotate_log() {
     check_path "$log_file"
     mv -f "$log_file" "$info_record_path/$info_record_file_back"
@@ -93,9 +105,11 @@ real_delete() {
     find "$log_file" -type f -exec chmod 640 {} \;
     log "$(cat "${version_info}")"
 
+    check_owner ${CUR_PATH}
     rm -rf "$CUR_PATH"
 
     if [ -d "${del_path}" ] && [ -z "$(ls -A "${del_path}")" ]; then
+      check_owner ${del_path}
       rmdir "${del_path}"
       current_user=$(whoami)
       install_info_path=/etc/Ascend/ascend_mis_install.info
