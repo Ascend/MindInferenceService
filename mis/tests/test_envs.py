@@ -73,36 +73,10 @@ class TestEnvs(unittest.TestCase):
         self.assertEqual(envs._get_cache_path_from_env("TEST_CACHE_PATH_NOT_EXIST", "/default/path"),
                          "/default/path")
 
-    def test_get_file_from_env(self):
-        with tempfile.NamedTemporaryFile(delete=True) as temp_file:
-            os.environ["TEST_FILE_VALID"] = temp_file.name
-            os.environ["TEST_FILE_INVALID"] = ("/invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                               "invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                               "invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                               "invalid/invalid/invalid/path")
-            self.assertEqual(envs._get_file_from_env("TEST_FILE_VALID", "/default/file"), temp_file.name)
-            with self.assertRaises(ValueError):
-                envs._get_file_from_env("TEST_FILE_INVALID", "/default/file")
-            with self.assertRaises(FileNotFoundError):
-                envs._get_file_from_env("TEST_FILE_NOT_EXIST", "/default/file")
-
-    def test_get_ip_address_from_env(self):
-        os.environ["TEST_IP_VALID"] = "192.168.1.1"
-        os.environ["TEST_IP_INVALID"] = "invalid_ip"
-        self.assertEqual(envs._get_ip_address_from_env("TEST_IP_VALID", DEFAULT_IP), "192.168.1.1")
-        with self.assertRaises(ValueError):
-            envs._get_ip_address_from_env("TEST_IP_INVALID", DEFAULT_IP)
-        self.assertEqual(envs._get_ip_address_from_env("TEST_IP_NOT_EXIST", DEFAULT_IP), DEFAULT_IP)
-
     def test_get_optimization_config(self):
         os.environ["MIS_CONFIG"] = "atlas800ia2-1x32gb-bf16-vllm-default"
         self.assertEqual(envs._get_str_from_env("MIS_CONFIG", None, constants.MIS_CONFIGS_LIST),
                          "atlas800ia2-1x32gb-bf16-vllm-default")
-
-    def test_get_ssl_cert_reqs(self):
-        os.environ["MIS_SSL_CERT_REQS"] = "0"
-        self.assertEqual(envs._get_ssl_cert_reqs(), 0)
-        self.assertEqual(envs._get_ssl_cert_reqs(), 0)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,5 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-import ipaddress
-import os
 from pathlib import Path
 from typing import Tuple
 
@@ -31,39 +29,6 @@ class EnvChecker:
             raise ValueError(f"ENV {name} is a symlink")
         if path.exists() and path.is_file():
             raise ValueError(f"ENV {name} exists but is a file")
-
-    @staticmethod
-    def check_file(name: str, file: str) -> None:
-        """Check the validity of a file path.
-        Args:
-            name (str): The name of the environment variable.
-            file (str): The path to the file.
-        Raises:
-            ValueError: If the absolute file path length exceeds the maximum limit.
-            ValueError: If the file path is a symlink.
-            FileNotFoundError: If the file does not exist.
-            ValueError: If the file path is not a file.
-            PermissionError: If the owner of the file path is not the current user.
-            OSError: If an error occurs when checking file path ownership.
-        """
-        path = Path(file)
-        abs_path = path.absolute()
-        if len(str(abs_path)) > MAX_PATH_LEN:
-            raise ValueError(f"ENV {name} absolute path length exceed limit {MAX_PATH_LEN}")
-        if path.is_symlink():
-            raise ValueError(f"ENV {name} is a symlink")
-        if not path.exists():
-            raise FileNotFoundError(f"ENV {name} is not found")
-        if not path.is_file():
-            raise ValueError(f"ENV {name} is not a file")
-        try:
-            current_user_id = os.getuid()
-            path_stat = os.stat(path)
-            path_owner_id = path_stat.st_uid
-            if current_user_id != path_owner_id:
-                raise PermissionError("File path is not owned by the current user.")
-        except OSError as e:
-            raise OSError("Error checking ownership of file path.") from e
 
     @staticmethod
     def check_int(name: str, num: int,
@@ -99,17 +64,3 @@ class EnvChecker:
         """
         if valid_values is not None and value not in valid_values:
             raise ValueError(f"ENV {name} not in {valid_values}")
-
-    @staticmethod
-    def check_ip_address(name: str, address: str) -> None:
-        """Check the validity of an IP address.
-        Args:
-            name (str): The name of the environment variable.
-            address (str): The IP address to check.
-        Raises:
-            ValueError: If the IP address is not valid.
-        """
-        try:
-            ipaddress.ip_address(address)
-        except ValueError as e:
-            raise ValueError(f"ENV {name} is not a valid ip address") from e
