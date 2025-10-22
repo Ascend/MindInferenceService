@@ -106,6 +106,7 @@ real_delete() {
     log "$(cat "${version_info}")"
 
     check_owner ${CUR_PATH}
+    find "$CUR_PATH" -type d -exec chmod 750 {} \;
     rm -rf "$CUR_PATH"
 
     if [ -d "${del_path}" ] && [ -z "$(ls -A "${del_path}")" ]; then

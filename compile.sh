@@ -57,6 +57,7 @@ function package() {
   find ./ -type f -exec chmod 640 {} \;
   # Set all pyz files to 550.
   find ./ -name "*.pyz" -exec chmod 550 {} \;
+  find ./ -name "version.info" -exec chmod 440 {} \;
 
   cd ..
   find ./ -type f -path "*.sh" -exec chmod 500 {} \;
