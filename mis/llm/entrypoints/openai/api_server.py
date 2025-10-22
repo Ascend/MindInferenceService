@@ -97,6 +97,11 @@ async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> Asy
     logger_service.debug(f"Aligning streaming response")
     async for content in generator:
         if "stop_reason" in content:
+            if not content.startswith("data: "):
+                logger_service.warning(f"Content does not start with 'data: ' prefix: {content[:100]}...")
+                yield content
+                continue
+
             try:
                 content_dict = json.loads(content[len("data: "):])
             except json.JSONDecodeError:
