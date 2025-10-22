@@ -1,6 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-
+import math
 from typing import Any, ClassVar, Dict, Optional, Union
 
 from fastapi import HTTPException
@@ -142,6 +142,11 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         min_value = validator.get("min")
         max_value = validator.get("max")
 
+        if isinstance(value, float) and math.isnan(value):
+            logger.error(f"Invalid value for {param_name}: NaN (Not a Number) is not allowed")
+            raise HTTPException(status_code=400,
+                                detail=f"Invalid value for {param_name}: NaN (Not a Number) is not allowed"
+                                )
         if min_value is not None and max_value is not None:
             if min_value > max_value:
                 logger.error(f"Invalid range for {param_name}: min({min_value}) > max({max_value})")
