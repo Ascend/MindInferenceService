@@ -16,6 +16,7 @@ from mis.llm.entrypoints.openai.api_server import (
     show_available_models,
     create_chat_completions,
     init_openai_app_state,
+    _align_streaming_response,
 )
 
 
@@ -247,6 +248,32 @@ class TestApiServer(unittest.TestCase):
         self.assertIsInstance(response, JSONResponse)
         mock_chat.assert_called_once_with(mock_raw_request)
         mock_handler.create_chat_completion.assert_awaited_once()
+
+    async def test_content_without_data_prefix(self):
+        """Test when content does not start with 'data: ' prefix"""
+
+        # Create a mock generator that yields content without 'data: ' prefix
+        async def mock_generator():
+            yield "invalid content without data prefix"
+            yield "another invalid line"
+
+        # Call the function
+        result_generator = _align_streaming_response(mock_generator())
+
+        # Collect all results
+        results = []
+        async for content in result_generator:
+            results.append(content)
+
+        # Assertions
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0], "invalid content without data prefix")
+        self.assertEqual(results[1], "another invalid line")
+
+        # Verify warning was logged
+        self.mock_logger_service.warning.assert_called()
+        warning_calls = self.mock_logger_service.warning.call_args_list
+        self.assertIn("Content does not start with 'data: ' prefix", str(warning_calls[0]))
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
     def test_create_chat_completions_with_streaming_response(self, mock_chat):
