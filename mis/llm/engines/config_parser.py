@@ -208,8 +208,8 @@ class ConfigParser:
             if args_attr is not None:
                 try:
                     ConfigChecker.check_string_input(attr, args_attr)
-                except Exception as e:
-                    raise Exception(f"{attr} in args is not a valid string: {e}") from e
+                except ValueError as e:
+                    raise ValueError(f"{attr} in args is not a valid string: {e}") from e
         logger.info("All arguments are valid.")
 
     def _get_default_config(self) -> Union[str, None]:
