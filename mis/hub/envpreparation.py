@@ -1,14 +1,12 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
-import ssl
-from typing import Optional
 
 import mis.constants as constants
 from mis.args import GlobalArgs
 from mis.llm.engines.config_parser import ConfigParser
 from mis.logger import init_logger, LogType
-from mis.utils.utils import ContainerIPDetector, get_model_path
+from mis.utils.utils import get_model_path
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
 
@@ -30,14 +28,6 @@ def environment_preparation(args: GlobalArgs) -> GlobalArgs:
 
     _source_components_envs()
     logger.info("Loaded component environment variables")
-
-    ip_update = ContainerIPDetector.get_ip(args.host)
-    if ip_update is None:
-        logger.error(f"Unable to automatically detect Host IP. "
-                     f"Please manually set the Host IP via the environment variable MIS_HOST.")
-        raise RuntimeError("Host IP could not be detected automatically.")
-    else:
-        args.host = ip_update
 
     # preferred config
     configparser = ConfigParser(args)

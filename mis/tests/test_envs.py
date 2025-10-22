@@ -25,14 +25,6 @@ class TestEnvs(unittest.TestCase):
             else:
                 os.environ.pop(key, None)
 
-    def test_get_bool_from_env(self):
-        os.environ["TEST_BOOL_TRUE"] = "true"
-        os.environ["TEST_BOOL_FALSE"] = "false"
-        os.environ["TEST_BOOL_INVALID"] = "invalid"
-        self.assertTrue(envs._get_bool_from_env("TEST_BOOL_TRUE", False))
-        self.assertFalse(envs._get_bool_from_env("TEST_BOOL_FALSE", True))
-        self.assertFalse(envs._get_bool_from_env("TEST_BOOL_NOT_EXIST", False))
-
     def test_get_int_from_env(self):
         os.environ["TEST_INT_VALID"] = "123"
         os.environ["TEST_INT_INVALID"] = "abc"

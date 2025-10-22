@@ -8,7 +8,6 @@ from fastapi import Request
 
 from mis.utils.utils import (
     ConfigChecker,
-    ContainerIPDetector,
     get_client_ip
 )
 
@@ -42,35 +41,6 @@ class TestConfigChecker(unittest.TestCase):
         # Test string with special characters
         with self.assertRaises(ValueError):
             ConfigChecker.check_string_input("test", "invalid!string")
-
-
-class TestContainerIP(unittest.TestCase):
-    def test_get_container_ip_from_env_success(self):
-        os.environ['CONTAINER_IP'] = '192.168.1.1'
-        os.environ['POD_IP'] = '192.168.1.2'
-        os.environ['HOST_IP'] = '192.168.1.3'
-
-        with self.assertLogs('mis.utils.utils', level='INFO') as cm:
-            ip = ContainerIPDetector._get_container_ip_from_env()
-            self.assertEqual(ip, '192.168.1.1')
-            expected_message = "IP obtained from environment variable"
-            self.assertTrue(any(expected_message in log_output for log_output in cm.output),
-                            f"Expected message '{expected_message}' not found in log output.")
-
-    def test_get_container_ip_from_env_failure(self):
-        if 'CONTAINER_IP' in os.environ:
-            del os.environ['CONTAINER_IP']
-        if 'POD_IP' in os.environ:
-            del os.environ['POD_IP']
-        if 'HOST_IP' in os.environ:
-            del os.environ['HOST_IP']
-
-        with self.assertLogs('mis.utils.utils', level='INFO') as cm:
-            ip = ContainerIPDetector._get_container_ip_from_env()
-            self.assertIsNone(ip)
-            expected_message = "Failed to obtain IP from environment variables"
-            self.assertTrue(any(expected_message in log_output for log_output in cm.output),
-                            f"Expected message '{expected_message}' not found in log output.")
 
 
 class TestFileOperations(unittest.TestCase):
