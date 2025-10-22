@@ -77,6 +77,37 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
 
 class TestConfigParser(unittest.TestCase):
 
+    @patch("sys.argv", ["-c", "dummy_script.py"])
+    @patch("os.path.realpath", return_value="/real/path/to/script")
+    @patch("os.path.dirname", return_value="/real/path")
+    def test_get_configs_root_normal(self, mock_dirname, mock_realpath):
+        breakpoint()
+        result = ConfigParser._get_configs_root()
+        self.assertEqual(result, "/real/path")
+        mock_realpath.assert_called_once_with("dummy_script.py")
+        mock_dirname.assert_called_once_with("/real/path/to/script")
+
+    @patch("sys.argv", [])
+    def test_get_configs_root_argv_empty(self):
+        with self.assertRaises(Exception) as context:
+            ConfigParser._get_configs_root()
+        self.assertEqual(str(context.exception), "list index out of range")
+
+    @patch("sys.argv", ["-c", "dummy_script.py"])
+    @patch("os.path.realpath", side_effect=OSError("Path error"))
+    def test_get_configs_root_realpath_error(self, mock_realpath):
+        with self.assertRaises(OSError) as context:
+            ConfigParser._get_configs_root()
+        self.assertEqual(str(context.exception), "Failed to get the configs root directory.")
+
+    @patch("sys.argv", ["-c", "dummy_script.py"])
+    @patch("os.path.realpath", return_value="/real/path/to/script")
+    @patch("os.path.dirname", return_value=None)
+    def test_get_configs_root_dirname_none(self, mock_dirname, mock_realpath):
+        with self.assertRaises(Exception) as context:
+            ConfigParser._get_configs_root()
+        self.assertEqual(str(context.exception), "Failed to get the configs root directory.")
+
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)

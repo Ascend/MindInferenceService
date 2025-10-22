@@ -41,10 +41,10 @@ class ConfigParser:
     def _get_configs_root():
         """Get the root path of configs, which may be at the same level as the startup script or one level above it."""
         try:
-            if not sys.argv[0]:
+            if not sys.argv[1]:
                 logger.error("Failed to get the script path.")
                 raise Exception("Failed to get the script path.")
-            script_dir = os.path.dirname(os.path.realpath(sys.argv[0]))
+            script_dir = os.path.dirname(os.path.realpath(sys.argv[1]))
         except OSError as e:
             logger.error(f"Failed to get the configs root directory: {e}")
             raise OSError("Failed to get the configs root directory.") from e
