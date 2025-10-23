@@ -28,7 +28,7 @@ function get_version() {
 get_version
 
 function compile_mis() {
-  echo "build mis"
+  echo "compile mis"
 
   cd "$workdir"
   mkdir -p "$workdir/output/mis"
@@ -37,7 +37,7 @@ function compile_mis() {
   echo "Mind Inference Service: ${VERSION}" >> "$workdir/output/mis/version.info"
 
   # Package pyz packages for MIS
-  python3 build.py
+  python3 compile.py
   cp -r dist/* "$workdir/output/mis/"
 
   cp -r configs "$workdir/output/mis/"
@@ -63,7 +63,7 @@ function package() {
   find ./ -type f -path "*.sh" -exec chmod 500 {} \;
   tar -zcvf "$target_name" -C "$package_dir" .
 
-  rm -rf "$package_dir"
+  [ -n "${package_dir}" ] && rm -rf "${package_dir}"
 }
 
 compile_mis

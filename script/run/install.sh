@@ -1,6 +1,12 @@
 #!/bin/bash
 # Copyright © Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
+set -e
+
+readonly USER_N=$(whoami)
+readonly WHO_PATH=$(which who)
+readonly CUT_PATH=$(which cut)
+
 # 自定义变量
 install_path="${USER_PWD}"
 
@@ -16,11 +22,9 @@ fi
 
 PACKAGE_LOG_NAME=MIS
 LOG_SIZE_THRESHOLD=$((10*1024*1024))
-declare -A paramDict=()               # 参数个数统计
+declare -A param_dict=()               # 参数个数统计
 version_number=""
-mxSDKManufactureName=""
-mxSDKNewName=""
-archName="aarch64"
+arch_name="aarch64"
 
 info_record_path="${HOME}/log/mis"
 info_record_file="deployment.log"
@@ -30,6 +34,7 @@ install_flag=n
 print_version_flag=n
 install_path_flag=n
 uninstall_flag=n
+quiet_flag=n
 
 ms_deployment_log_rotate() {
   if [ -L "${info_record_path}" ]; then
@@ -79,20 +84,6 @@ ms_log()
   echo "$1"
 }
 
-function print() {
-  # 将关键信息打印到屏幕上
-  echo "[${PACKAGE_LOG_NAME}] [$(date +%Y%m%d-%H:%M:%S)] [user: ${user_n}] [${ip_n}] [$1] $2"
-}
-
-readonly user_n=$(whoami)
-readonly who_path=$(which who)
-readonly cut_path=$(which cut)
-ip_n=$(${who_path} -m | ${cut_path} -d '(' -f 2 | ${cut_path} -d ')' -f 1)
-if [ "${ip_n}" = "" ]; then
-  ip_n="localhost"
-fi
-readonly ip_n
-
 ###  公用函数
 function print_usage() {
   ms_log "Please input this command for more help: --help"
@@ -105,8 +96,8 @@ function check_script_args() {
     print_usage
   fi
   # 重复参数检查
-  for key in "${!paramDict[@]}";do
-    if [ "${paramDict[${key}]}" -gt 1 ]; then
+  for key in "${!param_dict[@]}";do
+    if [ "${param_dict[${key}]}" -gt 1 ]; then
       ms_log "ERROR: parameter error! ${key} is repeat."
       exit 1
     fi
@@ -145,7 +136,7 @@ function check_script_args() {
       exit 1
     fi
     if [ -f "${install_info_path}" ]; then
-      ms_log "ERROR: Because the ${install_info_path} exists, '--install-path' can't be config. Please uninstall mis or do not use '--install-path'."
+      ms_log "ERROR: Because the ${install_info_path} exists, '--install-path' can't be config. Please uninstall MIS or do not use '--install-path'."
       exit 1
     fi
   fi
@@ -154,7 +145,7 @@ function check_script_args() {
 check_target_dir()
 {
   if [[ "${install_path}" =~ [^a-zA-Z0-9_./-] ]]; then
-    ms_log "Mis dir contains invalid char, please check path."
+    ms_log "MIS dir contains invalid char, please check path."
     exit 1
   fi
 }
@@ -162,14 +153,13 @@ check_target_dir()
 function check_sha256sum()
 {
   if [ ! -e "/usr/bin/sha256sum" ] && [ ! -e "/usr/bin/shasum" ]; then
-    ms_log "ERROR:Sha256 check Failed."
+    ms_log "ERROR: Sha256 check Failed."
     exit 1
   fi
 }
 
 # 解析脚本自身的参数
 function parse_script_args() {
-  ms_log "INFO: start to run"
   local all_para_len="$*"
   if [[ ${#all_para_len} -gt 1024 ]]; then
     ms_log "The total length of the parameter is too long"
@@ -201,7 +191,7 @@ function parse_script_args() {
     --install)
       check_platform
       install_flag=y
-      ((paramDict["install"]++)) || true
+      ((param_dict["install"]++)) || true
       shift
       ;;
     --install-path=*)
@@ -220,13 +210,18 @@ function parse_script_args() {
       nonexistent_suffix="${install_path#$existing_dir}"
       install_path="${abs_existing_dir}${nonexistent_suffix}"
       install_path_flag=y
-      ((paramDict["install-path"]++)) || true
+      ((param_dict["install-path"]++)) || true
       shift
       ;;
     --uninstall)
       check_platform
       uninstall_flag=y
-      ((paramDict["uninstall"]++)) || true
+      ((param_dict["uninstall"]++)) || true
+      shift
+      ;;
+    --quiet | -q)
+      quiet_flag=y
+      ((param_dict["quiet"]++)) || true
       shift
       ;;
     -*)
@@ -255,7 +250,7 @@ ms_save_uninstall_info()
   user_name=$(whoami)
   host_name=$(hostname)
   append_text="[$(date "+%Y-%m-%d %H:%M:%S")][${user_ip}][${user_name}][${host_name}]:"
-  echo "$append_text${append_text} Uninstall Mis successfully." >> "${path}"
+  echo "$append_text${append_text} Uninstall MIS successfully." >> "${path}"
 }
 
 ms_save_install_info()
@@ -268,7 +263,7 @@ ms_save_install_info()
   user_name=$(whoami)
   host_name=$(hostname)
   append_text="[$(date "+%Y-%m-%d %H:%M:%S")][${user_ip}][${user_name}][${host_name}]:"
-  echo "$append_text${new_version_info:+ $new_version_info} Install Mis successfully." >> "${path}"
+  echo "$append_text${new_version_info:+ $new_version_info} Install MIS successfully." >> "${path}"
 }
 
 ms_record_operator_info()
@@ -279,32 +274,32 @@ ms_record_operator_info()
 
   if test x"${install_flag}" = xy; then
     ms_save_install_info "${record_file_path}"
-    print "INFO" "Install mis successfully."
+    ms_log "INFO: Successfully installed MIS."
   fi
 
   if test x"${uninstall_flag}" = xy; then
     ms_save_uninstall_info "${record_file_path}"
-    print "INFO" "Uninstall mis successfully."
+    ms_log "INFO: Successfully uninstall MIS."
   fi
 
   find "${record_file_path}" -type f -exec chmod 440 {} \;
 }
 
-function handle_EULA() {
+function handle_eula() {
   local action=$1
   if [ "${quiet_flag}" = y ]; then
     ms_log "INFO: using quiet option implies acceptance of the EULA, start to ${action}"
     return
   fi
   if echo "${LANG}" | grep -q "zh_CN.UTF-8"; then
-    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: zh_CN.UTF-8 for Chinese"
+    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: 'zh_CN.UTF-8' for Chinese"
     eula_file=./eula_cn.conf
   else
-    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: en_US.UTF-8 for English"
+    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: '${LANG}' for English"
     eula_file=./eula_en.conf
   fi
   cat "${eula_file}" 1>&2
-  read -n1 -re -p "Do you accept the EULA to ${action} mis ?[Y/N]" answer
+  read -n1 -re -p "Do you accept the EULA to ${action} MIS ?[Y/N]" answer
   case "${answer}" in
     Y|y)
       ms_log "INFO: accept EULA, start to ${action}"
@@ -319,10 +314,10 @@ function handle_EULA() {
 function check_platform()
 {
   plat="$(uname -m)"
-  result="$(echo ${archName} | grep ${plat})"
+  result="$(echo ${arch_name} | grep ${plat})"
   if test x"${result}" = x""; then
-    ms_print_warning "Warning: Platform(${plat}) mismatch for ${archName}, please check it."
-    ms_log "Warning: Platform(${plat}) mismatch for ${archName}, please check it."
+    ms_print_warning "Warning: Platform(${plat}) mismatch for ${arch_name}, please check it."
+    ms_log "Warning: Platform(${plat}) mismatch for ${arch_name}, please check it."
   fi
 }
 
@@ -344,22 +339,31 @@ function untar_file() {
     SELF_DIR="$(cd "$(dirname "$0")"; pwd)"
     files=$(ls "$SELF_DIR"/Ascend-mis*.tar.gz 2>/dev/null)
     if [[ -z "$files" ]]; then
-        print "ERROR" "Can't find Ascend-mis*.tar.gz in $SELF_DIR"
+        ms_log "ERROR: Can't find Ascend-mis*.tar.gz in $SELF_DIR"
         exit 1
     fi
     file_count=$(echo "$files" | wc -l)
     if [[ "$file_count" -gt 1 ]]; then
-        print "ERROR" "There are more than one file match Ascend-mis*.tar.gz in $SELF_DIR"
+        ms_log "ERROR: There are more than one file match Ascend-mis*.tar.gz in $SELF_DIR"
         exit 1
     fi
     tar -xzf "${files}" -O "./version.info"
   elif [ "${install_flag}" = y ]; then
-    print "INFO" "install start"
+    ms_log "INFO: install start"
+
+    if [ -L "${install_info_dir}" ]; then
+      ms_log "Error: ${install_info_dir} cannot be a symlink"
+      exit 1
+    fi
     if [ ! -d "${install_info_dir}" ]; then
       mkdir -p "${install_info_dir}"
       chmod 750 "${install_info_dir}"
     fi
     last_install_path="Not Found"
+    if [ -L "${install_info_path}" ]; then
+      ms_log "Error: ${install_info_path} cannot be a symlink"
+      exit 1
+    fi
     if [ -f "${install_info_path}" ]; then
       while IFS="=" read -r key value; do
         if [ "$key" == "Install_Path" ]; then
@@ -368,29 +372,33 @@ function untar_file() {
         fi
       done < "$install_info_path"
       if [ "$last_install_path" == "Not Found" ]; then
-        print "ERROR" "Can't parse 'Install_Path' from $install_info_path, please remove it and reinstall."
+        ms_log "ERROR: Can't parse 'Install_Path' from $install_info_path, please remove it and reinstall."
         exit 1
       else
         install_path=$last_install_path
       fi
     fi
-    print "INFO" "The installation path is ${install_path}."
+    ms_log "INFO: The installation path is ${install_path}."
 
     SELF_DIR="$(cd "$(dirname "$0")"; pwd)"
     files=$(ls "$SELF_DIR"/Ascend-mis*.tar.gz 2>/dev/null)
     if [[ -z "$files" ]]; then
-        print "ERROR" "Can't find Ascend-mis*.tar.gz in $SELF_DIR"
+        ms_log "ERROR: Can't find Ascend-mis*.tar.gz in $SELF_DIR"
         exit 1
     fi
     file_count=$(echo "$files" | wc -l)
     if [[ "$file_count" -gt 1 ]]; then
-        print "ERROR" "There are more than one file match Ascend-mis*.tar.gz in $SELF_DIR"
+        ms_log "ERROR: There are more than one file match Ascend-mis*.tar.gz in $SELF_DIR"
         exit 1
     fi
-    misManufactureName="mis"
+    mis_name="mis"
     version_number=$(tar -xzf "${files}" -O "./version.info" | cut -d ':' -f2 | tr -d '[:space:]')
     new_version_info=$version_number
-    if [ ! -d $install_path ]; then
+    if [ -L "${install_path}" ]; then
+      ms_log "Error: ${install_path} cannot be a symlink"
+      exit 1
+    fi
+    if [ ! -d "${install_path}" ]; then
       mkdir -p "${install_path}"
       if [ $? -ne 0 ]; then
         ms_log "Error: Create ${install_path} failed"
@@ -400,39 +408,38 @@ function untar_file() {
     check_owner "${install_path}"
 
     if test x"${install_flag}" = xy; then
-      handle_EULA "install"
+      handle_eula "install"
       if \
-        [[ -d "${install_path}/${misManufactureName}/${new_version_info}/configs" ]] && \
-        [[ -f "${install_path}/${misManufactureName}/${new_version_info}/mis.pyz" ]] && \
-        [[ -f "${install_path}/${misManufactureName}/${new_version_info}/version.info" ]]; then
+        [[ -d "${install_path}/${mis_name}/${new_version_info}/configs" ]] && \
+        [[ -f "${install_path}/${mis_name}/${new_version_info}/mis.pyz" ]] && \
+        [[ -f "${install_path}/${mis_name}/${new_version_info}/version.info" ]]; then
 
-        print "WARNING" "There is already installation at $install_path, please check it."
+        ms_log "WARNING: There is already installation at $install_path, please check it."
         exit 1
       fi
     fi
-    mkdir -p ${install_path}/${misManufactureName}/${new_version_info}
+    mkdir -p ${install_path}/${mis_name}/${new_version_info}
 
-    if [ ! -d "${install_path}/${misManufactureName}/${new_version_info}" ]; then
-      print "ERROR" "Create path at ${install_path}/${misManufactureName}/${new_version_info} failed"
+    if [ ! -d "${install_path}/${mis_name}/${new_version_info}" ]; then
+      ms_log "ERROR: Create path at ${install_path}/${mis_name}/${new_version_info} failed"
       exit 1
     fi
-    check_owner ${install_path}/${misManufactureName}/${new_version_info}
+    check_owner ${install_path}/${mis_name}/${new_version_info}
 
-    tar -xzf "${files}" -C "${install_path}/${misManufactureName}/${new_version_info}" --no-same-owner
-    cp "$SELF_DIR"/uninstall.sh "${install_path}/${misManufactureName}/${new_version_info}"
-    chmod 750 "${install_path}/${misManufactureName}"
-    chmod 550 "${install_path}/${misManufactureName}/${new_version_info}"
-    chmod 500 "${install_path}/${misManufactureName}/${new_version_info}/uninstall.sh"
+    tar -xzf "${files}" -C "${install_path}/${mis_name}/${new_version_info}" --no-same-owner
     if test $? -ne 0; then
-      ms_log "Error: Failed to extract files to ${install_path}/${misManufactureName}/${new_version_info}"
-      print "ERROR" "Failed to extract files"
+      ms_log "ERROR: Failed to extract files to ${install_path}/${mis_name}/${new_version_info}"
       exit 1
     fi
+    cp "$SELF_DIR"/uninstall.sh "${install_path}/${mis_name}/${new_version_info}"
+    chmod 750 "${install_path}/${mis_name}"
+    chmod 550 "${install_path}/${mis_name}/${new_version_info}"
+    chmod 500 "${install_path}/${mis_name}/${new_version_info}/uninstall.sh"
 
     if [ ! -f "${install_info_path}" ]; then
       echo "Install_Path=${install_path}" > $install_info_path
       chmod 640 "$install_info_path"
-      print "INFO" "Save install info in ${install_info_path}"
+      ms_log "INFO: Save install info in ${install_info_path}"
     fi
 
     cd - > /dev/null
@@ -446,11 +453,12 @@ function untar_file() {
         fixed_begin_len=${#PACKAGE_LOG_NAME}
     fi
     let fixed_begin_len=$fixed_begin_len+3
-    printf "%-${fixed_begin_len}s" "Mis:"
-    echo -e "Install mis successfully, installed in ${install_path}/${misManufactureName}/${new_version_info}"
-    echo -e "To start the MIS server, execute the command 'python ${install_path}/${misManufactureName}/${new_version_info}/mis.pyz'"
+    printf "%-${fixed_begin_len}s" "MIS:"
+    echo -e "Install MIS successfully, installed in ${install_path}/${mis_name}/${new_version_info}"
+    echo -e "To start the MIS server, execute the command 'python ${install_path}/${mis_name}/${new_version_info}/mis.pyz'"
   elif [ "${uninstall_flag}" = "y" ]; then
-    misManufactureName="mis"
+    ms_log "INFO: Uninstall start"
+    mis_name="mis"
     last_install_path="Not Found"
     if [ -f "${install_info_path}" ]; then
       while IFS="=" read -r key value; do
@@ -460,34 +468,34 @@ function untar_file() {
         fi
       done < "$install_info_path"
       if [ "$last_install_path" == "Not Found" ]; then
-        print "ERROR" "Can't parse 'Install_Path' from $install_info_path, please remove it and manually uninstall mis."
+        ms_log "ERROR: Can't parse 'Install_Path' from $install_info_path, please remove it and manually uninstall MIS."
         exit 1
       fi
     else
-      print "ERROR" "Can't find ${install_info_path} file, uninstall mis failed."
+      ms_log "ERROR: Can't find ${install_info_path} file, uninstall MIS failed."
       exit 1
     fi
-    if [ ! -d "${last_install_path}/${misManufactureName}" ]; then
-      print "ERROR" "Can't find ${last_install_path}/${misManufactureName}, uninstall mis failed."
+    if [ ! -d "${last_install_path}/${mis_name}" ]; then
+      ms_log "ERROR: Can't find ${last_install_path}/${mis_name}, uninstall MIS failed."
       exit 1
     fi
 
     check_owner ${last_install_path}
 
-    find "${last_install_path}/${misManufactureName}" -type d -exec chmod 750 {} \;
-    rm -rf "${last_install_path}/${misManufactureName}"
+    find "${last_install_path}/${mis_name}" -type d -exec chmod 750 {} \;
+    rm -rf "${last_install_path}/${mis_name}"
     if test $? -ne 0; then
-      ms_log "Error: Failed to remove mis at ${last_install_path}/${misManufactureName}"
+      ms_log "Error: Failed to remove MIS at ${last_install_path}/${mis_name}"
       exit 1
     else
-      ms_log "Info: Remove mis success!"
+      ms_log "Info: Remove MIS success!"
     fi
     rm -rf "${install_info_path}"
     if test $? -ne 0; then
-      ms_log "Error: Failed to remove mis install info file at ${install_info_path}"
+      ms_log "Error: Failed to remove MIS install info file at ${install_info_path}"
       exit 1
     else
-      ms_log "Info: Remove mis install info file success!"
+      ms_log "Info: Remove MIS install info file success!"
     fi
     ms_record_operator_info
   else
