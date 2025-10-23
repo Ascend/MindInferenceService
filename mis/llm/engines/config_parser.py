@@ -64,6 +64,9 @@ class ConfigParser:
         """
         logger.debug(f"Updating attributes for engine type: {selected_engine_type}.")
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
+        if not validator_class or not isinstance(validator_class, AbsEngineConfigValidator):
+            logger.error(f"Invalid validator_class type: {type(AbsEngineConfigValidator)}, AbsEngineConfigValidator needed")
+            raise TypeError(f"Invalid validator_class type: {type(AbsEngineConfigValidator)}, AbsEngineConfigValidator needed")
         validator = validator_class(selected_engine_config.get(selected_engine_type))
         logger.debug(f"Attributes for engine type {selected_engine_type} updated successfully.")
         return validator.filter_and_validate_config()

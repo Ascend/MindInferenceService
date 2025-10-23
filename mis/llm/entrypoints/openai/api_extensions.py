@@ -60,8 +60,8 @@ MIS_CHAT_COMPLETION_FIELD_VALIDATORS: Dict[str, Dict[str, Any]] = {
     },
     "seed": {
         "type": int,
-        "min": -9223372036854775808,
-        "max": 9223372036854775807
+        "min": -65535,
+        "max": 65535
     },
     "stream": {
         "type": bool

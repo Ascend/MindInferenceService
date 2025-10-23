@@ -75,6 +75,18 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
             validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
             valid_config = validator.filter_and_validate_config()
 
+    def test_config_is_none(self):
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
+        with self.assertRaises(TypeError) as context:
+            AbsEngineConfigValidator(None, CHECKER_VLLM)
+            self.assertIn('Configuration must be a non-empty dictionary', str(context.exception))
+
+    def test_config_is_not_instance_of_dict(self):
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
+        with self.assertRaises(TypeError) as context:
+            AbsEngineConfigValidator("config_is_dict", CHECKER_VLLM)
+            self.assertIn('Configuration must be a non-empty dictionary', str(context.exception))
+
 
 class TestConfigParser(unittest.TestCase):
 
@@ -127,6 +139,28 @@ class TestConfigParser(unittest.TestCase):
 
         self.assertEqual(updated_args.engine_type, 'vllm')
         self.assertEqual(updated_args.model, 'test_model')
+
+    @patch('os.path.exists', return_value=True)
+    @patch('os.path.getsize', return_value=512)
+    @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
+    @patch('os.stat')
+    @patch('mis.llm.engines.config_parser.AbsEngineConfigValidator.get_validator')
+    def test_config_attr_update_get_validator_is_none(self, mock_get_validator, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                mock_getsize, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_get_validator.return_value = None
+        args = GlobalArgs()
+        args.engine_type = 'invalid_type'
+        args.mis_config = 'test_config'
+        args.model = 'test_model'
+
+        with self.assertRaises(TypeError) as context:
+            parser = ConfigParser(args)
+            parser.engine_config_loading()
+            self.assertIn('No validator found for engine type', str(context.exception))
+
 
     @patch('os.path.exists', return_value=False)
     def test_engine_config_loading_invalid_config_path(self, mock_exists):

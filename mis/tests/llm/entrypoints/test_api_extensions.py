@@ -221,17 +221,17 @@ class TestAPIExtensions(unittest.TestCase):
 
     def test_seed_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
-        kwargs["seed"] = -9223372036854775809
+        kwargs["seed"] = -65536
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for seed: -9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
+        assert str(exc_info.value) == "400: Invalid value for seed: -65536 not in [-65535, 65535]"
 
     def test_seed_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
-        kwargs["seed"] = 9223372036854775809
+        kwargs["seed"] = 65536
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for seed: 9223372036854775809 not in [-9223372036854775808, 9223372036854775807]"
+        assert str(exc_info.value) == "400: Invalid value for seed: 65536 not in [-65535, 65535]"
 
     def test_stream_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)

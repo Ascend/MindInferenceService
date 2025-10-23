@@ -26,6 +26,9 @@ def environment_preparation(args: GlobalArgs) -> GlobalArgs:
             - set environment variables if needed
     """
     logger.info("Starting environment preparation")
+    if not args or not isinstance(args, GlobalArgs):
+        logger.error(f"Invalid args type: {type(args)}, GlobalArgs needed")
+        raise TypeError(f"Invalid args type: {type(args)}, GlobalArgs needed")
 
     _source_components_envs()
     logger.info("Loaded component environment variables")

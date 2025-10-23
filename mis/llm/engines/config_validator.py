@@ -111,6 +111,14 @@ class AbsEngineConfigValidator(ABC):
         :param config: The configuration dictionary.
         :param checkers: The checker dictionary OF selected engine.
         """
+        if not config or not isinstance(config, Dict):
+            logger.error(f"Invalid config type: {type(config)}, Dict needed")
+            raise TypeError(f"Invalid config type: {type(config)}, Dict needed")
+
+        if not checkers or not isinstance(checkers, Dict):
+            logger.error(f"Invalid checkers type: {type(checkers)}, Dict needed")
+            raise TypeError(f"Invalid checkers type: {type(checkers)}, Dict needed")
+
         self.config = config
         self.checkers = checkers
         diff_config = set(self.config.keys()) - set(self.checkers.keys())
@@ -142,6 +150,8 @@ class AbsEngineConfigValidator(ABC):
         """
 
         def decorator(subclass):
+            if engine_type in cls._engine_config_validation:
+                logger.debug(f"Overwriting existing registration for engine type '{engine_type}'.")
             cls._engine_config_validation[engine_type] = subclass
             return subclass
 
