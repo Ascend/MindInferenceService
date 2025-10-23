@@ -30,6 +30,12 @@ cp /usr1/mindxsdk/build/conf/scripts/eula_* $PROCESS_DIR
 
 cd $PROCESS_DIR
 
+# 设置文件权限
+chmod 400 eula_*
+chmod 500 *.sh
+chmod 640 Ascend-mis*.tar.gz
+chmod 440 help.info
+
 bash makeself.sh --chown --nomd5 --sha256 --nocrc \
 	--header makeself-header.sh \
 	--help-header help.info \

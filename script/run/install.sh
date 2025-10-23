@@ -271,38 +271,6 @@ ms_save_install_info()
   echo "$append_text${new_version_info:+ $new_version_info} Install Mis successfully." >> "${path}"
 }
 
-ms_deployment_log_rotate() {
-  if [ -L "${info_record_path}" ]; then
-    echo "The directory path of deployment.log cannot be a symlink." >&2
-    exit 1
-  fi
-  if [[ ! -d "${info_record_path}" ]];then
-    mkdir -p "${info_record_path}"
-    chmod 750 "${info_record_path}"
-  fi
-  record_file_path="${info_record_path}"/"${info_record_file}"
-  if [ -L "${record_file_path}" ]; then
-    echo "The deployment.log cannot be a symlink." >&2
-    exit 1
-  fi
-  if [[ ! -f "${record_file_path}" ]];then
-    touch "${record_file_path}" 2>/dev/null
-  fi
-  record_file_path_bk="${info_record_path}"/"${info_record_file}".bk
-  if [ -L "${record_file_path_bk}" ]; then
-    echo "The deployment.log.bk cannot be a symlink." >&2
-    exit 1
-  fi
-  log_size=$(find "${record_file_path}" -exec ls -l {} \; | awk '{ print $5 }')
-  if [[ "${log_size}" -ge "${LOG_SIZE_THRESHOLD}" ]];then
-    mv -f "${record_file_path}" "${record_file_path_bk}"
-    touch "${record_file_path}" 2>/dev/null
-    chmod 400 "${record_file_path_bk}"
-  fi
-  chmod 600 "${record_file_path}"
-}
-
-
 ms_record_operator_info()
 {
   ms_deployment_log_rotate
@@ -389,6 +357,7 @@ function untar_file() {
     print "INFO" "install start"
     if [ ! -d "${install_info_dir}" ]; then
       mkdir -p "${install_info_dir}"
+      chmod 750 "${install_info_dir}"
     fi
     last_install_path="Not Found"
     if [ -f "${install_info_path}" ]; then
@@ -422,9 +391,13 @@ function untar_file() {
     version_number=$(tar -xzf "${files}" -O "./version.info" | cut -d ':' -f2 | tr -d '[:space:]')
     new_version_info=$version_number
     if [ ! -d $install_path ]; then
-      mkdir -p $install_path
+      mkdir -p "${install_path}"
+      if [ $? -ne 0 ]; then
+        ms_log "Error: Create ${install_path} failed"
+        exit 1
+      fi
     fi
-    check_owner $install_path
+    check_owner "${install_path}"
 
     if test x"${install_flag}" = xy; then
       handle_EULA "install"
@@ -447,6 +420,9 @@ function untar_file() {
 
     tar -xzf "${files}" -C "${install_path}/${misManufactureName}/${new_version_info}" --no-same-owner
     cp "$SELF_DIR"/uninstall.sh "${install_path}/${misManufactureName}/${new_version_info}"
+    chmod 750 "${install_path}/${misManufactureName}"
+    chmod 550 "${install_path}/${misManufactureName}/${new_version_info}"
+    chmod 500 "${install_path}/${misManufactureName}/${new_version_info}/uninstall.sh"
     if test $? -ne 0; then
       ms_log "Error: Failed to extract files to ${install_path}/${misManufactureName}/${new_version_info}"
       print "ERROR" "Failed to extract files"
@@ -455,6 +431,7 @@ function untar_file() {
 
     if [ ! -f "${install_info_path}" ]; then
       echo "Install_Path=${install_path}" > $install_info_path
+      chmod 640 "$install_info_path"
       print "INFO" "Save install info in ${install_info_path}"
     fi
 
@@ -497,6 +474,7 @@ function untar_file() {
 
     check_owner ${last_install_path}
 
+    find "${last_install_path}/${misManufactureName}" -type d -exec chmod 750 {} \;
     rm -rf "${last_install_path}/${misManufactureName}"
     if test $? -ne 0; then
       ms_log "Error: Failed to remove mis at ${last_install_path}/${misManufactureName}"
