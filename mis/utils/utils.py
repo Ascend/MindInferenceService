@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-import math
+import importlib.metadata
 import ipaddress
+import math
 import os
 import re
 import stat
@@ -180,3 +181,10 @@ def get_client_ip(request: Request) -> str:
             client_ip = "unknown"
 
     return client_ip
+
+
+def get_vllm_version():
+    try:
+        return importlib.metadata.version("vllm")
+    except importlib.metadata.PackageNotFoundError:
+        return None
