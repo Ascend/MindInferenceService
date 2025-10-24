@@ -24,6 +24,14 @@ class TestConfigChecker(unittest.TestCase):
         self.assertFalse(ConfigChecker.is_value_in_range("test", 0, 1, 10))
         # Test value above the maximum
         self.assertFalse(ConfigChecker.is_value_in_range("test", 11, 1, 10))
+        # Test min_value is greater than max_value and value is within the valid range
+        self.assertFalse(ConfigChecker.is_value_in_range("test", 5, 10, 1))
+        # Test min_value is greater than max_value and value above the minimum
+        self.assertFalse(ConfigChecker.is_value_in_range("test", 11, 10, 1))
+        # Test min_value is greater than max_value and value below the maximum
+        self.assertFalse(ConfigChecker.is_value_in_range("test", 0, 10, 1))
+        # Test value is NaN
+        self.assertFalse(ConfigChecker.is_value_in_range("test", float('nan'), 1, 10))
 
     def test_is_value_in_enum(self):
         valid_values = [1, 2, 3]

@@ -99,6 +99,13 @@ class TestAPIExtensions(unittest.TestCase):
             MISChatCompletionRequest(**kwargs)
         assert str(exc_info.value) == "400: Unsupported type for frequency_penalty, expected: float"
 
+    def test_frequency_penalty_nan_type(self):
+        kwargs = copy.deepcopy(self.valid_params)
+        kwargs["frequency_penalty"] = float('nan')
+        with pytest.raises(HTTPException) as exc_info:
+            MISChatCompletionRequest(**kwargs)
+        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: NaN (Not a Number) is not allowed"
+
     def test_frequency_penalty_less_than_min(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = -3.0

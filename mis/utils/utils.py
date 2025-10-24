@@ -1,5 +1,6 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import math
 import os
 import re
 from pathlib import Path
@@ -28,7 +29,11 @@ class ConfigChecker:
         """
         if not isinstance(value, (int, float)) or (min_value > max_value):
             logger.warning(f"{name} verification failed!")
+            return False
 
+        if isinstance(value, float) and math.isnan(value):
+            logger.warning(f"Invalid {name} cannot be NaN")
+            return False
         if value < min_value:
             logger.warning(f"{name} must be greater than or equal to {min_value}")
         elif value > max_value:

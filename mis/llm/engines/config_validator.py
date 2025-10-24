@@ -182,7 +182,7 @@ class AbsEngineConfigValidator(ABC):
                 valid_range_str = f"Valid in {checker.get('valid_values')}"
             elif "min" in checker and "max" in checker:
                 is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
-                valid_range_str = f"Valid in range {checker.get('min')} - {checker.get('max')}"
+                valid_range_str = f"Valid in range {checker.get('min')} - {checker.get('max')}, got {value}"
             else:
                 valid_range_str = "Valid values or range not specified"
                 logger.error(f"Checker for {key} must specify either 'valid_values' or both 'min' and 'max'.")
