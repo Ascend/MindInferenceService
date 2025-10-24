@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     UVICORN_LOG_LEVEL: str = "info"
 
 environment_variables: Dict[str, Callable[[], Any]] = {
-    "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", "/opt/mis/.cache"),
+    "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", os.path.join(os.path.expanduser('~'), "mis", ".cache")),
     "MIS_MODEL": lambda: _get_str_from_env("MIS_MODEL", DEFAULT_MIS_MODEL, constants.MIS_MODEL_LIST),
     "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_CONFIG": lambda: _get_str_from_env("MIS_CONFIG", DEFAULT_MIS_CONFIG, constants.MIS_CONFIGS_LIST),

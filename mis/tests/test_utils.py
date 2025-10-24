@@ -96,5 +96,16 @@ class TestGetClientIP(unittest.TestCase):
         ip = get_client_ip(request)
         self.assertEqual(ip, "127.0.0.1")
 
+    def test_get_client_ip_with_invalid_ip(self):
+        """Test getting invalid client IP from request.client.host"""
+        # Create mock request
+        request = MagicMock(spec=Request)
+        request.headers = {}
+        request.client = MagicMock()
+        request.client.host = "300.0.0.1"
+
+        ip = get_client_ip(request)
+        self.assertEqual(ip, "unknown")
+
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 # -*- coding:utf-8 -*-
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import math
+import ipaddress
 import os
 import re
 from pathlib import Path
@@ -157,4 +158,14 @@ def get_client_ip(request: Request) -> str:
     else:
         # Check X-Real-IP header
         client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
+
+    if client_ip == "unknown":
+        logger.warning(f"Could not determine valid client IP from any source, return unknown.")
+    else:
+        try:
+            ipaddress.ip_address(client_ip)
+        except ValueError:
+            logger.warning(f"Get invalid IP address, return unknown.")
+            client_ip = "unknown"
+
     return client_ip

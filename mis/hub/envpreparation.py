@@ -12,10 +12,10 @@ logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 
 def _source_components_envs() -> None:
+    """Set the default environment variable components_env to 1."""
     for components_env in constants.SOURCE_COMPONENTS_ENVS:
-        if components_env not in os.environ:
-            os.environ[components_env] = "1"
-            logger.debug(f"Set environment variable {components_env} to 1")
+        os.environ[components_env] = "1"
+        logger.info(f"Set environment variable {components_env} to 1")
 
 
 def environment_preparation(args: GlobalArgs) -> GlobalArgs:
