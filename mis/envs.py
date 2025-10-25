@@ -11,7 +11,7 @@ DEFAULT_MIS_MODEL = "Qwen3-8B"
 DEFAULT_MIS_CONFIG = "atlas800ia2-1x32gb-bf16-vllm-default"
 
 if TYPE_CHECKING:
-    MIS_CACHE_PATH: str = "/opt/mis/.cache"
+    MIS_CACHE_PATH: str = os.path.join(os.path.expanduser('~'), "mis", ".cache")
     MIS_MODEL: str = DEFAULT_MIS_MODEL
     MIS_ENGINE_TYPE: str = "vllm"
     MIS_CONFIG: str = DEFAULT_MIS_CONFIG

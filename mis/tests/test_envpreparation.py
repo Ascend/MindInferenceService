@@ -33,7 +33,7 @@ class TestEnvPreparation(unittest.TestCase):
     @mock.patch('os.stat')
     def test_environment_preparation(self, mock_stat, mock_getuid, mock_getsize, mock_open, mock_isdir, mock_exists):
         mock_stat_result = mock.MagicMock()
-        mock_stat_result.st_mode = 0o100644
+        mock_stat_result.st_mode = 0o100600
         mock_stat_result.st_uid = 1000
         mock_stat.return_value = mock_stat_result
 
@@ -61,7 +61,7 @@ class TestEnvPreparation(unittest.TestCase):
     @mock.patch('os.stat')
     def test_environment_preparation_without_none(self, mock_stat, mock_getuid, mock_getsize, mock_open, mock_isdir, mock_exists):
         mock_stat_result = mock.MagicMock()
-        mock_stat_result.st_mode = 0o100644
+        mock_stat_result.st_mode = 0o100600
         mock_stat_result.st_uid = 1000
         mock_stat.return_value = mock_stat_result
 
@@ -84,7 +84,7 @@ class TestEnvPreparation(unittest.TestCase):
     def test_environment_preparation_not_instance_of_global_args(self, mock_stat, mock_getuid, mock_getsize, mock_open, mock_isdir,
                                                   mock_exists):
         mock_stat_result = mock.MagicMock()
-        mock_stat_result.st_mode = 0o100644
+        mock_stat_result.st_mode = 0o100600
         mock_stat_result.st_uid = 1000
         mock_stat.return_value = mock_stat_result
 

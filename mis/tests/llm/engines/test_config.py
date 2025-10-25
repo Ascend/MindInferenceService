@@ -126,7 +126,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_valid_config(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                 mock_getsize, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -168,7 +168,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'invalid_engine'
         args.mis_config = 'test_config'
@@ -189,7 +189,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = None
         args.mis_config = 'test_config'
@@ -210,7 +210,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -231,7 +231,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -252,7 +252,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_valid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -272,7 +272,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600)
         config_file_path = 'invalid_config.yaml'
         args = GlobalArgs()
         args.engine_type = None
@@ -309,7 +309,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=False)
     def test_config_yaml_file_loading_symbolic_link(self, mock_isfile, mock_stat, mock_isfile2, mock_getuid,
                                                     mock_islink, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o644)
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600)
         config_file_path = 'atlas800ia2-1x32gb-bf16-vllm-latency'
         args = GlobalArgs()
         args.engine_type = "vllm"
