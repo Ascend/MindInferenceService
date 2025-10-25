@@ -24,8 +24,6 @@ cp $workdir/output/uninstall.sh $PROCESS_DIR
 cp $workdir/output/help.info $PROCESS_DIR
 cp $workdir/output/install.sh $PROCESS_DIR
 
-cp /usr1/opensource/makeself/makeself.sh $PROCESS_DIR
-cp /usr1/opensource/makeself/makeself-header.sh $PROCESS_DIR
 cp /usr1/mindxsdk/build/conf/scripts/eula_* $PROCESS_DIR
 
 cd $PROCESS_DIR
@@ -36,8 +34,8 @@ chmod 500 *.sh
 chmod 640 Ascend-mis*.tar.gz
 chmod 440 help.info
 
-bash makeself.sh --chown --nomd5 --sha256 --nocrc \
-	--header makeself-header.sh \
+bash /usr1/opensource/makeself/makeself.sh --chown --nomd5 --sha256 --nocrc \
+	--header /usr1/opensource/makeself/makeself-header.sh \
 	--help-header help.info \
 	--packaging-date "" \
 	--tar-extra '--owner=root --group=root' \

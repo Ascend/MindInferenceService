@@ -61,7 +61,7 @@ function log() {
         echo "[$(date +%Y%m%d-%H:%M:%S)] [$USER_N] [$IP_N]: $1" >&2
     fi
     if [ -f "$log_file" ]; then
-        log_check "$log_file"
+        log_check
         if ! echo "[$(date +%Y%m%d-%H:%M:%S)] [$USER_N] [$IP_N]: $1" >> "$log_file"; then
           echo "Can not write log, exiting!"
           exit 1
@@ -107,7 +107,7 @@ real_delete() {
 
     check_owner ${CUR_PATH}
     find "$CUR_PATH" -type d -exec chmod 750 {} \;
-    rm -rf "$CUR_PATH"
+    [ -n "${CUR_PATH}" ] && rm -rf "${CUR_PATH}"
 
     if [ -d "${del_path}" ] && [ -z "$(ls -A "${del_path}")" ]; then
       check_owner ${del_path}

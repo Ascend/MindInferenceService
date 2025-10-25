@@ -1,7 +1,7 @@
   --check                           Check integrity
-  --version                         Query mis version
-  --install                         Extract mis to /home/HwHiAiUser directory
-  --install-path=<path>             Install mis packages directly to a target directory (absolute or relative).
+  --version                         Query MIS version
+  --install                         Extract MIS to the specified installation directory, which defaults to the current directory.
+  --install-path=<path>             Install MIS packages directly to a target directory (absolute or relative).
                                     Need to specify the --install parameter.
-                                    If MIS has already been installed, this parameter can't be specified when installing another version of mis.
-  --uninstall                       uninstall mis package in /home/HwHiAiUser directory
+                                    If MIS has already been installed, this parameter can't be specified when installing another version of MIS.
+  --uninstall                       Uninstall MIS package from the installation directory
