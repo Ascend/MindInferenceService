@@ -88,6 +88,9 @@ def get_soc_name() -> Union[str, None]:
     try:
         import acl
         soc_info = acl.get_soc_name()
+    except ImportError as e:
+        logger.error(f"Unable to import ACL: {e}, please check if ACL is imported correctly.")
+        raise ImportError("Unable to import ACL, please check if ACL is imported correctly.") from e
     except Exception as e:
         logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
         raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
