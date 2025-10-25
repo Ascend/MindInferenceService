@@ -18,7 +18,7 @@ def build_zipapp():
         shutil.rmtree(build_dir)
     os.makedirs(build_dir)
 
-    shutil.copytree(MIS_NAME, os.path.join(build_dir, MIS_NAME))
+    shutil.copytree(MIS_NAME, os.path.join(build_dir, MIS_NAME), ignore=shutil.ignore_patterns("tests"))
 
     with open(os.path.join(build_dir, "__main__.py"), "w", encoding="utf-8") as f:
         f.write('''

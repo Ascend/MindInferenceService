@@ -15,7 +15,7 @@ install_info_path=/etc/Ascend/ascend_mis_install.info
 install_info_dir=/etc/Ascend
 
 if [ "$current_user" != "root" ]; then
-    home_dir=$(eval echo ~$current_user)
+    home_dir=$(getent passwd $current_user | cut -d: -f6)
     install_info_path=$home_dir/Ascend/ascend_mis_install.info
     install_info_dir=$home_dir/Ascend
 fi
