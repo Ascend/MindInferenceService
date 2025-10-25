@@ -115,7 +115,7 @@ real_delete() {
       current_user=$(whoami)
       install_info_path=/etc/Ascend/ascend_mis_install.info
       if [ "$current_user" != "root" ]; then
-          home_dir=$(eval echo ~$current_user)
+          home_dir=$(getent passwd $current_user | cut -d: -f6)
           install_info_path=$home_dir/Ascend/ascend_mis_install.info
       fi
       if [ -f "${install_info_path}" ]; then
