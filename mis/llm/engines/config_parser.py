@@ -2,6 +2,7 @@
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
+import stat
 import sys
 from typing import Dict, Optional, Union
 
@@ -64,6 +65,16 @@ class ConfigParser:
         """
         logger.debug(f"Updating attributes for engine type: {selected_engine_type}.")
         validator_class = AbsEngineConfigValidator.get_validator(selected_engine_type)
+        if validator_class is None:
+            logger.error(
+                f"Invalid validator_class type: {type(validator_class)}, subclass of AbsEngineConfigValidator needed")
+            raise TypeError(
+                f"Invalid validator_class type: {type(validator_class)}, subclass of AbsEngineConfigValidator needed")
+        if not issubclass(validator_class, AbsEngineConfigValidator):
+            logger.error(
+                f"Invalid validator_class type: {validator_class.__name__}, subclass of AbsEngineConfigValidator needed")
+            raise TypeError(
+                f"Invalid validator_class type: {validator_class.__name__}, subclass of AbsEngineConfigValidator needed")
         validator = validator_class(selected_engine_config.get(selected_engine_type))
         logger.debug(f"Attributes for engine type {selected_engine_type} updated successfully.")
         return validator.filter_and_validate_config()
@@ -117,6 +128,14 @@ class ConfigParser:
                 logger.error(f"The size of the configuration {self.mis_config} exceeds 1MB.")
                 raise Exception("The size of the configuration file exceeds 1MB.")
 
+            file_mode = stat.S_IMODE(path_stat.st_mode)
+            desired_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP  # 640
+            if file_mode > desired_mode:
+                logger.error(
+                    f"The permissions of configuration {self.mis_config} are too permissive: {oct(file_mode)}. "
+                    f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
+                raise PermissionError("The configuration file permissions are too permissive. Maximum allowed is 640.")
+
             with open(config_file_path, "r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
                 logger.info(f"Configuration {self.mis_config} loaded successfully.")
@@ -158,6 +177,15 @@ class ConfigParser:
         if self.mis_config is None:
             logger.warning("No valid configuration found. Using default parameters.")
             return None
+
+        path_stat = os.stat(self.model_folder_path)
+        dir_mode = stat.S_IMODE(path_stat.st_mode)
+        desired_mode = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
+        if dir_mode > desired_mode:
+            logger.error(
+                f"The permissions of the configuration path {self.model_folder_path} are too permissive: {oct(dir_mode)}. "
+                f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
+            raise PermissionError("The configuration path permissions are too permissive. Maximum allowed is 750.")
 
         config_file_path = os.path.join(self.model_folder_path, self.mis_config + ".yaml")
         engine_optimization_config = self._config_yaml_file_loading(config_file_path)

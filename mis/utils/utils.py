@@ -5,6 +5,7 @@ import math
 import ipaddress
 import os
 import re
+import stat
 from pathlib import Path
 from typing import Union, Tuple
 
@@ -137,9 +138,18 @@ def get_model_path(raw_model: str) -> str:
         path_owner_id = path_stat.st_uid
         if current_user_id != path_owner_id:
             raise PermissionError("File path is not owned by the current user.")
+
+        dir_mode = stat.S_IMODE(path_stat.st_mode)
+        desired_mode = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
+        if dir_mode > desired_mode:
+            logger.error(
+                f"The permissions of Local model path {abs_model_path} are too permissive: {oct(dir_mode)}. "
+                f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
+            raise PermissionError("The Local model path permissions are too permissive. Maximum allowed is 750.")
     except OSError as e:
         raise OSError("Error checking ownership of file path.") from e
-
+    except Exception as e:
+        raise Exception("Unexpected error while get model path.") from e
     logger.info("Model path is valid and readable.")
     return str(abs_model_path)
 

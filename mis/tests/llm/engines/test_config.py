@@ -75,6 +75,16 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
             validator = AbsEngineConfigValidator(invalid_config, CHECKER_VLLM)
             valid_config = validator.filter_and_validate_config()
 
+    def test_config_is_none(self):
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
+        with self.assertRaises(TypeError) as context:
+            AbsEngineConfigValidator(None, CHECKER_VLLM)
+
+    def test_config_is_not_instance_of_dict(self):
+        from mis.llm.engines.config_validator import AbsEngineConfigValidator, CHECKER_VLLM
+        with self.assertRaises(TypeError) as context:
+            AbsEngineConfigValidator("config_is_dict", CHECKER_VLLM)
+
 
 class TestConfigParser(unittest.TestCase):
 
@@ -116,7 +126,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_valid_config(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                 mock_getsize, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -127,6 +137,14 @@ class TestConfigParser(unittest.TestCase):
 
         self.assertEqual(updated_args.engine_type, 'vllm')
         self.assertEqual(updated_args.model, 'test_model')
+
+    @patch('mis.llm.engines.config_validator.AbsEngineConfigValidator.get_validator')
+    def test_config_attr_update_get_validator_is_none(self, mock_get_validator):
+        mock_get_validator.return_value = None
+
+        with self.assertRaises(TypeError) as context:
+            ConfigParser._config_attr_update('invalid_type', {'invalid_type': {}})
+
 
     @patch('os.path.exists', return_value=False)
     def test_engine_config_loading_invalid_config_path(self, mock_exists):
@@ -150,7 +168,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'invalid_engine'
         args.mis_config = 'test_config'
@@ -171,7 +189,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                        mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = None
         args.mis_config = 'test_config'
@@ -192,7 +210,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -213,7 +231,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -234,7 +252,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_engine_config_loading_valid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000)
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -254,7 +272,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.stat')
     def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
                                                  mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000)
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600)
         config_file_path = 'invalid_config.yaml'
         args = GlobalArgs()
         args.engine_type = None
@@ -265,6 +283,25 @@ class TestConfigParser(unittest.TestCase):
             parser._config_yaml_file_loading(config_file_path)
 
     @patch('os.path.exists', return_value=True)
+    @patch('builtins.open', new_callable=mock_open, read_data='key: value: invalid')
+    @patch('os.path.getsize', return_value=512)
+    @patch('os.getuid', return_value=1000)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=False)
+    @patch('os.stat')
+    def test_config_yaml_file_loading_yaml_with_permission_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
+                                                 mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o777)
+        config_file_path = 'invalid_config.yaml'
+        args = GlobalArgs()
+        args.engine_type = "vllm"
+        args.model = 'test_model'
+        args.mis_config = 'atlas800ia2-1x32gb-bf16-vllm-latency'
+        parser = ConfigParser(args)
+        with self.assertRaises(PermissionError):
+            parser._config_yaml_file_loading(config_file_path)
+
+    @patch('os.path.exists', return_value=True)
     @patch('os.path.islink', return_value=True)
     @patch('os.getuid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
@@ -272,7 +309,7 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.isfile', return_value=False)
     def test_config_yaml_file_loading_symbolic_link(self, mock_isfile, mock_stat, mock_isfile2, mock_getuid,
                                                     mock_islink, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000)
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600)
         config_file_path = 'atlas800ia2-1x32gb-bf16-vllm-latency'
         args = GlobalArgs()
         args.engine_type = "vllm"
