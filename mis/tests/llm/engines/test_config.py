@@ -120,12 +120,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('os.path.exists', return_value=True)
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_valid_config(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                mock_getsize, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_valid_config(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile,
+                                                mock_getgid, mock_getuid, mock_getsize, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -144,7 +146,6 @@ class TestConfigParser(unittest.TestCase):
         with self.assertRaises(TypeError) as context:
             ConfigParser._config_attr_update('invalid_type', {'invalid_type': {}})
 
-
     @patch('os.path.exists', return_value=False)
     def test_engine_config_loading_invalid_config_path(self, mock_exists):
         args = GlobalArgs()
@@ -162,12 +163,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: invalid_engine\nmodel: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                       mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_invalid_engine_type(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile,
+                                                       mock_getgid, mock_getuid, mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = 'invalid_engine'
         args.mis_config = 'test_config'
@@ -183,12 +186,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='model: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_missing_engine_type(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                       mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_missing_engine_type(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile,
+                                                       mock_getgid, mock_getuid, mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = None
         args.mis_config = 'test_config'
@@ -204,12 +209,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_missing_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                 mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_missing_model(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile, mock_getgid,
+                                                 mock_getuid, mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -225,12 +232,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\nmodel: invalid_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_invalid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                 mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_invalid_model(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile, mock_getgid,
+                                                 mock_getuid, mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -246,12 +255,14 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='engine_type: vllm\nmodel: test_model\n')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_engine_config_loading_valid_model(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                               mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600)
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_engine_config_loading_valid_model(self, mock_getgrgid, mock_stat, mock_isdir, mock_isfile, mock_getgid,
+                                               mock_getuid, mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_mode=0o600, st_gid=1000)
         args = GlobalArgs()
         args.engine_type = 'vllm'
         args.mis_config = 'test_config'
@@ -266,13 +277,16 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='key: value: invalid')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_config_yaml_file_loading_yaml_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                 mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600)
-        config_file_path = 'invalid_config.yaml'
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_config_yaml_file_loading_yaml_error(self, mock_getgrgid, mock_stat, mock_isdir,
+                                                 mock_isfile, mock_getgid, mock_getuid, mock_getsize,
+                                                 mock_file, mock_exists):
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o600, st_gid=1000)
+        config_file_path = '/config_tmp'
         args = GlobalArgs()
         args.engine_type = None
         args.model = 'test_model'
@@ -285,13 +299,16 @@ class TestConfigParser(unittest.TestCase):
     @patch('builtins.open', new_callable=mock_open, read_data='key: value: invalid')
     @patch('os.path.getsize', return_value=512)
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.path.isfile', return_value=True)
-    @patch('os.path.isdir', return_value=False)
+    @patch('os.path.isdir', return_value=True)
     @patch('os.stat')
-    def test_config_yaml_file_loading_yaml_with_permission_error(self, mock_stat, mock_isdir, mock_isfile, mock_getuid,
-                                                 mock_getsize, mock_file, mock_exists):
-        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o777)
-        config_file_path = 'invalid_config.yaml'
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_config_yaml_file_loading_yaml_with_permission_error(self, mock_getgrgid, mock_stat,
+                                                                 mock_isdir, mock_isfile, mock_getgid, mock_getuid,
+                                                                 mock_getsize, mock_file, mock_exists):
+        mock_stat.return_value = Mock(st_uid=1000, st_mode=0o777, st_gid=1000)
+        config_file_path = '/config_tmp'
         args = GlobalArgs()
         args.engine_type = "vllm"
         args.model = 'test_model'
@@ -316,9 +333,10 @@ class TestConfigParser(unittest.TestCase):
         args.mis_config = 'atlas800ia2-1x32gb-bf16-vllm-latency'
         parser = ConfigParser(args)
 
-        with self.assertRaises(Exception) as context:
+        with self.assertRaises(OSError) as context:
             parser._config_yaml_file_loading(config_file_path)
-        self.assertEqual(str(context.exception), "The configuration file is a symbolic link.")
+        self.assertEqual(str(context.exception),
+                         "Configuration atlas800ia2-1x32gb-bf16-vllm-latency is link, it's not supported.")
 
 
 if __name__ == '__main__':

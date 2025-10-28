@@ -211,8 +211,8 @@ def _build_app(args: GlobalArgs) -> FastAPI:
         _add_middlewares(args, app)
         logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
     else:
-        logger.warning("Middleware is disabled by MIS_ENABLE_DOS_PROTECTION=False")
-
+        logger.warning("The middleware is disabled. "
+                       "For security, please correctly set MIS_ENABLE_DOS_PROTECTION.")
     _add_exception_handlers(app)
     _add_restrict_host_middleware(app)
 
