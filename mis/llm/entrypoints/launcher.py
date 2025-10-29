@@ -24,6 +24,7 @@ from mis.args import ARGS, GlobalArgs
 from mis.hub.envpreparation import environment_preparation
 from mis.llm.engine_factory import AutoEngine
 from mis.llm.entrypoints.middleware import (RateLimitConfig, RequestSizeLimitMiddleware,
+                                            RequestHeaderSizeLimitMiddleware,
                                             ConcurrencyLimitMiddleware, RateLimitMiddleware,
                                             RequestTimeoutMiddleware)
 from mis.logger import init_logger, LogType
@@ -86,8 +87,11 @@ def _build_app(args: GlobalArgs) -> FastAPI:
     app = FastAPI(openapi_url=None,
                   docs_url=None,
                   redoc_url=None,
-                  lifespan=lifespan)
+                  lifespan=lifespan,
+                  redirect_slashes=False)
     if args.enable_dos_protection:
+        app.add_middleware(RequestHeaderSizeLimitMiddleware, max_header_size=constants.MAX_REQUEST_HEADER_SIZE)
+
         # Add request size limiting middleware using configured limit
         app.add_middleware(RequestSizeLimitMiddleware, max_body_size=constants.MAX_REQUEST_BODY_SIZE)
 

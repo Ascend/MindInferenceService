@@ -2,7 +2,6 @@
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import asyncio
-import importlib.metadata
 import json
 from http import HTTPStatus
 from typing import AsyncGenerator
@@ -31,7 +30,7 @@ from mis.llm.entrypoints.openai.api_extensions import (
     MISOpenAIServingChat
 )
 from mis.logger import init_logger, LogType
-from mis.utils.utils import get_client_ip
+from mis.utils.utils import get_client_ip, get_vllm_version
 
 logger = init_logger(__name__, log_type=LogType.OPERATION)
 logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
@@ -43,13 +42,6 @@ router = APIRouter()
 MIS_MODEL_REMOVE_FIELDS = [
     "root", "parent", "permission"
 ]
-
-
-def get_vllm_version():
-    try:
-        return importlib.metadata.version("vllm")
-    except importlib.metadata.PackageNotFoundError:
-        return None
 
 
 @router.get("/openai/v1/models")

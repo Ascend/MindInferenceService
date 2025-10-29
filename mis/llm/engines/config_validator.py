@@ -49,11 +49,6 @@ CHECKER_VLLM = {
         "min": 1,
         "max": 64000
     },
-    "max_seq_len_to_capture": {
-        "type": "int",
-        "min": 1,
-        "max": 64000
-    },
     "gpu_memory_utilization": {
         "type": "float",
         "min": 0.0,

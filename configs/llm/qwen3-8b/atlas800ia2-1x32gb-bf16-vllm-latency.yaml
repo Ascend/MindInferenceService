@@ -5,7 +5,6 @@ vllm:
   max_num_seqs: 256
   max_model_len: 16384
   max_num_batched_tokens: 16384
-  max_seq_len_to_capture: 8192
   gpu_memory_utilization: 0.95
   block_size: 128
   swap_space: 4

@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import asyncio
 import unittest
 from unittest.mock import Mock, AsyncMock, patch
-import asyncio
 
+import json
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.testclient import TestClient
+from starlette.status import HTTP_431_REQUEST_HEADER_FIELDS_TOO_LARGE, HTTP_200_OK
 
 from mis.llm.entrypoints.middleware import (
     RequestTimeoutMiddleware,
+    RequestHeaderSizeLimitMiddleware,
     RequestSizeLimitMiddleware,
     ConcurrencyLimitMiddleware,
     RateLimitMiddleware,
@@ -379,6 +382,104 @@ class TestRequestTimeoutIntegration(unittest.TestCase):
         # Send another fast request to confirm the service is working
         fast_response2 = self.client.get("/fast")
         self.assertEqual(fast_response2.status_code, 200)
+
+
+class TestRequestHeaderSizeLimitMiddleware(unittest.TestCase):
+    """Test the request header size limit middleware"""
+    def setUp(self):
+        """Initialize the test environment"""
+        self.app = FastAPI()
+        self.test_client = TestClient(self.app)
+
+        # Add middleware, set the maximum request header size to 1024 bytes
+        self.app.add_middleware(RequestHeaderSizeLimitMiddleware, max_header_size=1024)
+
+        @self.app.get("/test")
+        async def test_endpoint():
+            return {"message": "success"}
+
+    def test_request_with_small_headers(self):
+        """Test request headers within the limit"""
+        response = self.test_client.get("/test")
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        self.assertEqual(response.json(), {"message": "success"})
+
+    def test_request_with_large_headers(self):
+        """Test request headers exceeding the limit"""
+        # Construct a request with a large number of headers
+        headers = {
+            "X-Test-Header-1": "x" * 500,
+            "X-Test-Header-2": "x" * 500,
+            "X-Test-Header-3": "x" * 100,
+        }
+
+        # Total header size exceeds 1024 bytes
+        response = self.test_client.get("/test", headers=headers)
+        self.assertEqual(response.status_code, HTTP_431_REQUEST_HEADER_FIELDS_TOO_LARGE)
+        self.assertIn("Request headers too large", response.json()["detail"])
+
+    def test_request_with_exact_limit_headers(self):
+        """Test request headers exactly at the limit"""
+        # Set the maximum request header size to 1024 bytes.
+        max_header_size = 1024
+        #   #example: Headers({'host': 'testserver', 'accept': '*/*', 'accept-encoding': 'gzip, deflate',
+        #   #'connection': 'keep-alive', 'user-agent': 'testclient', 'x-test-header': 'xx...x'})
+        header_reserved_size = (len('host') + len('testserver') + len('accept') + len('*/*') +
+                                len('accept-encoding') + len('gzip, deflate') + len('connection') +
+                                len('keep-alive') + len('user-agent') + len('testclient') + len(': ') * 6)
+        header_name = "X-Test-Header"
+        header_value_length = max_header_size - len(header_name.encode('utf-8')) - header_reserved_size
+        header_value = "x" * header_value_length
+
+        headers = {
+            header_name: header_value
+        }
+
+        response = self.test_client.get("/test", headers=headers)
+        self.assertEqual(response.status_code, HTTP_200_OK)
+        self.assertEqual(response.json(), {"message": "success"})
+
+    def test_request_with_invalid_header_encoding(self):
+        """Test the case where request header parsing fails"""
+        # Simulate a request object
+        mock_request = Mock(spec=Request)
+        mock_request.headers.items.side_effect = Exception("Invalid header encoding")  # Simulate parsing failure
+
+        # Simulate call_next (normal return)
+        mock_call_next = AsyncMock(return_value=JSONResponse(content={"message": "success"}, status_code=200))
+
+        # Simulate logger
+        with patch("mis.llm.entrypoints.middleware.logger") as mock_logger:
+            # Simulate get_client_ip to avoid accessing request.headers
+            with patch("mis.llm.entrypoints.middleware.get_client_ip", return_value="127.0.0.1"):
+                # Instantiate middleware
+                middleware = RequestHeaderSizeLimitMiddleware(FastAPI(), max_header_size=1024)
+
+                # Call dispatch method
+                response = asyncio.run(middleware.dispatch(mock_request, mock_call_next))
+
+                # Verify response
+                self.assertEqual(response.status_code, 400)
+                response_content = response.body.decode("utf-8")
+                response_dict = json.loads(response_content)
+                self.assertIn("Error parsing request headers", response_dict["detail"])
+
+                # Verify if the log is recorded
+                mock_logger.error.assert_called()
+
+    def test_middleware_initialization(self):
+        """Test middleware initialization"""
+        app = FastAPI()
+        middleware = RequestHeaderSizeLimitMiddleware(app, max_header_size=2048)
+        self.assertEqual(middleware.max_header_size, 2048)
+
+    def test_invalid_app_or_max_header_size(self):
+        """Test exceptions when invalid parameters are passed"""
+        with self.assertRaises(TypeError):
+            RequestHeaderSizeLimitMiddleware(None, max_header_size=1024)
+
+        with self.assertRaises(TypeError):
+            RequestHeaderSizeLimitMiddleware(FastAPI(), max_header_size="invalid")
 
 
 if __name__ == '__main__':

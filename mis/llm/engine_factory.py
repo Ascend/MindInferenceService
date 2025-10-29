@@ -3,9 +3,12 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 from typing import Type
 
+from packaging import version
+
 from mis import constants
 from mis.args import GlobalArgs
 from mis.logger import init_logger, LogType
+from mis.utils.utils import get_vllm_version
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
 
@@ -66,11 +69,22 @@ class VLLMEngine:
             logger.error(f"Failed to import required modules from vllm: {e}")
             raise ImportError(f"Failed to import required modules from vllm: {e}") from e
         try:
-            engine_args = AsyncEngineArgs(model=args.model,
-                                          served_model_name=args.served_model_name,
-                                          disable_log_stats=args.disable_log_stats,
-                                          disable_log_requests=args.disable_log_requests,
-                                          **args.engine_optimization_config)
+            vllm_version = get_vllm_version()
+            if vllm_version is None:
+                logger.error("vLLM version is not found, please check vLLM installation.")
+                raise Exception("vLLM version is not found, please check vLLM installation.")
+            if version.parse(vllm_version) >= version.parse("0.10.1"):
+                engine_args = AsyncEngineArgs(model=args.model,
+                                              served_model_name=args.served_model_name,
+                                              disable_log_stats=args.disable_log_stats,
+                                              enable_log_requests=not args.disable_log_requests,
+                                              **args.engine_optimization_config)
+            else:
+                engine_args = AsyncEngineArgs(model=args.model,
+                                              served_model_name=args.served_model_name,
+                                              disable_log_stats=args.disable_log_stats,
+                                              disable_log_requests=args.disable_log_requests,
+                                              **args.engine_optimization_config)
             logger.info(f"AsyncLLMEngine args initialized successfully.")
             return AsyncLLMEngine.from_engine_args(engine_args)
         except Exception as e:

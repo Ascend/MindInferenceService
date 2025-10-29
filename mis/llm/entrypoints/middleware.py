@@ -6,12 +6,15 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, Union
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.exceptions import ExceptionMiddleware
+from starlette.types import ASGIApp
+from starlette.requests import Request
+
 
 from mis import constants
 from mis.logger import init_logger, LogType
@@ -29,6 +32,63 @@ class RateLimitConfig:
     """Rate limiting configuration"""
     requests_per_minute: int = constants.RATE_LIMIT_PER_MINUTE
     cleanup_interval: int = 600  # Cleanup interval in seconds
+
+
+class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware for limiting request header size"""
+    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
+                 max_header_size: int = constants.MAX_REQUEST_HEADER_SIZE) -> None:
+        """ Initialize middleware with maximum header size limit
+        Args:
+            app (FastAPI, ExceptionMiddleware): The FastAPI application instance.
+            max_header_size (int): Maximum allowed size for request headers in bytes
+        """
+        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+            logger_service.error("FastAPI app instance is required for RequestHeaderSizeLimitMiddleware")
+            raise TypeError("FastAPI app instance is required for RequestHeaderSizeLimitMiddleware")
+        if not isinstance(max_header_size, int):
+            logger_service.error("Integer value is required for max_header_size in RequestHeaderSizeLimitMiddleware")
+            raise TypeError("Integer value is required for max_header_size in RequestHeaderSizeLimitMiddleware")
+        super().__init__(app)
+        self.max_header_size = max_header_size
+
+    async def dispatch(self, request: Request, call_next: callable) -> JSONResponse:
+        """ Check request header size and reject if it exceeds the limit
+        Args:
+            request (Request): The incoming request
+            call_next (Callable): The next middleware or application callable
+        """
+        client_ip = get_client_ip(request)
+        url = request.url.path
+        if not callable(call_next):
+            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                           f"call_next must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error: invalid RequestSizeLimitMiddleware configuration"}
+            )
+
+        header_size = 0
+        try:
+            for name, value in request.headers.items():
+                header_size += len(name.encode('utf-8')) + len(b": ") + len(value.encode('utf-8'))
+        except Exception as e:
+            logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Error parsing request headers: {e}")
+            return JSONResponse(
+                status_code=HTTPStatus.BAD_REQUEST,
+                content={"detail": "Error parsing request headers"}
+            )
+        if header_size > self.max_header_size:
+            logger.warning(
+                f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.value} "
+                f"Request headers too large: {header_size} bytes, limit: {self.max_header_size} bytes")
+            return JSONResponse(
+                status_code=HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
+                content={"detail": f"Request headers too large. Maximum size: {self.max_header_size} bytes"}
+            )
+
+        response = await call_next(request)
+        return response
 
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):

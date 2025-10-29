@@ -28,7 +28,6 @@ class TestAbsEngineConfigValidator(unittest.TestCase):
             "max_num_seqs": 100,
             "max_model_len": 8192,
             "max_num_batched_tokens": 8192,
-            "max_seq_len_to_capture": 8192,
             "gpu_memory_utilization": 0.8,
             "block_size": 32,
             "swap_space": 512,
