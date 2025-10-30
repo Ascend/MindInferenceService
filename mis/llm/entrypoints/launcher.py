@@ -73,43 +73,29 @@ async def _build_engine_client_from_args(args: GlobalArgs) -> EngineClient:
             engine_client.shutdown()
 
 
-def _build_app(args: GlobalArgs) -> FastAPI:
-    """
-    Build the FastAPI application based on the given arguments.
-
-    Args:
-        args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
-
-    Returns:
-        FastAPI: The configured FastAPI application.
-    """
-    logger.debug("Disabling FastAPI documentation")
-    app = FastAPI(openapi_url=None,
-                  docs_url=None,
-                  redoc_url=None,
-                  lifespan=lifespan,
-                  redirect_slashes=False)
-    if args.enable_dos_protection:
-        app.add_middleware(RequestHeaderSizeLimitMiddleware, max_header_size=constants.MAX_REQUEST_HEADER_SIZE)
-
-        # Add request size limiting middleware using configured limit
-        app.add_middleware(RequestSizeLimitMiddleware, max_body_size=constants.MAX_REQUEST_BODY_SIZE)
-
-        # Add concurrent request limiting middleware using configured limit
-        app.add_middleware(ConcurrencyLimitMiddleware, max_concurrent_requests=constants.MAX_CONCURRENT_REQUESTS)
-
-        # Add rate limiting middleware
-        rate_limit_config = RateLimitConfig(
-            requests_per_minute=getattr(args, 'rate_limit_per_minute', constants.RATE_LIMIT_PER_MINUTE),
+def _add_exception_handlers(app: FastAPI):
+    @app.exception_handler(HTTPStatus.METHOD_NOT_ALLOWED)
+    async def method_not_allowed_handler(request: Request, exc: Exception) -> JSONResponse:
+        """
+        Custom exception handler for HTTP 405 Method Not Allowed.
+        Args:
+            request (Request): The incoming HTTP request object.
+            exc (Exception): The exception that was raised (e.g., MethodNotAllowed).
+        Returns:
+            JSONResponse: A JSON response with status code 405 and a message indicating
+                          the unsupported method and the allowed methods.
+        """
+        client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
+        logger_operation.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.METHOD_NOT_ALLOWED.value} "
+                                 f"Request Method not allowed, allowed methods in ['GET', 'POST']")
+        return JSONResponse(
+            status_code=HTTPStatus.METHOD_NOT_ALLOWED,
+            content={
+                "message": f"Method {request.method} not allowed",
+                "allowed_methods": ["GET", "POST"]
+            }
         )
-
-        rate_limit_middleware = RateLimitMiddleware(app, config=rate_limit_config)
-        app.add_middleware(rate_limit_middleware.__class__, config=rate_limit_config)
-        app.add_middleware(RequestTimeoutMiddleware, request_timeout_in_sec=constants.REQUEST_TIMEOUT_IN_SEC)
-
-        logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
-    else:
-        logger.warning("Middleware is disabled by MIS_ENABLE_DOS_PROTECTION=False")
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -136,6 +122,99 @@ def _build_app(args: GlobalArgs) -> FastAPI:
                 "details": str(exc)
             },
         )
+
+
+def _add_middlewares(args: GlobalArgs, app: FastAPI):
+    app.add_middleware(RequestHeaderSizeLimitMiddleware, max_header_size=constants.MAX_REQUEST_HEADER_SIZE)
+
+    # Add request size limiting middleware using configured limit
+    app.add_middleware(RequestSizeLimitMiddleware, max_body_size=constants.MAX_REQUEST_BODY_SIZE)
+
+    # Add concurrent request limiting middleware using configured limit
+    app.add_middleware(ConcurrencyLimitMiddleware, max_concurrent_requests=constants.MAX_CONCURRENT_REQUESTS)
+
+    # Add rate limiting middleware
+    rate_limit_config = RateLimitConfig(
+        requests_per_minute=getattr(args, 'rate_limit_per_minute', constants.RATE_LIMIT_PER_MINUTE),
+    )
+
+    rate_limit_middleware = RateLimitMiddleware(app, config=rate_limit_config)
+    app.add_middleware(rate_limit_middleware.__class__, config=rate_limit_config)
+    app.add_middleware(RequestTimeoutMiddleware, request_timeout_in_sec=constants.REQUEST_TIMEOUT_IN_SEC)
+
+
+def _add_restrict_host_middleware(app: FastAPI):
+    @app.middleware("http")
+    async def restrict_host_middleware(request: Request, call_next: callable) -> JSONResponse:
+        """
+        Middleware to restrict access based on the Host header.
+        Args:
+            request (Request): The incoming HTTP request object.
+            call_next (Callable): The next middleware or route handler in the chain.
+        Returns:
+            JSONResponse: The response from the next middleware or route handler if the host is allowed,
+                          or a JSONResponse with status code 403 if the host is not allowed.
+        """
+        client_ip = get_client_ip(request)
+        url = request.url.path  # Secure attribute access, usually does not require handling.
+        allowed_hosts = (constants.MIS_HOST,)
+        if not callable(call_next):
+            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                           f"call_next must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error: invalid RequestSizeLimitMiddleware configuration"}
+            )
+        try:
+            host = request.headers.get("host", "").split(":")[0]
+            if host not in allowed_hosts:
+                logger_operation.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.FORBIDDEN.value} Invalid host")
+                return JSONResponse(
+                    status_code=HTTPStatus.FORBIDDEN,
+                    content={"detail": f"Forbidden: Invalid Host"}
+                )
+            return await call_next(request)
+        except AttributeError as e:
+            logger_operation.error(
+                f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                f"AttributeError in restrict_host_middleware: {e}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal Server Error"}
+            )
+        except Exception as e:
+            logger_operation.error(
+                f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                f"Unexpected error in restrict_host_middleware: {e}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal Server Error"}
+            )
+
+
+def _build_app(args: GlobalArgs) -> FastAPI:
+    """
+    Build the FastAPI application based on the given arguments.
+    Args:
+        args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
+    Returns:
+        FastAPI: The configured FastAPI application.
+    """
+    logger.debug("Disabling FastAPI documentation")
+    app = FastAPI(openapi_url=None,
+                  docs_url=None,
+                  redoc_url=None,
+                  lifespan=lifespan,
+                  redirect_slashes=False)
+
+    if args.enable_dos_protection:
+        _add_middlewares(args, app)
+        logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
+    else:
+        logger.warning("Middleware is disabled by MIS_ENABLE_DOS_PROTECTION=False")
+
+    _add_exception_handlers(app)
+    _add_restrict_host_middleware(app)
 
     from mis.llm.entrypoints.openai.api_server import router as openai_router
     app.include_router(openai_router)

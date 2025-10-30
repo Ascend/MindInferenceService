@@ -25,6 +25,7 @@ logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
 
 MINUTE_SECONDS = 60
 CLEANUP_INTERVAL_SECONDS = 300
+MAX_HEADER_COUNT = 200
 
 
 @dataclass
@@ -70,6 +71,9 @@ class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
 
         header_size = 0
         try:
+            if len(request.headers) > MAX_HEADER_COUNT:
+                logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Too many headers")
+                return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Too many headers"})
             for name, value in request.headers.items():
                 header_size += len(name.encode('utf-8')) + len(b": ") + len(value.encode('utf-8'))
         except Exception as e:
