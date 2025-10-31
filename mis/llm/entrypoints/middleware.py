@@ -12,7 +12,6 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.exceptions import ExceptionMiddleware
-from starlette.types import ASGIApp
 from starlette.requests import Request
 
 

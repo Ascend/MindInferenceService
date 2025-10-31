@@ -2,10 +2,11 @@
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
+import stat
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import mis.constants as constants
-from mis.utils.env_checker import EnvChecker
+from mis.utils.general_checker import GeneralChecker
 
 DEFAULT_MIS_MODEL = "Qwen3-8B"
 DEFAULT_MIS_CONFIG = "atlas800ia2-1x32gb-bf16-vllm-default"
@@ -72,7 +73,7 @@ def _get_int_from_env(name: str, default: Optional[int],
         value = int(os.environ[name])
     except ValueError as e:
         raise ValueError(f"ENV {name} is not a valid int value") from e
-    EnvChecker.check_int(name, value, min_value, max_value, valid_values)
+    GeneralChecker.check_int(name, value, min_value, max_value, valid_values)
     return value
 
 
@@ -89,7 +90,7 @@ def _get_str_from_env(name: str, default: Optional[str], valid_values: tuple[str
     if name not in os.environ:
         return default
     value = os.environ[name]
-    EnvChecker.check_str_in(name, value, valid_values)
+    GeneralChecker.check_str_in(name, value, valid_values)
     return value
 
 
@@ -103,7 +104,8 @@ def _get_cache_path_from_env(name: str, default: str) -> str:
         str: The validated cache path from the environment variable or the default value.
     """
     cache_path = _get_str_from_env(name, default)
-    EnvChecker.check_cache_path(name, cache_path)
+    expected_mode = constants.DIRECTORY_PERMISSIONS  # 750
+    GeneralChecker.check_path_or_file(name, cache_path, is_dir=True, expected_mode=expected_mode)
     return cache_path
 
 

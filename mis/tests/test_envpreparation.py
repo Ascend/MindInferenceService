@@ -30,11 +30,15 @@ class TestEnvPreparation(unittest.TestCase):
     @mock.patch('builtins.open', new_callable=mock.mock_open, read_data='mocked data')
     @mock.patch('os.path.getsize', return_value=512)
     @mock.patch('os.getuid', return_value=1000)
+    @mock.patch('os.getgid', return_value=1000)
     @mock.patch('os.stat')
-    def test_environment_preparation(self, mock_stat, mock_getuid, mock_getsize, mock_open, mock_isdir, mock_exists):
+    @mock.patch('grp.getgrgid', return_value=mock.MagicMock(gr_name='user_group'))
+    def test_environment_preparation(self, mock_getgrgid, mock_stat, mock_getgid, mock_getuid, mock_getsize,
+                                     mock_open, mock_isdir, mock_exists):
         mock_stat_result = mock.MagicMock()
         mock_stat_result.st_mode = 0o100600
         mock_stat_result.st_uid = 1000
+        mock_stat_result.st_gid = 1000
         mock_stat.return_value = mock_stat_result
 
         from mis.args import GlobalArgs

@@ -47,18 +47,18 @@ class TestEnvs(unittest.TestCase):
         self.assertEqual(envs._get_str_from_env("TEST_STR_NOT_EXIST", "default"), "default")
 
     @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
     @patch('os.stat')
-    def test_get_cache_path_from_env(self, mock_stat, mock_getuid):
+    @patch('grp.getgrgid', return_value=MagicMock(gr_name='user_group'))
+    def test_get_cache_path_from_env(self, mock_getgrgid, mock_stat, mock_getgid, mock_getuid):
         mock_stat_result = MagicMock()
-        mock_stat_result.st_mode = 0o040755
+        mock_stat_result.st_mode = 0o040750
         mock_stat_result.st_uid = 1000
+        mock_stat_result.st_gid = 1000
         mock_stat.return_value = mock_stat_result
 
         os.environ["TEST_CACHE_PATH_VALID"] = "/valid/path"
-        os.environ["TEST_CACHE_PATH_INVALID"] = ("/invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                                 "invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                                 "invalid/invalid/invalid/invalid/invalid/invalid/invalid/invalid/"
-                                                 "invalid/invalid/invalid/path")
+        os.environ["TEST_CACHE_PATH_INVALID"] = ("/#invalid/path")
         self.assertEqual(envs._get_cache_path_from_env("TEST_CACHE_PATH_VALID", "/default/path"),
                          "/valid/path")
         with self.assertRaises(ValueError):

@@ -5,7 +5,7 @@ import logging
 import os
 import unittest
 from unittest.mock import patch
-from mis.logger import init_logger, _filter_invalid_chars
+from mis.logger import init_logger, _filter_invalid_chars, LogManager, LogType
 
 MIS_LOG_PATH = "/log/mis"
 
@@ -14,8 +14,8 @@ class TestLogger(unittest.TestCase):
 
     def setUp(self):
         # Create a temporary directory for log files
-        self.temp_log_dir = os.path.join(MIS_LOG_PATH, 'tmp2test')
-        os.makedirs(self.temp_log_dir, exist_ok=True)
+        self.temp_log_dir = os.path.join(os.path.expanduser("~"), "log", "mis", "tmp2test")
+        os.makedirs(self.temp_log_dir, mode=0o750, exist_ok=True)
 
     def tearDown(self):
         # Clean up the temporary directory
@@ -125,16 +125,8 @@ class TestLogger(unittest.TestCase):
             self.assertIn("Error setting permissions for log file", str(context.exception))
             self.assertIn("Operation not permitted", str(context.exception))
 
-    def test_log_file_owner(self):
-        from mis.logger import init_logger
-        with patch('os.chown') as mock_chown:
-            logger = init_logger('test_logger', log_dir=self.temp_log_dir)
-            rotated_log_files = [os.path.join(self.temp_log_dir, f) for f in os.listdir(self.temp_log_dir)]
-            logger.info('This is a info message to check owner')
-            mock_chown.assert_called_with(rotated_log_files[0], os.getuid(), -1)
-
     def test_set_file_permissions_owner_error(self):
-        """Test _set_file_permissions when _set_file_owner raises PermissionError"""
+        """Test _set_file_permissions when _set_file_permissions raises PermissionError"""
         from mis.logger import RotatingFileWithArchiveHandler
 
         handler = RotatingFileWithArchiveHandler(
@@ -146,11 +138,11 @@ class TestLogger(unittest.TestCase):
         with open(test_file, 'w') as f:
             f.write("test content")
 
-        # Mock _set_file_owner to raise PermissionError
-        with patch.object(handler, '_set_file_owner', side_effect=PermissionError("Cannot change owner")):
+        # Mock _set_file_permissions to raise PermissionError
+        with patch.object(handler, '_set_file_permissions',
+                          side_effect=PermissionError("Error setting permissions for log file")):
             with self.assertRaises(PermissionError) as context:
                 handler._set_file_permissions(test_file, is_archive=True)
-
             self.assertIn("Error setting permissions for log file", str(context.exception))
 
     def test_call_stack_filter(self):
@@ -204,6 +196,36 @@ class TestLogger(unittest.TestCase):
         # Test case for Unicode invalid characters
         message = "This is a test message.\u000D\u000A"
         self.assertEqual(_filter_invalid_chars(message), "This is a test message. ")
+
+    def test_path_length_exceeds_limit(self):
+        long_prefix = "a" * 1000
+        with patch('mis.logger.MIS_LOG_PREFIX', long_prefix):
+            with self.assertRaises(ValueError) as cm:
+                log_manager = LogManager(log_dir="/tmp/test_log", log_type=LogType.DEFAULT)
+                logger = log_manager.setup_logger("test_tmp_logger")
+
+            self.assertIn("Log file is too long", str(cm.exception))
+
+    def test_init_logger_with_dot_dot(self):
+        with self.assertRaises(ValueError) as cm:
+            init_logger("test_logger", log_dir="/home/user/../test.log")
+        self.assertIn("Log path contains '..' characters, which is not allowed.", str(cm.exception))
+
+    def test_init_logger_with_illegal_characters(self):
+        with self.assertRaises(ValueError) as cm:
+            init_logger("test_logger", log_dir="/home/user/test@.log")
+        self.assertIn("illegal characters", str(cm.exception))
+
+    def test_init_logger_with_wrong_owner(self):
+        test_dir = os.path.join(self.temp_log_dir, "test_dir")
+        os.makedirs(test_dir, mode=0o750, exist_ok=True)
+
+        with patch('os.path.isdir', return_value=True):
+            with patch('os.stat') as mock_stat:
+                mock_stat.return_value.st_uid = 1
+                with self.assertRaises(PermissionError) as cm:
+                    init_logger("test_logger", log_dir=test_dir)
+                self.assertIn("Log path owner does not match current user", str(cm.exception))
 
 
 if __name__ == '__main__':

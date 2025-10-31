@@ -9,10 +9,13 @@ from typing import Dict, Optional, Union
 import yaml
 
 from mis.args import GlobalArgs
-from mis.constants import HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE
+from mis.constants import (HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE,
+                           DIRECTORY_PERMISSIONS, FILE_PERMISSIONS)
 from mis.llm.engines.config_validator import AbsEngineConfigValidator
 from mis.logger import init_logger, LogType
+from mis.utils.general_checker import GeneralChecker
 from mis.utils.utils import ConfigChecker, get_soc_name
+
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
 
@@ -72,9 +75,11 @@ class ConfigParser:
                 f"Invalid validator_class type: {type(validator_class)}, subclass of AbsEngineConfigValidator needed")
         if not issubclass(validator_class, AbsEngineConfigValidator):
             logger.error(
-                f"Invalid validator_class type: {validator_class.__name__}, subclass of AbsEngineConfigValidator needed")
+                f"Invalid validator_class type: {validator_class.__name__}, "
+                f"subclass of AbsEngineConfigValidator needed")
             raise TypeError(
-                f"Invalid validator_class type: {validator_class.__name__}, subclass of AbsEngineConfigValidator needed")
+                f"Invalid validator_class type: {validator_class.__name__}, "
+                f"subclass of AbsEngineConfigValidator needed")
         validator = validator_class(selected_engine_config.get(selected_engine_type))
         logger.debug(f"Attributes for engine type {selected_engine_type} updated successfully.")
         return validator.filter_and_validate_config()
@@ -111,40 +116,22 @@ class ConfigParser:
             if not os.path.isfile(config_file_path):
                 logger.error(f"The configuration {self.mis_config} does not exist.")
                 raise Exception("The configuration file does not exist.")
-
-            current_user_id = os.getuid()
-            path_stat = os.stat(config_file_path)
-            path_owner_id = path_stat.st_uid
-            if current_user_id != path_owner_id:
-                logger.error(f"The configuration {self.mis_config} is not owned by the current user.")
-                raise Exception("The configuration file is not owned by the current user.")
-
-            if os.path.islink(config_file_path):
-                logger.error(f"The configuration {self.mis_config} is a symbolic link.")
-                raise Exception("The configuration file is a symbolic link.")
-
-            file_size = os.path.getsize(config_file_path)
-            if file_size > MIS_MAX_CONFIG_SIZE:
-                logger.error(f"The size of the configuration {self.mis_config} exceeds 1MB.")
-                raise Exception("The size of the configuration file exceeds 1MB.")
-
-            file_mode = stat.S_IMODE(path_stat.st_mode)
-            desired_mode = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP  # 640
-            if file_mode > desired_mode:
-                logger.error(
-                    f"The permissions of configuration {self.mis_config} are too permissive: {oct(file_mode)}. "
-                    f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
-                raise PermissionError("The configuration file permissions are too permissive. Maximum allowed is 640.")
-
+            expected_mode = FILE_PERMISSIONS  # 640
+            GeneralChecker.check_path_or_file(
+                path_label=f"Configuration {self.mis_config}",
+                path=config_file_path,
+                is_dir=False,
+                expected_mode=expected_mode,
+                max_file_size=MIS_MAX_CONFIG_SIZE
+            )
             with open(config_file_path, "r", encoding="utf-8") as file:
                 config = yaml.safe_load(file)
                 logger.info(f"Configuration {self.mis_config} loaded successfully.")
-
             return config
 
         except FileNotFoundError:
             logger.warning(f"Config {self.mis_config} not found. "
-                         "The engine will be started with default parameters.")
+                           "The engine will be started with default parameters.")
             return None
         except (OSError, yaml.YAMLError) as e:
             logger.error(f"Failed to load configuration {self.mis_config}: {e}")
@@ -178,14 +165,20 @@ class ConfigParser:
             logger.warning("No valid configuration found. Using default parameters.")
             return None
 
-        path_stat = os.stat(self.model_folder_path)
-        dir_mode = stat.S_IMODE(path_stat.st_mode)
-        desired_mode = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
-        if dir_mode > desired_mode:
-            logger.error(
-                f"The permissions of the configuration path {self.model_folder_path} are too permissive: {oct(dir_mode)}. "
-                f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
-            raise PermissionError("The configuration path permissions are too permissive. Maximum allowed is 750.")
+        try:
+            expected_mode = DIRECTORY_PERMISSIONS  # 750
+            GeneralChecker.check_path_or_file(
+                path_label=f"Configuration path",
+                path=self.model_folder_path,
+                is_dir=True,
+                expected_mode=expected_mode,
+            )
+        except OSError as e:
+            logger.error(f"Failed to load configuration {self.mis_config}: {e}")
+            raise e
+        except Exception as e:
+            logger.error(f"Unexpected error while loading configuration {self.mis_config}: {e}")
+            raise e
 
         config_file_path = os.path.join(self.model_folder_path, self.mis_config + ".yaml")
         engine_optimization_config = self._config_yaml_file_loading(config_file_path)

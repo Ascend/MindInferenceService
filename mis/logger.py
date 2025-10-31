@@ -16,6 +16,8 @@ from logging.handlers import RotatingFileHandler
 from typing import Optional, Callable
 
 from mis import envs
+from mis.constants import DIRECTORY_PERMISSIONS, FILE_PERMISSIONS, ARCHIVED_FILE_PERMISSIONS
+from mis.utils.general_checker import GeneralChecker
 
 MIS_LOG_LEVEL = envs.MIS_LOG_LEVEL
 MIS_LOG_PREFIX = "log_mis_disk_"
@@ -25,7 +27,7 @@ MIS_CALLER_INSPECT_DEPTH = 20
 MIS_MAX_ARCHIVE_COUNT = 5
 MIS_MAX_LOG_STORED = 36
 MIS_ARCHIVE_SIZE = 50 * 1024 * 1024
-MIS_DEFAULT_USER_ID = 1000
+
 
 _FORMAT = "%(levelname)s %(asctime)s [MIS] [%(filename)s:%(lineno)d] %(funcName)s: %(message)s"
 _DATE_FORMAT = "%m-%d %H:%M:%S"
@@ -87,10 +89,10 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
         original_umask = os.umask(DEFAULT_UMASK)
         try:
             if not os.path.exists(self.log_dir):
-                os.makedirs(self.log_dir)
+                os.makedirs(self.log_dir, mode=DIRECTORY_PERMISSIONS)
             else:
                 current_mode = os.stat(self.log_dir).st_mode
-                desired_mode = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
+                desired_mode = DIRECTORY_PERMISSIONS  # 750
                 if stat.S_IMODE(current_mode) != desired_mode:
                     os.chmod(self.log_dir, desired_mode)
         except OSError as e:
@@ -111,8 +113,8 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
         try:
             current_username = getpass.getuser()
             current_uid = pwd.getpwnam(current_username).pw_uid
-        except KeyError:
-            current_uid = MIS_DEFAULT_USER_ID
+        except KeyError as e:
+            raise KeyError("Unable to determine current user ID") from e
         return current_uid
 
     @staticmethod
@@ -153,24 +155,22 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
                     logger.error(f"Error occurred while cleaning up old log files: {e}")
 
     @staticmethod
-    def _set_file_owner(filepath: str) -> None:
-        """Set file owner to current user or uid 1000.
-
+    def _set_file_permissions(filepath: str, is_archive: bool = False) -> None:
+        """Set file permissions based on whether it's a current log or archived log.
         Args:
             filepath (str): Path to the file
+            is_archive (bool): Whether the file is an archived log
         """
         try:
-            username = getpass.getuser()
-            uid = pwd.getpwnam(username).pw_uid
-        except KeyError:
-            # If we can't determine current user, use uid 1000
-            uid = MIS_DEFAULT_USER_ID
+            if is_archive:
+                # Archived logs: read-only permissions (440)
+                os.chmod(filepath, ARCHIVED_FILE_PERMISSIONS)  # 440
+            else:
+                # Current logs: read-write permissions (640)
+                os.chmod(filepath, FILE_PERMISSIONS)  # 0640
 
-        try:
-            # Set file owner
-            os.chown(filepath, uid, -1)
         except PermissionError as e:
-            raise PermissionError(f"Error setting owner for log file: {e}") from e
+            raise PermissionError(f"Error setting permissions for log file: {e}") from e
 
     def doRollover(self) -> None:
         """Perform log rotation and remove excess rotated log files"""
@@ -205,28 +205,9 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
                         len(f) > len(os.path.basename(self.baseFilename))):  # Check if it's a rotated file
                     filepath = os.path.join(self.log_dir, f)
                     # Set read-only permissions (440) for rotated log files
-                    os.chmod(filepath, stat.S_IRUSR | stat.S_IRGRP)  # 0440
+                    os.chmod(filepath, ARCHIVED_FILE_PERMISSIONS)  # 440
         except OSError as e:
             raise OSError(f"Error setting permissions for rotated log files: {e}") from e
-
-    def _set_file_permissions(self, filepath: str, is_archive: bool = False) -> None:
-        """Set file permissions based on whether it's a current log or archived log.
-        Args:
-            filepath (str): Path to the file
-            is_archive (bool): Whether the file is an archived log
-        """
-        try:
-            if is_archive:
-                # Archived logs: read-only permissions (440)
-                os.chmod(filepath, stat.S_IRUSR | stat.S_IRGRP)  # 0440
-            else:
-                # Current logs: read-write permissions (640)
-                os.chmod(filepath, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP)  # 0640
-
-            # Try to set file owner to current user or uid 1000
-            self._set_file_owner(filepath)
-        except PermissionError as e:
-            raise PermissionError(f"Error setting permissions for log file: {e}") from e
 
     def _cleanup_old_log_files(self):
         """Clean up old log files when count exceeds max_archive_count.
@@ -273,8 +254,14 @@ class LogManager:
         self.logger: Optional[Logger] = None
         self.log_type = log_type
 
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
+        original_umask = os.umask(DEFAULT_UMASK)
+        try:
+            if not os.path.exists(self.log_dir):
+                os.makedirs(self.log_dir, mode=DIRECTORY_PERMISSIONS)  # 750
+        except OSError as e:
+            raise OSError(f"Error occurred while checking or creating log directory: {e}") from e
+        finally:
+            os.umask(original_umask)
 
     def setup_logger(self, name: str) -> Logger:
         """Set up the logger
@@ -308,6 +295,20 @@ class LogManager:
             log_filename = os.path.join(self.log_dir, f"{MIS_LOG_PREFIX}service_{timestamp}.log")
         else:
             raise ValueError("log_type must be LogType.DEFAULT, LogType.OPERATION, or LogType.SERVICE")
+
+        GeneralChecker.check_path_or_file(
+            path_label="Log path",
+            path=self.log_dir,
+            is_dir=True,
+            expected_mode=DIRECTORY_PERMISSIONS,  # 750
+        )
+        GeneralChecker.check_path_or_file(
+            path_label="Log file",
+            path=log_filename,
+            is_dir=False,
+            expected_mode=FILE_PERMISSIONS,  # 640
+            max_file_size=MIS_ARCHIVE_SIZE
+        )
 
         file_handler = RotatingFileWithArchiveHandler(
             log_filename,

@@ -183,6 +183,7 @@ class TestApiServer(unittest.TestCase):
         if vllm_version is None:
             raise Exception("vLLM package is not installed.")
         elif version.parse(vllm_version) > version.parse("0.10.0"):
+            from vllm.entrypoints.openai.protocol import ErrorInfo
             mock_error_response = ErrorResponse(error=ErrorInfo(
                 message="test error", type="test_type", error="test error", code=404
             ))

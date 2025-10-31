@@ -6,15 +6,15 @@ import ipaddress
 import math
 import os
 import re
-import stat
 from pathlib import Path
 from typing import Union, Tuple
 
 from fastapi import Request
 
 import mis.envs as envs
-from mis.constants import HW_910B
+from mis.constants import HW_910B, DIRECTORY_PERMISSIONS
 from mis.logger import init_logger, LogType
+from mis.utils.general_checker import GeneralChecker
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
 
@@ -116,37 +116,17 @@ def get_model_path(raw_model: str) -> str:
     return this absolute path.
     """
     abs_model_path = Path(envs.MIS_CACHE_PATH).joinpath(raw_model)
-
-    if not abs_model_path.exists():
-        logger.error("Local model path does not exist.")
-        raise FileNotFoundError("Local model path does not exist.")
-
-    if not abs_model_path.is_dir():
-        logger.error("Local model path is not a directory.")
-        raise NotADirectoryError("Local model path is not a directory.")
-
-    if abs_model_path.is_symlink():
-        logger.error("Local model path is a symlink.")
-        raise FileNotFoundError("Local model path is a symlink.")
-
-    if not os.access(abs_model_path, os.R_OK):
-        logger.error("Local model path is not readable.")
-        raise PermissionError("Local model path is not readable.")
-
     try:
-        current_user_id = os.getuid()
-        path_stat = os.stat(abs_model_path)
-        path_owner_id = path_stat.st_uid
-        if current_user_id != path_owner_id:
-            raise PermissionError("File path is not owned by the current user.")
-
-        dir_mode = stat.S_IMODE(path_stat.st_mode)
-        desired_mode = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
-        if dir_mode > desired_mode:
-            logger.error(
-                f"The permissions of Local model path {abs_model_path} are too permissive: {oct(dir_mode)}. "
-                f"Maximum allowed is {oct(desired_mode)} (rwxr-x---).")
-            raise PermissionError("The Local model path permissions are too permissive. Maximum allowed is 750.")
+        expected_mode = DIRECTORY_PERMISSIONS  # 750
+        GeneralChecker.check_path_or_file(
+            path_label="Local model path",
+            path=str(abs_model_path),
+            is_dir=True,
+            expected_mode=expected_mode
+        )
+        if not os.access(abs_model_path, os.R_OK):
+            logger.error("Local model path is not readable by current process.")
+            raise OSError("Local model path is not readable by current process.")
     except OSError as e:
         raise OSError("Error checking ownership of file path.") from e
     except Exception as e:

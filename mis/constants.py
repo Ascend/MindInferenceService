@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
+import stat
+
+
 MIS_MODEL_LIST = ("Qwen3-8B", )
 
 MIS_ENGINE_TYPES = ("vllm",)
@@ -31,3 +34,7 @@ MAX_REQUEST_BODY_SIZE = 50 * 1024 * 1024
 MAX_CONCURRENT_REQUESTS = 512
 RATE_LIMIT_PER_MINUTE = 60
 REQUEST_TIMEOUT_IN_SEC = 2500
+
+DIRECTORY_PERMISSIONS = stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP  # 750
+FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP  # 640
+ARCHIVED_FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IRGRP  # 440
