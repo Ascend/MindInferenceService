@@ -55,6 +55,9 @@ class ConfigChecker:
         :param valid_values: tuple of valid values
         :return: True if the value is in the valid values, False otherwise
         """
+        if not isinstance(value, (int, str, bool)):
+            logger.warning(f"{name} verification failed!")
+            return False
         if value not in valid_values:
             logger.warning(f"{name} must be one of {valid_values}")
             return False
@@ -93,10 +96,10 @@ def get_soc_name() -> Union[str, None]:
         import acl
         soc_info = acl.get_soc_name()
     except ImportError as e:
-        logger.error(f"Unable to import ACL: {e}, please check if ACL is imported correctly.")
+        logger.error(f"Unable to import ACL, please check if ACL is imported correctly.")
         raise ImportError("Unable to import ACL, please check if ACL is imported correctly.") from e
     except Exception as e:
-        logger.error(f"get soc info failed: {e}, please check if CANN is installed correctly.")
+        logger.error(f"get soc info failed, please check if CANN is installed correctly.")
         raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
     if soc_info is None:
         logger.error("get soc info failed, please check the device mounting status.")
@@ -128,8 +131,10 @@ def get_model_path(raw_model: str) -> str:
             logger.error("Local model path is not readable by current process.")
             raise OSError("Local model path is not readable by current process.")
     except OSError as e:
+        logger.error("Error checking ownership of file path.")
         raise OSError("Error checking ownership of file path.") from e
     except Exception as e:
+        logger.error("Unexpected error while get model path.")
         raise Exception("Unexpected error while get model path.") from e
     logger.info("Model path is valid and readable.")
     return str(abs_model_path)
@@ -143,22 +148,20 @@ def get_client_ip(request: Request) -> str:
     if not isinstance(request, Request):
         logger.error("Invalid request type")
         raise TypeError("Invalid request type")
-    # Check X-Forwarded-For header
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        client_ip = forwarded_for.split(",")[0].strip()
-    else:
-        # Check X-Real-IP header
-        client_ip = request.headers.get("X-Real-IP", request.client.host if request.client else "unknown")
 
-    if client_ip == "unknown":
-        logger.warning(f"Could not determine valid client IP from any source, return unknown.")
-    else:
+    try:
+        client_ip = request.client.host
         try:
             ipaddress.ip_address(client_ip)
         except ValueError:
             logger.warning(f"Get invalid IP address, return unknown.")
             client_ip = "unknown"
+    except AttributeError as e:
+        logger.error("Error getting client IP address.")
+        raise AttributeError("Error getting client IP address.") from e
+    except Exception as e:
+        logger.error("Unexpected error while getting client IP address.")
+        raise Exception("Unexpected error while getting client IP address.") from e
 
     return client_ip
 

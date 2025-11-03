@@ -10,17 +10,18 @@ from typing import Dict, Optional, Tuple, Union
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from starlette.middleware.exceptions import ExceptionMiddleware
+from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.exceptions import ExceptionMiddleware
 from starlette.requests import Request
-
 
 from mis import constants
 from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip
 
 logger = init_logger(__name__, log_type=LogType.OPERATION)
-logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
+op_logger = init_logger(__name__ + ".operation", log_type=LogType.OPERATION)
 
 MINUTE_SECONDS = 60
 CLEANUP_INTERVAL_SECONDS = 300
@@ -36,6 +37,7 @@ class RateLimitConfig:
 
 class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting request header size"""
+
     def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
                  max_header_size: int = constants.MAX_REQUEST_HEADER_SIZE) -> None:
         """ Initialize middleware with maximum header size limit
@@ -44,11 +46,13 @@ class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
             max_header_size (int): Maximum allowed size for request headers in bytes
         """
         if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger_service.error("FastAPI app instance is required for RequestHeaderSizeLimitMiddleware")
-            raise TypeError("FastAPI app instance is required for RequestHeaderSizeLimitMiddleware")
+            logger.error(
+                f"Invalid app type: {type(app)}, FastApi or ExceptionMiddleware needed.")
+            raise TypeError(
+                f"Invalid app type: {type(app)}, FastApi or ExceptionMiddleware needed.")
         if not isinstance(max_header_size, int):
-            logger_service.error("Integer value is required for max_header_size in RequestHeaderSizeLimitMiddleware")
-            raise TypeError("Integer value is required for max_header_size in RequestHeaderSizeLimitMiddleware")
+            logger.error(f"Invalid max_header_size type: {type(max_header_size)}, integer needed.")
+            raise TypeError(f"Invalid max_header_size type: {type(max_header_size)}, integer needed.")
         super().__init__(app)
         self.max_header_size = max_header_size
 
@@ -59,31 +63,31 @@ class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
             call_next (Callable): The next middleware or application callable
         """
         client_ip = get_client_ip(request)
-        url = request.url.path
         if not callable(call_next):
-            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                           f"call_next must be callable, got {type(call_next).__name__}")
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"call_next must be callable, got {type(call_next).__name__}")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                content={"detail": "Internal server error: invalid RequestSizeLimitMiddleware configuration"}
+                content={"detail": "Internal server error"}
             )
 
         header_size = 0
         try:
             if len(request.headers) > MAX_HEADER_COUNT:
-                logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Too many headers")
+                op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST.value} Too many headers")
                 return JSONResponse(status_code=HTTPStatus.BAD_REQUEST, content={"detail": "Too many headers"})
             for name, value in request.headers.items():
                 header_size += len(name.encode('utf-8')) + len(b": ") + len(value.encode('utf-8'))
         except Exception as e:
-            logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Error parsing request headers: {e}")
+            op_logger.error(
+                f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST.value} Error parsing request headers: {e}")
             return JSONResponse(
                 status_code=HTTPStatus.BAD_REQUEST,
                 content={"detail": "Error parsing request headers"}
             )
         if header_size > self.max_header_size:
-            logger.warning(
-                f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.value} "
+            op_logger.warning(
+                f"[IP: {client_ip}] {HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.value} "
                 f"Request headers too large: {header_size} bytes, limit: {self.max_header_size} bytes")
             return JSONResponse(
                 status_code=HTTPStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
@@ -96,13 +100,29 @@ class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting the size of the request body."""
-    def __init__(self, app: FastAPI, max_body_size: int = constants.MAX_REQUEST_BODY_SIZE) -> None:  # Default 50MB
+
+    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
+                 max_body_size: int = constants.MAX_REQUEST_BODY_SIZE) -> None:  # Default 50MB
         """
         Initialize the middleware with the given FastAPI app and maximum body size.
         Args:
             app (FastAPI): The FastAPI application instance.
             max_body_size (int): The maximum allowed request body size in bytes. Default is 50MB.
         """
+        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+            logger.error(
+                f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
+            raise TypeError(
+                f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
+        if not isinstance(max_body_size, int):
+            logger.error("max_body_size is not an integer.")
+            raise TypeError(f"max_body_size must be an integer, got {type(max_body_size)}.")
+        if max_body_size > constants.MAX_REQUEST_BODY_SIZE:
+            logger.error(f"max_body_size cannot exceed {constants.MAX_REQUEST_BODY_SIZE}, got {max_body_size}.")
+            raise ValueError(f"max_body_size cannot exceed {constants.MAX_REQUEST_BODY_SIZE}, got {max_body_size}.")
+        if max_body_size <= 0:
+            logger.error(f"max_body_size must be a positive integer, got {max_body_size}.")
+            raise ValueError(f"max_body_size must be a positive integer, got {max_body_size}.")
         super().__init__(app)
         self.max_body_size = max_body_size
 
@@ -115,6 +135,15 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         Returns:
             Response: The response from the next middleware or route handler.
         """
+        client_ip = get_client_ip(request)
+        if not callable(call_next):
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"Internal server error: {call_next} must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal server error"}
+            )
+
         content_length_check = self._check_content_length(request)
         if content_length_check is not None:
             return content_length_check
@@ -134,7 +163,6 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             Response or None: Returns a 413 JSON response if the size is over the limit, otherwise None.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
         transfer_encoding = request.headers.get("transfer-encoding", "")
         is_chunked = "chunked" in transfer_encoding.lower()
 
@@ -144,9 +172,9 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         if content_length and not is_chunked:
             content_length = int(content_length)
             if content_length > self.max_body_size:
-                logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
-                               f"Request body too large: {content_length} bytes, "
-                               f"limit: {self.max_body_size} bytes")
+                op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
+                                  f"Request body too large: {content_length} bytes, "
+                                  f"limit: {self.max_body_size} bytes")
                 return JSONResponse(
                     status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
                     content={"detail": f"Request body too large. "
@@ -161,7 +189,6 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             request (Request): The incoming HTTP request.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
         transfer_encoding = request.headers.get("transfer-encoding", "")
         is_chunked = "chunked" in transfer_encoding.lower()
 
@@ -176,9 +203,9 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
             async for chunk in original_stream:
                 total_size += len(chunk)
                 if total_size > self.max_body_size:
-                    logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
-                                   f"Chunked request body too large: {total_size} bytes, "
-                                   f"limit: {self.max_body_size} bytes")
+                    op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.REQUEST_ENTITY_TOO_LARGE.value} "
+                                      f"Chunked request body too large: {total_size} bytes, "
+                                      f"limit: {self.max_body_size} bytes")
                     raise HTTPException(
                         status_code=HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
                         detail=f"The request body is too large. "
@@ -191,13 +218,31 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
 class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting concurrent requests (production-grade implementation)"""
-    def __init__(self, app: FastAPI, max_concurrent_requests: int = constants.MAX_CONCURRENT_REQUESTS) -> None:
+
+    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
+                 max_concurrent_requests: int = constants.MAX_CONCURRENT_REQUESTS) -> None:
         """
         Initialize the middleware with the given FastAPI app and maximum concurrent requests.
         Args:
             app (FastAPI): The FastAPI application.
             max_concurrent_requests (int): The maximum allowed concurrent requests. Default is 512.
         """
+        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+            logger.error(
+                f"FastApi or ExceptionMiddleware app instance is required for ConcurrencyLimitMiddleware, got {type(app)}.")
+            raise TypeError(
+                f"FastApi or ExceptionMiddleware app instance is required for ConcurrencyLimitMiddleware, got {type(app)}.")
+        if not isinstance(max_concurrent_requests, int):
+            logger.error("max_concurrent_requests is not an integer.")
+            raise TypeError(f"max_concurrent_requests must be an integer, got {type(max_concurrent_requests)}.")
+        if max_concurrent_requests > constants.MAX_CONCURRENT_REQUESTS:
+            logger.error(
+                f"max_concurrent_requests cannot exceed {constants.MAX_CONCURRENT_REQUESTS}, got {max_concurrent_requests}.")
+            raise ValueError(
+                f"max_concurrent_requests cannot exceed {constants.MAX_CONCURRENT_REQUESTS}, got {max_concurrent_requests}.")
+        if max_concurrent_requests <= 0:
+            logger.error(f"max_concurrent_requests must be a positive integer, got {max_concurrent_requests}.")
+            raise ValueError(f"max_concurrent_requests must be a positive integer, got {max_concurrent_requests}.")
         super().__init__(app)
         self.max_concurrent_requests = max_concurrent_requests
         # Use semaphore for better concurrency control
@@ -217,11 +262,17 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
         """
         # Check if maximum concurrent requests exceeded
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
+        if not callable(call_next):
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"Internal server error: {call_next} must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal Server Error."}
+            )
         async with self.lock:
             if self.active_requests >= self.max_concurrent_requests:
-                logger.warning(
-                    f"[IP: {client_ip}] '{url}' {HTTPStatus.TOO_MANY_REQUESTS.value} Too many concurrent requests: "
+                op_logger.warning(
+                    f"[IP: {client_ip}] {HTTPStatus.TOO_MANY_REQUESTS.value} Too many concurrent requests: "
                     f"{self.active_requests}, limit: {self.max_concurrent_requests}")
                 return JSONResponse(
                     status_code=HTTPStatus.TOO_MANY_REQUESTS,
@@ -230,7 +281,7 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
                                   f"Maximum concurrent requests: {self.max_concurrent_requests}"}
                 )
             self.active_requests += 1
-            logger_service.debug(f"Request started, active requests: {self.active_requests}")
+            logger.debug(f"Request started, active requests: {self.active_requests}")
 
         try:
             # Use semaphore to control concurrency
@@ -239,21 +290,22 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
                     response = await call_next(request)
                     return response
                 except Exception as e:
-                    logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                                 f"Error processing request: {e}")
+                    op_logger.error(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                                    f"Error processing request: {e}")
                     return JSONResponse(
                         status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                        content={"detail": "An internal server error occurred."}
+                        content={"detail": "Internal Server Error."}
                     )
         finally:
             async with self.lock:
                 self.active_requests -= 1
-                logger_service.debug(f"Request finished, active requests: {self.active_requests}")
+                logger.debug(f"Request finished, active requests: {self.active_requests}")
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Time-window based rate limiting middleware (production-grade implementation)"""
-    def __init__(self, app: FastAPI, config: RateLimitConfig = None) -> None:
+
+    def __init__(self, app: Union[FastAPI, ExceptionMiddleware], config: RateLimitConfig = None) -> None:
         """
         Initialize the middleware with the given FastAPI app and rate limit configuration.
 
@@ -261,6 +313,15 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             app (FastAPI): The FastAPI application.
             config (RateLimitConfig): The rate limit configuration. Default is a default RateLimitConfig instance.
         """
+        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+            logger.error(
+                f"FastApi or ExceptionMiddleware app instance is required for RateLimitMiddleware, got {type(app)}.")
+            raise TypeError(
+                f"FastApi or ExceptionMiddleware app instance is required for RateLimitMiddleware, got {type(app)}.")
+        """Ensure that self.config can always obtain a RateLimitConfig instance"""
+        if config and not isinstance(config, RateLimitConfig):
+            logger.error(f"Invalid config type: {type(config)}, RateLimitConfig needed")
+            raise TypeError(f"Invalid config type: {type(config)}, RateLimitConfig needed")
         super().__init__(app)
         self.config = config or RateLimitConfig()
         # Use sliding window algorithm to store request counts
@@ -271,14 +332,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     async def shutdown(self):
         """Cancel the cleanup task when the application is shutting down."""
-        logger_service.info("Shutting down rate limit middleware")
+        logger.info("Shutting down rate limit middleware")
         if self.cleanup_task and not self.cleanup_task.done():
             self.cleanup_task.cancel()
-            logger_service.info("Cancelling rate limit middleware cleanup task")
+            logger.info("Cancelling rate limit middleware cleanup task")
             try:
                 await self.cleanup_task
             except asyncio.CancelledError:
-                logger_service.info("Rate limit middleware cleanup task has been cancelled.")
+                logger.info("Rate limit middleware cleanup task has been cancelled.")
 
     async def dispatch(self, request: Request, call_next: callable) -> JSONResponse:
         """
@@ -290,12 +351,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             JSONResponse: The response from the next middleware or route handler.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
+        if not callable(call_next):
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"Internal server error: {call_next} must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal Server Error."}
+            )
         # Check rate limit
         async with self._counts_lock:
             is_allowed, retry_after = self._check_rate_limit(client_ip)
             if not is_allowed:
-                logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.TOO_MANY_REQUESTS.value} Rate limit exceeded")
+                op_logger.warning(
+                    f"[IP: {client_ip}] {HTTPStatus.TOO_MANY_REQUESTS.value} Rate limit exceeded")
                 return JSONResponse(
                     status_code=HTTPStatus.TOO_MANY_REQUESTS,
                     content={
@@ -314,11 +382,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """Regularly clean up expired request count data to prevent memory leaks."""
         while True:
             try:
-                logger_service.debug("Cleaning up expired rate limit entries")
+                logger.debug("Cleaning up expired rate limit entries")
                 await self._remove_expired_data()
                 await asyncio.sleep(self.config.cleanup_interval)
             except Exception as e:
-                logger_service.error(f"An error occurred while clearing the request count: {e}")
+                logger.error(f"An error occurred while clearing the request count: {e}")
 
     def _check_rate_limit(self, identifier: str) -> Tuple[bool, int]:
         """
@@ -349,16 +417,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 expired_keys.append(key)
         async with self._counts_lock:
             for key in expired_keys:
-                logger_service.debug(f"Deleting expired rate limit entry: {key}")
+                logger.debug(f"Deleting expired rate limit entry: {key}")
                 del self.request_counts[key]
 
     def _update_or_check_window(
-        self,
-        identifier: str,
-        window_type: str,  # 'minute'
-        current_time: float,
-        config_key: str,  # 'requests_per_minute'
-        is_check: bool = False
+            self,
+            identifier: str,
+            window_type: str,  # 'minute'
+            current_time: float,
+            config_key: str,  # 'requests_per_minute'
+            is_check: bool = False
     ) -> Tuple[Optional[bool], int]:
         """
         General method for checking or updating the request count within a specified time window.
@@ -408,7 +476,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 class RequestTimeoutMiddleware(BaseHTTPMiddleware):
     """Middleware for setting a timeout on incoming requests (production-grade implementation)"""
-    def __init__(self, app: FastAPI, request_timeout_in_sec: int = constants.REQUEST_TIMEOUT_IN_SEC):
+
+    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
+                 request_timeout_in_sec: int = constants.REQUEST_TIMEOUT_IN_SEC):
         """
         Initialize the middleware with the given FastAPI app and request timeout in seconds.
         Args:
@@ -416,6 +486,19 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             request_timeout_in_sec (int): The maximum allowed time (in seconds) for a request to be processed.
                                           Default is defined by `constants.REQUEST_TIMEOUT_IN_SEC`.
         """
+        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+            logger.error(
+                f"FastApi or ExceptionMiddleware app instance is required for RequestTimeoutMiddleware, got {type(app)}.")
+            raise TypeError(
+                f"FastApi or ExceptionMiddleware app instance is required for RequestTimeoutMiddleware, got {type(app)}.")
+        if not isinstance(request_timeout_in_sec, int):
+            logger.error("request_timeout_in_sec is not an integer.")
+            raise TypeError(f"request_timeout_in_sec must be an integer, got {type(request_timeout_in_sec)}.")
+        if request_timeout_in_sec > constants.REQUEST_TIMEOUT_IN_SEC:
+            logger.error(
+                f"request_timeout_in_sec cannot exceed {constants.REQUEST_TIMEOUT_IN_SEC}, got {request_timeout_in_sec}.")
+            raise ValueError(
+                f"request_timeout_in_sec cannot exceed {constants.REQUEST_TIMEOUT_IN_SEC}, got {request_timeout_in_sec}.")
         super().__init__(app)
         self.timeout = request_timeout_in_sec
 
@@ -431,52 +514,80 @@ class RequestTimeoutMiddleware(BaseHTTPMiddleware):
             asyncio.TimeoutError: If the request processing exceeds the timeout.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
+        if not callable(call_next):
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"Internal server error: {call_next} must be callable, got {type(call_next).__name__}")
+            return JSONResponse(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                content={"detail": "Internal Server Error."}
+            )
         task = asyncio.create_task(call_next(request))
         try:
             # Using asyncio.wait_for to set a Timeout
             response = await asyncio.wait_for(task, timeout=self.timeout)
             return response
         except asyncio.TimeoutError:
+            return await self._handle_timeout(task, client_ip)
+        except Exception as e:
+            return await self._handle_exception(task, client_ip, e)
+
+    async def _handle_timeout(
+            self,
+            task: asyncio.Task,
+            client_ip: str
+    ) -> JSONResponse:
+        """
+        Handle timeout scenario by canceling task and returning timeout response.
+        """
+        task.cancel()
+
+        try:
+            # Wait for the task cleanup to complete
+            await task
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            op_logger.error(f"[IP: {client_ip}] {HTTPStatus.REQUEST_TIMEOUT.value} "
+                            f"Error during task cleanup after timeout: {e}")
+            return JSONResponse(
+                status_code=HTTPStatus.REQUEST_TIMEOUT,
+                content={"detail": "Request timeout"}
+            )
+
+        op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.REQUEST_TIMEOUT.value} "
+                          f"Request timeout after {self.timeout} seconds")
+        return JSONResponse(
+            status_code=HTTPStatus.REQUEST_TIMEOUT,
+            content={"detail": "Request timeout"}
+        )
+
+    async def _handle_exception(
+            self,
+            task: asyncio.Task,
+            client_ip: str,
+            exception: Exception
+    ) -> JSONResponse:
+        """
+        Handle general exception scenario by canceling task and returning error response.
+        """
+        # If the task is still running, cancel it
+        if not task.done():
             task.cancel()
             try:
-                # Wait for the task cleanup to complete.
                 await task
             except asyncio.CancelledError:
                 pass
-            except Exception as e:
-                logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                             f"Error during task cleanup after timeout: {e}")
+            except Exception as cleanup_error:
+                op_logger.error(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                                f"Error during task cleanup after exception: {cleanup_error}")
                 return JSONResponse(
                     status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                    content={"detail": "Request timeout and cleanup failed"}
+                    content={"detail": "Request failed"}
                 )
 
-            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.REQUEST_TIMEOUT.value} "
-                           f"Request timeout after {self.timeout} seconds")
-            return JSONResponse(
-                status_code=HTTPStatus.REQUEST_TIMEOUT,
-                content={"detail": f"Request timeout"}
-            )
-        except Exception as e:
-            # If the task is still running, cancel it.
-            if not task.done():
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-                except Exception as cleanup_error:
-                    logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                                 f"Error during task cleanup after exception: {cleanup_error}")
-                    return JSONResponse(
-                        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                        content={"detail": "Request failed and cleanup failed"}
-                    )
-
-            logger.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                         f"Error processing request: {e}")
-            return JSONResponse(
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                content={"detail": "An internal server error occurred"}
-            )
+        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                        f"Error processing request: {exception}")
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )

@@ -4,7 +4,7 @@
 import asyncio
 import json
 from http import HTTPStatus
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional, List
 
 from fastapi import APIRouter, Request
 from packaging import version
@@ -33,7 +33,7 @@ from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip, get_vllm_version
 
 logger = init_logger(__name__, log_type=LogType.OPERATION)
-logger_service = init_logger(__name__+".service", log_type=LogType.SERVICE)
+op_logger = init_logger(__name__ + ".operation", log_type=LogType.OPERATION)
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ MIS_MODEL_REMOVE_FIELDS = [
 @router.get("/openai/v1/models")
 async def show_available_models(raw_request: Request):
     client_ip = get_client_ip(raw_request)
-    logger_service.debug(f"Handling request to show available models.")
+    logger.debug(f"Handling request to show available models.")
     handler = models(raw_request)
 
     try:
@@ -59,7 +59,8 @@ async def show_available_models(raw_request: Request):
         else:
             available_models = await handler.show_available_models()
     except asyncio.TimeoutError:
-        logger.error(f"[IP: {client_ip}] 'GET /openai/v1/models' {HTTPStatus.REQUEST_TIMEOUT.value} Request timeout")
+        op_logger.error(
+            f"[IP: {client_ip}] {HTTPStatus.REQUEST_TIMEOUT.value} Request timeout")
         return JSONResponse(
             status_code=HTTPStatus.REQUEST_TIMEOUT.value,
             content={"detail": f"[IP: {client_ip}] Request timeout"}
@@ -69,7 +70,7 @@ async def show_available_models(raw_request: Request):
         for field in MIS_MODEL_REMOVE_FIELDS:
             if hasattr(model_, field):
                 delattr(model_, field)
-    logger.info(f"[IP: {client_ip}] 'GET /openai/v1/models' {HTTPStatus.OK.value} OK")
+    op_logger.info(f"[IP: {client_ip}] {HTTPStatus.OK.value} OK")
     return JSONResponse(content=available_models.model_dump())
 
 
@@ -77,40 +78,40 @@ def _align_non_streaming_response(generator: ChatCompletionResponse) -> None:
     """
     remove stop_reason in vllm response to ensure consistent behavior
     """
-    logger_service.debug(f"Aligning non-streaming response")
+    logger.debug(f"Aligning non-streaming response")
     for choice in generator.choices:
         del choice.stop_reason
-    logger_service.debug(f"Non-streaming response aligned")
+    logger.debug(f"Non-streaming response aligned")
 
 
 async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
     """
     remove stop_reason in vllm stream response to ensure consistent behavior
     """
-    logger_service.debug(f"Aligning streaming response")
+    logger.debug(f"Aligning streaming response")
     async for content in generator:
         if "stop_reason" in content:
             if not content.startswith("data: "):
-                logger_service.warning(f"Content does not start with 'data: ' prefix: {content[:100]}...")
+                logger.warning(f"Content does not start with 'data: ' prefix: {content[:100]}...")
                 yield content
                 continue
 
             try:
                 content_dict = json.loads(content[len("data: "):])
             except json.JSONDecodeError:
-                logger_service.warning(f"Failed to parse JSON content")
+                logger.warning(f"Failed to parse JSON content")
                 yield content
                 continue
 
             if not isinstance(content_dict, dict):
-                logger_service.warning(f"Content is not a dictionary")
+                logger.warning(f"Content is not a dictionary")
                 yield content
                 continue
 
             try:
                 content_obj = ChatCompletionStreamResponse(**content_dict)
             except ValidationError:
-                logger_service.warning(f"Validation error in content object")
+                logger.warning(f"Validation error in content object")
                 yield content
                 continue
 
@@ -120,18 +121,18 @@ async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> Asy
             yield f"data: {content_obj.model_dump_json(exclude_unset=True)}\n\n"
         else:
             yield content
-    logger_service.debug(f"Streaming response aligned")
+    logger.debug(f"Streaming response aligned")
 
 
 @router.post("/openai/v1/chat/completions")
 async def create_chat_completions(request: MISChatCompletionRequest,
                                   raw_request: Request):
     client_ip = get_client_ip(raw_request)
-    logger_service.debug(f"Handling request to create chat completions.")
+    logger.debug(f"Handling request to create chat completions.")
     handler = chat(raw_request)
     if handler is None:
-        logger.error(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' {HTTPStatus.BAD_REQUEST} "
-                     f"The model does not support Chat Completions API")
+        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST} "
+                        f"The model does not support Chat Completions API")
         return base(raw_request).create_error_response(message="The model does not support Chat Completions API")
     try:
         if raw_request.app.state.request_timeout:
@@ -142,15 +143,16 @@ async def create_chat_completions(request: MISChatCompletionRequest,
         else:
             generator = await handler.create_chat_completion(request, raw_request)
     except asyncio.TimeoutError:
-        logger.error(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' "
-                     f"{HTTPStatus.REQUEST_TIMEOUT.value} Request timeout")
+        op_logger.error(f"[IP: {client_ip}] "
+                        f"{HTTPStatus.REQUEST_TIMEOUT.value} Request timeout")
         return JSONResponse(
             status_code=HTTPStatus.REQUEST_TIMEOUT.value,
             content={"detail": f"Request timeout"}
         )
 
     if isinstance(generator, ErrorResponse):
-        logger.error(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' {generator.code} Error in chat completion")
+        op_logger.error(
+            f"[IP: {client_ip}] {generator.code} Error in chat completion")
         vllm_version = get_vllm_version()
         if vllm_version is None:
             return JSONResponse(
@@ -166,11 +168,11 @@ async def create_chat_completions(request: MISChatCompletionRequest,
 
     elif isinstance(generator, ChatCompletionResponse):
         _align_non_streaming_response(generator)
-        logger.info(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' {HTTPStatus.OK.value} OK")
+        op_logger.info(f"[IP: {client_ip}] {HTTPStatus.OK.value} OK")
         return JSONResponse(content=generator.model_dump())
 
     generator = _align_streaming_response(generator)
-    logger.info(f"[IP: {client_ip}] 'POST /openai/v1/chat/completions' {HTTPStatus.OK.value} OK")
+    op_logger.info(f"[IP: {client_ip}] {HTTPStatus.OK.value} OK")
     return StreamingResponse(content=generator, media_type="text/event-stream")
 
 
@@ -180,7 +182,19 @@ async def init_openai_app_state(
         state: State,
         args: GlobalArgs
 ) -> None:
-    logger_service.info("Initializing OpenAI app state.")
+    logger.info("Initializing OpenAI app state.")
+    if not isinstance(engine_client, EngineClient):
+        logger.error(f"Invalid engine_client type: {type(engine_client)}, EngineClient needed")
+        raise TypeError(f"Invalid engine_client type: {type(engine_client)}, EngineClient needed")
+    if not isinstance(model_config, ModelConfig):
+        logger.error(f"Invalid model_config type: {type(model_config)}, ModelConfig needed")
+        raise TypeError(f"Invalid model_config type: {type(model_config)}, ModelConfig needed")
+    if not isinstance(state, State):
+        logger.error(f"Invalid state type: {type(state)}, State needed")
+        raise TypeError(f"Invalid state type: {type(state)}, State needed")
+    if not isinstance(args, GlobalArgs):
+        logger.error(f"Invalid args type: {type(args)}, GlobalArgs needed")
+        raise TypeError(f"Invalid args type: {type(args)}, GlobalArgs needed")
     if args.served_model_name is not None:
         served_model_names = [args.served_model_name]
     else:
@@ -196,16 +210,29 @@ async def init_openai_app_state(
         for name in served_model_names
     ]
 
-    logger_service.info("Registering openai_serving_models.")
-    # register openai_serving_models, will be use by function `models`
+    await _register_openai_services(engine_client, model_config, state, base_model_paths, request_logger)
+
+    state.task = model_config.task
+    state.request_timeout = REQUEST_TIMEOUT_IN_SEC
+    logger.info("OpenAI app state initialized")
+
+
+async def _register_openai_services(
+        engine_client: EngineClient,
+        model_config: ModelConfig,
+        state: State,
+        base_model_paths: List[BaseModelPath],
+        request_logger: Optional[RequestLogger]
+) -> None:
+    """Register all OpenAI serving components."""
+    logger.info("Registering openai_serving_models.")
     state.openai_serving_models = OpenAIServingModels(
         engine_client=engine_client,
         model_config=model_config,
         base_model_paths=base_model_paths,
     )
 
-    logger_service.info("Registering openai_serving_chat.")
-    # register openai_serving_chat, will be use by function `chat`
+    logger.info("Registering openai_serving_chat.")
     state.openai_serving_chat = MISOpenAIServingChat(
         engine_client,
         model_config,
@@ -216,8 +243,7 @@ async def init_openai_app_state(
         chat_template_content_format="auto",
     )
 
-    logger_service.info("Registering openai_serving_tokenization.")
-    # register openai_serving_tokenization, will be use by function `base`
+    logger.info("Registering openai_serving_tokenization.")
     state.openai_serving_tokenization = OpenAIServingTokenization(
         engine_client,
         model_config,
@@ -226,7 +252,3 @@ async def init_openai_app_state(
         chat_template=None,
         chat_template_content_format="auto"
     )
-
-    state.task = model_config.task
-    state.request_timeout = REQUEST_TIMEOUT_IN_SEC
-    logger_service.info("OpenAI app state initialized")

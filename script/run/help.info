@@ -1,4 +1,3 @@
-  --check                           Check integrity
   --version                         Query MIS version
   --install                         Extract MIS to the specified installation directory, which defaults to the current directory.
   --install-path=<path>             Install MIS packages directly to a target directory (absolute or relative).
