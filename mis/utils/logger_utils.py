@@ -11,6 +11,8 @@ class NewLineFormatter(logging.Formatter):
         super().__init__(fmt, datefmt, style)
 
     def format(self, record: logging.LogRecord) -> str:
+        if not isinstance(record, logging.LogRecord):
+            raise TypeError(f"Record must be a logging.LogRecord, got {type(record)}")
         msg = super().format(record)
         if record.message != "":
             parts = msg.split(record.message)

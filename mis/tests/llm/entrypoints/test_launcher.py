@@ -4,11 +4,11 @@
 import asyncio
 import unittest
 from unittest.mock import patch, MagicMock, AsyncMock
-
-from mis.llm.entrypoints.launcher import _build_engine_client_from_args, _build_app, _init_app_state, _run_server
+from mis.llm.entrypoints.launcher import _build_engine_client_from_args, _init_app_state, _run_server
 
 
 class TestLauncher(unittest.TestCase):
+
     def setUp(self):
         """Set up test fixtures before each test method."""
         from mis.args import GlobalArgs

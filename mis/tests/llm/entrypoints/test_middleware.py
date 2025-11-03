@@ -449,7 +449,7 @@ class TestRequestHeaderSizeLimitMiddleware(unittest.TestCase):
         mock_call_next = AsyncMock(return_value=JSONResponse(content={"message": "success"}, status_code=200))
 
         # Simulate logger
-        with patch("mis.llm.entrypoints.middleware.logger") as mock_logger:
+        with patch("mis.llm.entrypoints.middleware.op_logger") as mock_logger:
             # Simulate get_client_ip to avoid accessing request.headers
             with patch("mis.llm.entrypoints.middleware.get_client_ip", return_value="127.0.0.1"):
                 # Instantiate middleware

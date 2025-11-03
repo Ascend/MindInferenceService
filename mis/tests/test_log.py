@@ -3,9 +3,10 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import logging
 import os
+import time
 import unittest
-from unittest.mock import patch
 from mis.logger import init_logger, _filter_invalid_chars, LogManager, LogType
+from unittest.mock import patch, MagicMock
 
 MIS_LOG_PATH = "/log/mis"
 
@@ -26,11 +27,38 @@ class TestLogger(unittest.TestCase):
                 os.rmdir(os.path.join(root, name))
         os.rmdir(self.temp_log_dir)
 
-    def test_init_logger(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_init_logger(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                         mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import EnhancedLogger
         logger = init_logger('test_logger', log_dir=self.temp_log_dir)
         self.assertIsInstance(logger, EnhancedLogger)
         self.assertIsInstance(logger.logger, logging.Logger)
+
+    @patch('mis.logger.LogManager.setup_logger')
+    def test_init_logger_with_not_logger(self, mock_setup_logger):
+        mock_setup_logger.return_value = None
+        with self.assertRaises(TypeError):
+            init_logger('test_logger', log_dir=self.temp_log_dir)
+
+    def test_setup_logger_with_name_is_invalid(self):
+        log_manager = LogManager(log_dir=self.temp_log_dir, log_type=LogType.DEFAULT)
+        with self.assertRaises(TypeError):
+            log_manager.setup_logger(123)
+
+    def test_init_log_manager_with_none(self):
+        with self.assertRaises(TypeError):
+            LogManager(log_dir=None, log_type=LogType.DEFAULT)
+        with self.assertRaises(TypeError):
+            LogManager(log_dir=self.temp_log_dir, log_type=None)
 
     def test_invalid_name_or_log_dir(self):
         with self.assertRaises(ValueError):
@@ -42,7 +70,17 @@ class TestLogger(unittest.TestCase):
         with self.assertRaises(ValueError):
             init_logger('test_logger', log_dir=self.temp_log_dir, log_type='invalid')
 
-    def test_log_dir_default_value(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_log_dir_default_value(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                                   mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600, st_mtime=int(time.time()))
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         logger = init_logger('test_logger')
         user_home = os.path.expanduser('~')
         found_file_handler = False
@@ -53,19 +91,49 @@ class TestLogger(unittest.TestCase):
                 break
         self.assertTrue(found_file_handler, "No FileHandler found in logger")
 
-    def test_return_type(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_return_type(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                         mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import EnhancedLogger
         logger = init_logger('test_logger', log_dir=self.temp_log_dir)
         self.assertIsInstance(logger, EnhancedLogger)
         self.assertIsInstance(logger.logger, logging.Logger)
 
-    def test_log_file_creation(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_log_file_creation(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                               mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         logger = init_logger('test_log', log_dir=self.temp_log_dir)
         logger.info('This is a test message')
         log_files = [f for f in os.listdir(self.temp_log_dir) if f.startswith('log_mis_')]
         self.assertGreater(len(log_files), 0)
 
-    def test_log_messages(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_log_messages(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                          mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import MIS_LOG_PREFIX
         logger = init_logger('test_logger', log_dir=self.temp_log_dir)
         logger.debug('This is a debug message')
@@ -77,7 +145,17 @@ class TestLogger(unittest.TestCase):
         log_files = [f for f in os.listdir(self.temp_log_dir) if f.startswith(MIS_LOG_PREFIX)]
         self.assertGreater(len(log_files), 0)
 
-    def test_log_file_cleanup(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_log_file_cleanup(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                              mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import MIS_LOG_PREFIX, MIS_MAX_ARCHIVE_COUNT
         logger = init_logger('test_logger', log_dir=self.temp_log_dir)
         for root, dirs, files in os.walk(self.temp_log_dir, topdown=False):
@@ -96,7 +174,17 @@ class TestLogger(unittest.TestCase):
         log_files = [f for f in os.listdir(self.temp_log_dir) if f.startswith(MIS_LOG_PREFIX)]
         self.assertEqual(len(log_files), MIS_MAX_ARCHIVE_COUNT + 1)
 
-    def test_log_file_permissions(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_log_file_permissions(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                                  mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import init_logger
         with patch('os.chmod') as mock_chmod:
             logger = init_logger('test_logger', log_dir=self.temp_log_dir)
@@ -104,7 +192,17 @@ class TestLogger(unittest.TestCase):
             logger.info('This is a info message to check permissions')
             mock_chmod.assert_called_with(rotated_log_files[0], 0o640)
 
-    def test_set_file_permissions_with_permission_error(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_set_file_permissions_with_permission_error(self, mock_stat, mock_isdir, mock_isfile, mock_getsize,
+                                                        mock_getgrgid, mock_getgid, mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         """Test _set_file_permissions when PermissionError occurs"""
         from mis.logger import RotatingFileWithArchiveHandler
 
@@ -125,7 +223,17 @@ class TestLogger(unittest.TestCase):
             self.assertIn("Error setting permissions for log file", str(context.exception))
             self.assertIn("Operation not permitted", str(context.exception))
 
-    def test_set_file_permissions_owner_error(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_set_file_permissions_owner_error(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid,
+                                              mock_getgid, mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         """Test _set_file_permissions when _set_file_permissions raises PermissionError"""
         from mis.logger import RotatingFileWithArchiveHandler
 
@@ -145,7 +253,35 @@ class TestLogger(unittest.TestCase):
                 handler._set_file_permissions(test_file, is_archive=True)
             self.assertIn("Error setting permissions for log file", str(context.exception))
 
-    def test_call_stack_filter(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_init_rotating_file_with_archive_handler_with_none(self, mock_stat, mock_isdir, mock_isfile, mock_getsize,
+                                                               mock_getgrgid, mock_getgid, mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
+        """Test _set_file_permissions when _set_file_owner raises PermissionError"""
+        from mis.logger import RotatingFileWithArchiveHandler
+        with self.assertRaises(TypeError):
+            RotatingFileWithArchiveHandler(None, log_dir=self.temp_log_dir)
+        with self.assertRaises(TypeError):
+            RotatingFileWithArchiveHandler(os.path.join(self.temp_log_dir, "test.log"), log_dir=None)
+
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_call_stack_filter(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                               mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         from mis.logger import init_logger
         logger = init_logger('test_call_stack', log_dir=self.temp_log_dir)
         logger.info('This is a info message to check call stack filter')
@@ -197,11 +333,23 @@ class TestLogger(unittest.TestCase):
         message = "This is a test message.\u000D\u000A"
         self.assertEqual(_filter_invalid_chars(message), "This is a test message. ")
 
-    def test_path_length_exceeds_limit(self):
+    @patch('os.getuid', return_value=1000)
+    @patch('os.getgid', return_value=1000)
+    @patch('grp.getgrgid', return_value=1000)
+    @patch('os.path.getsize', return_value=1024 * 1024)
+    @patch('os.path.isfile', return_value=True)
+    @patch('os.path.isdir', return_value=True)
+    @patch('os.stat')
+    def test_path_length_exceeds_limit(self, mock_stat, mock_isdir, mock_isfile, mock_getsize, mock_getgrgid, mock_getgid,
+                               mock_getuid):
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_getgrgid.return_value = MagicMock(gr_name='test_group')
         long_prefix = "a" * 1000
         with patch('mis.logger.MIS_LOG_PREFIX', long_prefix):
             with self.assertRaises(ValueError) as cm:
-                log_manager = LogManager(log_dir="/tmp/test_log", log_type=LogType.DEFAULT)
+                test_dir = "/tmp/test_log"
+                os.makedirs(os.path.join(long_prefix, test_dir, "test_tmp_logger"), mode=0o750, exist_ok=True)
+                log_manager = LogManager(log_dir=test_dir, log_type=LogType.DEFAULT)
                 logger = log_manager.setup_logger("test_tmp_logger")
 
             self.assertIn("Log file is too long", str(cm.exception))

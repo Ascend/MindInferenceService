@@ -12,14 +12,14 @@ from mis.llm.engine_factory import AutoEngine, VLLMEngine
 class TestAutoEngine(unittest.TestCase):
     def test_from_config_with_none_args(self):
         with self.assertRaises(TypeError) as context:
-            result = VLLMEngine.from_args(None)
-        self.assertEqual(str(context.exception), "Invalid args type: <class 'NoneType'>, GlobalArgs needed")
+            VLLMEngine.from_args(None)
+        self.assertEqual(str(context.exception), f"Invalid args type: <class 'NoneType'>, GlobalArgs needed")
 
     def test_from_config_with_invalid_args_type(self):
         invalid_args = "not a GlobalArgs instance"
         with self.assertRaises(TypeError) as context:
-            result = VLLMEngine.from_args(invalid_args)
-        self.assertEqual(str(context.exception), "Invalid args type: <class 'str'>, GlobalArgs needed")
+            VLLMEngine.from_args(invalid_args)
+        self.assertEqual(str(context.exception), f"Invalid args type: <class 'str'>, GlobalArgs needed")
 
     @patch('mis.llm.engine_factory.VLLMEngine.from_args')
     def test_from_config_vllm(self, mock_from_args):

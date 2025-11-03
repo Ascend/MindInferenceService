@@ -12,7 +12,8 @@ from fastapi import Request
 from packaging import version
 from starlette.datastructures import State
 from starlette.responses import JSONResponse
-
+from vllm.config import ModelConfig
+from vllm.engine.protocol import EngineClient
 from mis.llm.entrypoints.openai.api_server import (
     show_available_models,
     create_chat_completions,
@@ -59,7 +60,7 @@ class TestApiServer(unittest.TestCase):
     def setUp(self, mock_isdir, mock_stat):
         """Set up test fixtures before each test method."""
         mock_isdir.return_value = True
-        mock_stat.return_value = os.stat_result((0o755, 0, 0, 0, 0, 0, 0, 0, 0, 0))  # Mock a valid stat result
+        mock_stat.return_value = os.stat_result((0o750, 0, 0, 0, 0, 0, 0, 0, 0, 0))  # Mock a valid stat result
 
         from mis.args import GlobalArgs
         self.test_args = GlobalArgs(
@@ -70,8 +71,10 @@ class TestApiServer(unittest.TestCase):
         )
 
     @patch('mis.llm.entrypoints.openai.api_server.models')
-    def test_show_available_models(self, mock_models):
+    @patch('os.stat')
+    def test_show_available_models(self, mock_stat, mock_models):
         """Test show_available_models endpoint."""
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
         mock_response = MagicMock()
         mock_response.data = [self.set_up_mock_models()]
         mock_response.model_dump.return_value = {
@@ -125,9 +128,11 @@ class TestApiServer(unittest.TestCase):
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
     @patch('mis.llm.entrypoints.openai.api_server.base')
-    def test_create_chat_completions_with_none_handler(self, mock_base, mock_chat):
+    @patch('os.stat')
+    def test_create_chat_completions_with_none_handler(self, mock_stat, mock_base, mock_chat):
         """Test create_chat_completions when handler is None."""
         # Setup mocks
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
         mock_chat.return_value = None
         mock_base_instance = MagicMock()
         from vllm.entrypoints.openai.protocol import ErrorResponse
@@ -174,9 +179,11 @@ class TestApiServer(unittest.TestCase):
 
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
-    def test_create_chat_completions_with_error_response(self, mock_chat):
+    @patch('os.stat')
+    def test_create_chat_completions_with_error_response(self, mock_stat, mock_chat):
         """Test create_chat_completions when handler returns ErrorResponse."""
         # Setup mocks
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
         mock_handler = AsyncMock()
         from vllm.entrypoints.openai.protocol import ErrorResponse
         vllm_version = get_vllm_version()
@@ -214,9 +221,11 @@ class TestApiServer(unittest.TestCase):
         mock_handler.create_chat_completion.assert_awaited_once()
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
-    def test_create_chat_completions_with_chat_response(self, mock_chat):
+    @patch('os.stat')
+    def test_create_chat_completions_with_chat_response(self, mock_stat, mock_chat):
         """Test create_chat_completions when handler returns ChatCompletionResponse."""
         # Setup mocks
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
         mock_handler = AsyncMock()
         from vllm.entrypoints.openai.protocol import ChatCompletionResponse
         mock_chat_response = ChatCompletionResponse(
@@ -251,9 +260,11 @@ class TestApiServer(unittest.TestCase):
         mock_handler.create_chat_completion.assert_awaited_once()
 
     @patch('mis.llm.entrypoints.openai.api_server.chat')
-    def test_create_chat_completions_with_streaming_response(self, mock_chat):
+    @patch('os.stat')
+    def test_create_chat_completions_with_streaming_response(self, mock_stat, mock_chat):
         """Test create_chat_completions when handler returns generator."""
         # Setup mocks
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
         mock_handler = AsyncMock()
         mock_generator = MagicMock()
         mock_handler.create_chat_completion = AsyncMock(return_value=mock_generator)
@@ -281,11 +292,13 @@ class TestApiServer(unittest.TestCase):
         mock_chat.assert_called_once_with(mock_raw_request)
         mock_handler.create_chat_completion.assert_awaited_once()
 
-    def test_init_openai_app_state_with_served_model_name(self):
+    @patch('os.stat')
+    def test_init_openai_app_state_with_served_model_name(self, mock_stat):
         """Test init_openai_app_state with served_model_name provided."""
         # Setup
-        mock_engine_client = AsyncMock()
-        mock_model_config = MagicMock()
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
         mock_state = State()
         from mis.args import GlobalArgs
@@ -309,11 +322,13 @@ class TestApiServer(unittest.TestCase):
         self.assertIsNotNone(mock_state.openai_serving_chat)
         self.assertIsNotNone(mock_state.openai_serving_tokenization)
 
-    def test_init_openai_app_state_without_served_model_name(self):
+    @patch('os.stat')
+    def test_init_openai_app_state_without_served_model_name(self, mock_stat):
         """Test init_openai_app_state without served_model_name."""
         # Setup
-        mock_engine_client = AsyncMock()
-        mock_model_config = MagicMock()
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
         mock_state = State()
         from mis.args import GlobalArgs
@@ -337,11 +352,13 @@ class TestApiServer(unittest.TestCase):
         self.assertIsNotNone(mock_state.openai_serving_chat)
         self.assertIsNotNone(mock_state.openai_serving_tokenization)
 
-    def test_init_openai_app_state_with_disabled_log_requests(self):
+    @patch('os.stat')
+    def test_init_openai_app_state_with_disabled_log_requests(self, mock_stat):
         """Test init_openai_app_state with disabled log requests."""
         # Setup
-        mock_engine_client = AsyncMock()
-        mock_model_config = MagicMock()
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
         mock_state = State()
         from mis.args import GlobalArgs
@@ -364,6 +381,95 @@ class TestApiServer(unittest.TestCase):
         self.assertIsNotNone(mock_state.openai_serving_models)
         self.assertIsNotNone(mock_state.openai_serving_chat)
         self.assertIsNotNone(mock_state.openai_serving_tokenization)
+
+    @patch('os.stat')
+    def test_init_openai_app_state_with_engine_client_is_invalid(self, mock_stat):
+        """Test init_openai_app_state with engine client is invalid."""
+        # Setup
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_model_config = MagicMock(spec=ModelConfig)
+        mock_model_config.task = "test_task"
+        mock_state = State()
+        from mis.args import GlobalArgs
+        args = GlobalArgs(
+            model="test_model",
+            served_model_name=None,
+            disable_log_requests=True,
+            max_log_len=1000
+        )
+
+        # Create an async function to test
+        async def test_init_state():
+            await init_openai_app_state("invalid_type", mock_model_config, mock_state, args)
+
+        # Run the async test
+        with self.assertRaises(TypeError) as context:
+            self.run_async(test_init_state())
+
+    @patch('os.stat')
+    def test_init_openai_app_state_with_model_config_is_invalid(self, mock_stat):
+        """Test init_openai_app_state with engine client is invalid."""
+        # Setup
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_state = State()
+        from mis.args import GlobalArgs
+        args = GlobalArgs(
+            model="test_model",
+            served_model_name=None,
+            disable_log_requests=True,
+            max_log_len=1000
+        )
+
+        # Create an async function to test
+        async def test_init_state():
+            await init_openai_app_state(mock_engine_client, "invalid_type", mock_state, args)
+
+        # Run the async test
+        with self.assertRaises(TypeError) as context:
+            self.run_async(test_init_state())
+
+    @patch('os.stat')
+    def test_init_openai_app_state_with_state_is_invalid(self, mock_stat):
+        """Test init_openai_app_state with engine client is invalid."""
+        # Setup
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_model_config = MagicMock(spec=ModelConfig)
+        mock_model_config.task = "test_task"
+        from mis.args import GlobalArgs
+        args = GlobalArgs(
+            model="test_model",
+            served_model_name=None,
+            disable_log_requests=True,
+            max_log_len=1000
+        )
+
+        # Create an async function to test
+        async def test_init_state():
+            await init_openai_app_state(mock_engine_client, mock_model_config, "invalid_type", args)
+
+        # Run the async test
+        with self.assertRaises(TypeError) as context:
+            self.run_async(test_init_state())
+
+    @patch('os.stat')
+    def test_init_openai_app_state_with_args_is_invalid(self, mock_stat):
+        """Test init_openai_app_state with engine client is invalid."""
+        # Setup
+        mock_stat.return_value = MagicMock(st_uid=1000, st_gid=1000, st_mode=0o600)
+        mock_engine_client = AsyncMock(spec=EngineClient)
+        mock_model_config = MagicMock(spec=ModelConfig)
+        mock_model_config.task = "test_task"
+        mock_state = State()
+
+        # Create an async function to test
+        async def test_init_state():
+            await init_openai_app_state(mock_engine_client, mock_model_config, mock_state, "invalid_type")
+
+        # Run the async test
+        with self.assertRaises(TypeError) as context:
+            self.run_async(test_init_state())
 
     def run_async(self, coroutine):
         """Helper method to run async tests avoiding event loop issues."""

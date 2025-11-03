@@ -81,6 +81,13 @@ class RotatingFileWithArchiveHandler(RotatingFileHandler):
             delay (bool): Whether to delay file opening until first write
             log_dir (str): Directory to store log files
         """
+        GeneralChecker.check_path_or_file(
+            path_label="Log file",
+            path=filepath,
+            is_dir=False,
+            expected_mode=FILE_PERMISSIONS,  # 640
+            max_file_size=MIS_ARCHIVE_SIZE
+        )
         super().__init__(filepath, mode, max_bytes, backup_count, encoding, delay)
         self.log_dir = log_dir
         self.base_filename = os.path.basename(filepath)
@@ -230,6 +237,8 @@ class CallStackFilter(logging.Filter):
         Args:
             record (logging.LogRecord): Log record
         """
+        if not isinstance(record, logging.LogRecord):
+            raise TypeError(f"Invalid record type: {type(record)}, logging.LogRecord needed")
         # Get real caller info
         filename, lineno, function_name = _find_caller_info()
         record.filename = filename
@@ -248,6 +257,16 @@ class LogManager:
             archive_size: Maximum size of a log file before archiving
             log_type (LogType): Used to log type, where DEFAULT, OPERATION, and SERVICE.
         """
+        if not isinstance(log_dir, str):
+            raise TypeError(f"log_dir must be a string, got {type(log_dir)}")
+        if not isinstance(log_type, LogType):
+            raise TypeError(f"log_type must be a LogType enum, got {type(log_type)}")
+        GeneralChecker.check_path_or_file(
+            path_label="Log path",
+            path=log_dir,
+            is_dir=True,
+            expected_mode=DIRECTORY_PERMISSIONS,  # 750
+        )
         self.log_dir: str = log_dir
         self.max_archive_count: int = max_archive_count
         self.archive_size: int = archive_size
@@ -272,6 +291,8 @@ class LogManager:
         Returns:
             Logger: Configured logger instance
         """
+        if not isinstance(name, str):
+            raise TypeError(f"Name must be a string, got {type(name)}")
         self.logger = logging.getLogger(name)
         self.logger.setLevel(logging.DEBUG if self.log_type == LogType.OPERATION else MIS_LOG_LEVEL)
 
@@ -360,6 +381,8 @@ class EnhancedLogger:
         Args:
             logger (Logger): Logger instance
         """
+        if not isinstance(logger, Logger):
+            raise TypeError(f"Invalid logger type: {type(logger)}, Logger needed")
         self.logger: Logger = logger
         self._caller_filename = None
         self._caller_lineno = None

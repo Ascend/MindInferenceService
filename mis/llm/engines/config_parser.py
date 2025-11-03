@@ -32,9 +32,8 @@ class ConfigParser:
         """
         logger.debug(f"Initializing ConfigParser with args.")
         self.args = args
-        self.args.engine_optimization_config = {}
-
         self._check_all_args_valid()
+        self.args.engine_optimization_config = {}
 
         self.model_type = self.args.model.split('/')[-1]
         self.model_folder_path = os.path.join(self._get_configs_root(), "configs", "llm", self.model_type.lower())
@@ -221,8 +220,8 @@ class ConfigParser:
         """
         logger.debug("Checking all arguments.")
         if not isinstance(self.args, GlobalArgs):
-            logger.error("args must be an instance of GlobalArgs")
-            raise TypeError("args must be an instance of GlobalArgs")
+            logger.error(f"Invalid args type: {type(self.args)}, GlobalArgs needed")
+            raise TypeError(f"Invalid args type: {type(self.args)}, GlobalArgs needed")
 
         for attr in ("engine_type", "mis_config"):
             # Verify the attribute character string.

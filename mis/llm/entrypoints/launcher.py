@@ -6,12 +6,13 @@ import signal
 import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
-from typing import Optional
+from typing import Optional, Union
 
 import uvloop
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.middleware.exceptions import ExceptionMiddleware
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.launcher import serve_http
@@ -31,13 +32,13 @@ from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
-logger_operation = init_logger(__name__+".operation", log_type=LogType.OPERATION)
+op_logger = init_logger(__name__ + ".operation", log_type=LogType.OPERATION)
 
 TIMEOUT_KEEP_ALIVE = 5
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> None:
+async def lifespan(app: Union[FastAPI, ExceptionMiddleware]) -> None:
     """
     An async context manager that handles the application's startup and shutdown events.
     Args:
@@ -46,6 +47,11 @@ async def lifespan(app: FastAPI) -> None:
         None: Control is yielded back to the application to run.
     """
     logger.info("Application is starting up.")
+    if not isinstance(app, (FastAPI, ExceptionMiddleware)):
+        logger.error(
+            f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
+        raise TypeError(
+            f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
     yield
     logger.info("Application is shutting down.")
     if hasattr(app.state, "rate_limit_middleware"):
@@ -86,9 +92,8 @@ def _add_exception_handlers(app: FastAPI):
                           the unsupported method and the allowed methods.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
-        logger_operation.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.METHOD_NOT_ALLOWED.value} "
-                                 f"Request Method not allowed, allowed methods in ['GET', 'POST']")
+        op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.METHOD_NOT_ALLOWED.value} "
+                          f"Request Method not allowed, allowed methods in ['GET', 'POST']")
         return JSONResponse(
             status_code=HTTPStatus.METHOD_NOT_ALLOWED,
             content={
@@ -100,21 +105,19 @@ def _add_exception_handlers(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
         error = ErrorResponse(message=str(exc),
                               type="BadRequestError",
                               code=HTTPStatus.BAD_REQUEST)
-        logger_operation.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.BAD_REQUEST.value} Request validation error "
-                               f"{error.model_dump()}")
+        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST.value} Request validation error "
+                        f"{error.model_dump()}")
         return JSONResponse(content=error.model_dump(),
                             status_code=HTTPStatus.BAD_REQUEST)
 
     @app.exception_handler(Exception)
     async def internal_exception_handler(request: Request, exc: Exception):
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
-        logger_operation.error(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                               f"Internal server error: {exc}")
+        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                        f"Internal server error: {exc}")
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={
@@ -156,35 +159,34 @@ def _add_restrict_host_middleware(app: FastAPI):
                           or a JSONResponse with status code 403 if the host is not allowed.
         """
         client_ip = get_client_ip(request)
-        url = request.url.path  # Secure attribute access, usually does not require handling.
         allowed_hosts = (constants.MIS_HOST,)
         if not callable(call_next):
-            logger.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                           f"call_next must be callable, got {type(call_next).__name__}")
+            op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+                              f"call_next must be callable, got {type(call_next).__name__}")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                content={"detail": "Internal server error: invalid RequestSizeLimitMiddleware configuration"}
+                content={"detail": "Internal server error"}
             )
         try:
             host = request.headers.get("host", "").split(":")[0]
             if host not in allowed_hosts:
-                logger_operation.warning(f"[IP: {client_ip}] '{url}' {HTTPStatus.FORBIDDEN.value} Invalid host")
+                op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.FORBIDDEN.value} Invalid host")
                 return JSONResponse(
                     status_code=HTTPStatus.FORBIDDEN,
                     content={"detail": f"Forbidden: Invalid Host"}
                 )
             return await call_next(request)
         except AttributeError as e:
-            logger_operation.error(
-                f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+            op_logger.error(
+                f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
                 f"AttributeError in restrict_host_middleware: {e}")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"detail": "Internal Server Error"}
             )
         except Exception as e:
-            logger_operation.error(
-                f"[IP: {client_ip}] '{url}' {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
+            op_logger.error(
+                f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
                 f"Unexpected error in restrict_host_middleware: {e}")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
