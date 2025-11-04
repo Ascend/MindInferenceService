@@ -96,10 +96,10 @@ def get_soc_name() -> Union[str, None]:
         import acl
         soc_info = acl.get_soc_name()
     except ImportError as e:
-        logger.error(f"Unable to import ACL, please check if ACL is imported correctly.")
+        logger.error("Unable to import ACL, please check if ACL is imported correctly.")
         raise ImportError("Unable to import ACL, please check if ACL is imported correctly.") from e
     except Exception as e:
-        logger.error(f"get soc info failed, please check if CANN is installed correctly.")
+        logger.error("get soc info failed, please check if CANN is installed correctly.")
         raise Exception("get soc info failed, please check if CANN is installed correctly.") from e
     if soc_info is None:
         logger.error("get soc info failed, please check the device mounting status.")
@@ -154,7 +154,7 @@ def get_client_ip(request: Request) -> str:
         try:
             ipaddress.ip_address(client_ip)
         except ValueError:
-            logger.warning(f"Get invalid IP address, return unknown.")
+            logger.warning("Get invalid IP address, return unknown.")
             client_ip = "unknown"
     except AttributeError as e:
         logger.error("Error getting client IP address.")

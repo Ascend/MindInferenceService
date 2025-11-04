@@ -3,7 +3,7 @@
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 from fastapi import Request
 from mis.utils.utils import get_client_ip, ConfigChecker

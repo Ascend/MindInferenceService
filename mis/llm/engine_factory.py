@@ -85,7 +85,7 @@ class VLLMEngine:
                                               disable_log_stats=args.disable_log_stats,
                                               disable_log_requests=args.disable_log_requests,
                                               **args.engine_optimization_config)
-            logger.info(f"AsyncLLMEngine args initialized successfully.")
+            logger.info("AsyncLLMEngine args initialized successfully.")
             return AsyncLLMEngine.from_engine_args(engine_args)
         except Exception as e:
             logger.error(f"Failed to initialize AsyncLLMEngine: {e}")

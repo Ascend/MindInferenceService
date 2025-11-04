@@ -6,18 +6,17 @@ import signal
 import sys
 from contextlib import asynccontextmanager
 from http import HTTPStatus
-from typing import Optional, Union
+from typing import Optional
 
 import uvloop
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
-from starlette.middleware.exceptions import ExceptionMiddleware
+from starlette.types import ASGIApp
 from vllm.config import ModelConfig
 from vllm.engine.protocol import EngineClient
 from vllm.entrypoints.launcher import serve_http
 from vllm.entrypoints.openai.api_server import lifespan, create_server_socket
-from vllm.entrypoints.openai.protocol import ErrorResponse
 from vllm.utils import set_ulimit
 
 from mis import constants
@@ -38,20 +37,18 @@ TIMEOUT_KEEP_ALIVE = 5
 
 
 @asynccontextmanager
-async def lifespan(app: Union[FastAPI, ExceptionMiddleware]) -> None:
+async def lifespan(app: ASGIApp) -> None:
     """
     An async context manager that handles the application's startup and shutdown events.
     Args:
-        app (FastAPI): The FastAPI application instance.
+        app (ASGIApp): The ASGIApp application instance.
     Yields:
         None: Control is yielded back to the application to run.
     """
     logger.info("Application is starting up.")
-    if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-        logger.error(
-            f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
-        raise TypeError(
-            f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
+    if app is None:
+        logger.error("ASGIApp application instance is required and cannot be None.")
+        raise ValueError("ASGIApp application instance is required and cannot be None.")
     yield
     logger.info("Application is shutting down.")
     if hasattr(app.state, "rate_limit_middleware"):
@@ -79,7 +76,7 @@ async def _build_engine_client_from_args(args: GlobalArgs) -> EngineClient:
             engine_client.shutdown()
 
 
-def _add_exception_handlers(app: FastAPI):
+def _add_exception_handlers(app: ASGIApp):
     @app.exception_handler(HTTPStatus.METHOD_NOT_ALLOWED)
     async def method_not_allowed_handler(request: Request, exc: Exception) -> JSONResponse:
         """
@@ -93,7 +90,7 @@ def _add_exception_handlers(app: FastAPI):
         """
         client_ip = get_client_ip(request)
         op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.METHOD_NOT_ALLOWED.value} "
-                          f"Request Method not allowed, allowed methods in ['GET', 'POST']")
+                          "Request Method not allowed, allowed methods in ['GET', 'POST']")
         return JSONResponse(
             status_code=HTTPStatus.METHOD_NOT_ALLOWED,
             content={
@@ -105,29 +102,28 @@ def _add_exception_handlers(app: FastAPI):
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         client_ip = get_client_ip(request)
-        error = ErrorResponse(message=str(exc),
-                              type="BadRequestError",
-                              code=HTTPStatus.BAD_REQUEST)
-        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST.value} Request validation error "
-                        f"{error.model_dump()}")
-        return JSONResponse(content=error.model_dump(),
-                            status_code=HTTPStatus.BAD_REQUEST)
+        op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST.value} Request validation error")
+        return JSONResponse(
+            status_code=HTTPStatus.BAD_REQUEST,
+            content={
+                "message": "Request validation error"
+            },
+        )
 
     @app.exception_handler(Exception)
-    async def internal_exception_handler(request: Request, exc: Exception):
+    async def internal_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         client_ip = get_client_ip(request)
         op_logger.error(f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                        f"Internal server error: {exc}")
+                        "Internal server error")
         return JSONResponse(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             content={
-                "message": "Internal Server Error",
-                "details": str(exc)
+                "message": "Internal Server Error"
             },
         )
 
 
-def _add_middlewares(args: GlobalArgs, app: FastAPI):
+def _add_middlewares(args: GlobalArgs, app: ASGIApp):
     app.add_middleware(RequestHeaderSizeLimitMiddleware, max_header_size=constants.MAX_REQUEST_HEADER_SIZE)
 
     # Add request size limiting middleware using configured limit
@@ -146,7 +142,7 @@ def _add_middlewares(args: GlobalArgs, app: FastAPI):
     app.add_middleware(RequestTimeoutMiddleware, request_timeout_in_sec=constants.REQUEST_TIMEOUT_IN_SEC)
 
 
-def _add_restrict_host_middleware(app: FastAPI):
+def _add_restrict_host_middleware(app: ASGIApp):
     @app.middleware("http")
     async def restrict_host_middleware(request: Request, call_next: callable) -> JSONResponse:
         """
@@ -173,13 +169,13 @@ def _add_restrict_host_middleware(app: FastAPI):
                 op_logger.warning(f"[IP: {client_ip}] {HTTPStatus.FORBIDDEN.value} Invalid host")
                 return JSONResponse(
                     status_code=HTTPStatus.FORBIDDEN,
-                    content={"detail": f"Forbidden: Invalid Host"}
+                    content={"detail": "Forbidden: Invalid Host"}
                 )
             return await call_next(request)
         except AttributeError as e:
             op_logger.error(
                 f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                f"AttributeError in restrict_host_middleware: {e}")
+                "AttributeError in restrict_host_middleware")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"detail": "Internal Server Error"}
@@ -187,22 +183,22 @@ def _add_restrict_host_middleware(app: FastAPI):
         except Exception as e:
             op_logger.error(
                 f"[IP: {client_ip}] {HTTPStatus.INTERNAL_SERVER_ERROR.value} "
-                f"Unexpected error in restrict_host_middleware: {e}")
+                "Unexpected error in restrict_host_middleware")
             return JSONResponse(
                 status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
                 content={"detail": "Internal Server Error"}
             )
 
 
-def _build_app(args: GlobalArgs) -> FastAPI:
+def _build_app(args: GlobalArgs) -> ASGIApp:
     """
-    Build the FastAPI application based on the given arguments.
+    Build the ASGIApp application based on the given arguments.
     Args:
         args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
     Returns:
-        FastAPI: The configured FastAPI application.
+        ASGIApp: The configured ASGIApp application.
     """
-    logger.debug("Disabling FastAPI documentation")
+    logger.debug("Disabling ASGIApp documentation")
     app = FastAPI(openapi_url=None,
                   docs_url=None,
                   redoc_url=None,
@@ -211,7 +207,8 @@ def _build_app(args: GlobalArgs) -> FastAPI:
 
     if args.enable_dos_protection:
         _add_middlewares(args, app)
-        logger.info(f"Size limit, concurrency limit, rate limit and timeout control middleware is enabled")
+        logger.info(
+            "Headers size limit, request size limit, concurrency limit, rate limit and timeout control middleware is enabled")
     else:
         logger.warning("The middleware is disabled. "
                        "For security, please correctly set MIS_ENABLE_DOS_PROTECTION.")
@@ -225,14 +222,14 @@ def _build_app(args: GlobalArgs) -> FastAPI:
 
 
 async def _init_app_state(engine_client: EngineClient, model_config: ModelConfig,
-                          app: FastAPI, args: GlobalArgs) -> None:
+                          app: ASGIApp, args: GlobalArgs) -> None:
     """
     Initialize the application state with the given engine client, model configuration, and arguments.
 
     Args:
         engine_client (EngineClient): The engine client.
         model_config (ModelConfig): The model configuration.
-        app (FastAPI): The FastAPI application.
+        app (ASGIApp): The ASGIApp application.
         args (GlobalArgs): The global arguments containing all configuration resolved by MIS.
     """
     if args.engine_type in constants.MIS_ENGINE_TYPES:
@@ -270,7 +267,7 @@ async def _run_server(args: GlobalArgs) -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     async with _build_engine_client_from_args(args) as engine_client:
-        logger.info("Building FastAPI application")
+        logger.info("Building ASGIApp application")
         app = _build_app(args)
 
         app.state.engine_client = engine_client

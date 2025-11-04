@@ -23,7 +23,7 @@ def main() -> None:
     signal.signal(signal.SIGTERM, signal_handler)
 
     try:
-        logger.info(f"start mis_launcher")
+        logger.info("start mis_launcher")
         command = [
             sys.executable, "-c",
             ("import sys; sys.path.insert(0, sys.argv[1]);"

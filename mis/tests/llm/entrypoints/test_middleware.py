@@ -475,7 +475,7 @@ class TestRequestHeaderSizeLimitMiddleware(unittest.TestCase):
 
     def test_invalid_app_or_max_header_size(self):
         """Test exceptions when invalid parameters are passed"""
-        with self.assertRaises(TypeError):
+        with self.assertRaises(ValueError):
             RequestHeaderSizeLimitMiddleware(None, max_header_size=1024)
 
         with self.assertRaises(TypeError):
