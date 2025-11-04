@@ -2,7 +2,6 @@
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
-import stat
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import mis.constants as constants

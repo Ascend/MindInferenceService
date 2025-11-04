@@ -119,8 +119,8 @@ class AbsEngineConfigValidator(ABC):
         diff_config = set(self.config.keys()) - set(self.checkers.keys())
         if diff_config:
             # Check if the backend configuration keywords for inference are updated with the version
-            logger.error(f"Configuration keys {diff_config} are not supported.")
-            raise ValueError(f"Configuration keys {diff_config} are not supported.")
+            logger.error("Some configuration keys are not supported. Please refer to the documentation.")
+            raise ValueError("Some configuration keys are not supported. Please refer to the documentation.")
         self.config_update: Dict = {key: self.config[key] for key in self.config if key in self.checkers.keys()}
 
     @staticmethod
@@ -188,7 +188,7 @@ class AbsEngineConfigValidator(ABC):
                 valid_range_str = f"Valid in {checker.get('valid_values')}"
             elif "min" in checker and "max" in checker:
                 is_valid = ConfigChecker.is_value_in_range(key, value, checker.get("min"), checker.get("max"))
-                valid_range_str = f"Valid in range {checker.get('min')} - {checker.get('max')}, got {value}"
+                valid_range_str = f"Valid in range {checker.get('min')} - {checker.get('max')}"
             else:
                 logger.error(f"Checker for {key} must specify either 'valid_values' or both 'min' and 'max'.")
                 raise Exception(f"Checker for {key} must specify either 'valid_values' or both 'min' and 'max'.")

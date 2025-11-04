@@ -88,13 +88,13 @@ class MISChatCompletionRequest(ChatCompletionRequest):
     model_post_init: ClassVar[Any]
 
     def __init__(self, **kwargs: Any) -> None:
-        logger.debug(f"Initializing MISChatCompletionRequest with parameters")
+        logger.debug("Initializing MISChatCompletionRequest with parameters")
         used_kwargs = {}
         for key in kwargs:
             if key in MIS_CHAT_COMPLETION_WHITELIST:
                 used_kwargs[key] = kwargs[key]
             else:
-                logger.warning(f"MIS chat completion ignore invalid param.")
+                logger.warning(f"MIS chat completion ignore invalid param: {key}.")
         self._remove_invalid_messages(used_kwargs)
         validated_kwargs = self._validate_parameters(used_kwargs)
         super().__init__(**validated_kwargs)
@@ -155,21 +155,21 @@ class MISChatCompletionRequest(ChatCompletionRequest):
                                     detail=f"Invalid range for {param_name}: min({min_value}) > max({max_value})"
                                     )
             if not ConfigChecker.is_value_in_range(param_name, value, min_value, max_value):
-                logger.error(f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]")
+                logger.error(f"Invalid value for {param_name}: not in [{min_value}, {max_value}]")
                 raise HTTPException(status_code=400,
-                                    detail=f"Invalid value for {param_name}: {value} not in [{min_value}, {max_value}]"
+                                    detail=f"Invalid value for {param_name}: not in [{min_value}, {max_value}]"
                                     )
         elif min_value is not None:
             if value < min_value:
-                logger.error(f"Invalid value for {param_name}: {value} < min({min_value})")
+                logger.error(f"Invalid value for {param_name}: less than min({min_value})")
                 raise HTTPException(status_code=400,
-                                    detail=f"Invalid value for {param_name}: {value} < min({min_value})"
+                                    detail=f"Invalid value for {param_name}: less than min({min_value})"
                                     )
         elif max_value is not None:
             if value > max_value:
-                logger.error(f"Invalid value for {param_name}: {value} > max({max_value})")
+                logger.error(f"Invalid value for {param_name}: greater than max({max_value})")
                 raise HTTPException(status_code=400,
-                                    detail=f"Invalid value for {param_name}: {value} > max({max_value})"
+                                    detail=f"Invalid value for {param_name}: greater than max({max_value})"
                                     )
         logger.debug(f"Parameter {param_name} validated range successfully.")
         return value
@@ -192,9 +192,9 @@ class MISChatCompletionRequest(ChatCompletionRequest):
         if valid_values is not None:
             if ConfigChecker.is_value_in_enum(param_name, value, valid_values):
                 return value
-        logger.error(f"Invalid value for {param_name}: {value} not in {valid_values}")
+        logger.error(f"Invalid value for {param_name}: not in {valid_values}")
         raise HTTPException(status_code=400,
-                            detail=f"Invalid value for {param_name}: {value} not in {valid_values}"
+                            detail=f"Invalid value for {param_name}: not in {valid_values}"
                             )
 
     def model_post_init(self, __context: Any) -> None:

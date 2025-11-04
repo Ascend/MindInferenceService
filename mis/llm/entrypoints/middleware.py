@@ -6,21 +6,19 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass
 from http import HTTPStatus
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
-from starlette.middleware.exceptions import ExceptionMiddleware
-from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.middleware.exceptions import ExceptionMiddleware
 from starlette.requests import Request
+from starlette.types import ASGIApp
 
 from mis import constants
 from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip
 
-logger = init_logger(__name__, log_type=LogType.OPERATION)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 op_logger = init_logger(__name__ + ".operation", log_type=LogType.OPERATION)
 
 MINUTE_SECONDS = 60
@@ -38,18 +36,15 @@ class RateLimitConfig:
 class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting request header size"""
 
-    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
-                 max_header_size: int = constants.MAX_REQUEST_HEADER_SIZE) -> None:
+    def __init__(self, app: ASGIApp, max_header_size: int = constants.MAX_REQUEST_HEADER_SIZE) -> None:
         """ Initialize middleware with maximum header size limit
         Args:
-            app (FastAPI, ExceptionMiddleware): The FastAPI application instance.
+            app: The ASGIApp application instance.
             max_header_size (int): Maximum allowed size for request headers in bytes
         """
-        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger.error(
-                f"Invalid app type: {type(app)}, FastApi or ExceptionMiddleware needed.")
-            raise TypeError(
-                f"Invalid app type: {type(app)}, FastApi or ExceptionMiddleware needed.")
+        if app is None:
+            logger.error("ASGIApp application instance is required and cannot be None.")
+            raise ValueError("ASGIApp application instance is required and cannot be None.")
         if not isinstance(max_header_size, int):
             logger.error(f"Invalid max_header_size type: {type(max_header_size)}, integer needed.")
             raise TypeError(f"Invalid max_header_size type: {type(max_header_size)}, integer needed.")
@@ -101,19 +96,16 @@ class RequestHeaderSizeLimitMiddleware(BaseHTTPMiddleware):
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting the size of the request body."""
 
-    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
-                 max_body_size: int = constants.MAX_REQUEST_BODY_SIZE) -> None:  # Default 50MB
+    def __init__(self, app: ASGIApp, max_body_size: int = constants.MAX_REQUEST_BODY_SIZE) -> None:  # Default 50MB
         """
-        Initialize the middleware with the given FastAPI app and maximum body size.
+        Initialize the middleware with the given ASGIApp app and maximum body size.
         Args:
-            app (FastAPI): The FastAPI application instance.
+            app (ASGIApp): The ASGIApp application instance.
             max_body_size (int): The maximum allowed request body size in bytes. Default is 50MB.
         """
-        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger.error(
-                f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
-            raise TypeError(
-                f"FastApi or ExceptionMiddleware app instance is required for RequestSizeLimitMiddleware, got {type(app)}.")
+        if app is None:
+            logger.error("ASGIApp application instance is required and cannot be None.")
+            raise ValueError("ASGIApp application instance is required and cannot be None.")
         if not isinstance(max_body_size, int):
             logger.error("max_body_size is not an integer.")
             raise TypeError(f"max_body_size must be an integer, got {type(max_body_size)}.")
@@ -219,19 +211,16 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
     """Middleware for limiting concurrent requests (production-grade implementation)"""
 
-    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
-                 max_concurrent_requests: int = constants.MAX_CONCURRENT_REQUESTS) -> None:
+    def __init__(self, app: ASGIApp, max_concurrent_requests: int = constants.MAX_CONCURRENT_REQUESTS) -> None:
         """
-        Initialize the middleware with the given FastAPI app and maximum concurrent requests.
+        Initialize the middleware with the given ASGIApp app and maximum concurrent requests.
         Args:
-            app (FastAPI): The FastAPI application.
+            app (ASGIApp): The ASGIApp application.
             max_concurrent_requests (int): The maximum allowed concurrent requests. Default is 512.
         """
-        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger.error(
-                f"FastApi or ExceptionMiddleware app instance is required for ConcurrencyLimitMiddleware, got {type(app)}.")
-            raise TypeError(
-                f"FastApi or ExceptionMiddleware app instance is required for ConcurrencyLimitMiddleware, got {type(app)}.")
+        if app is None:
+            logger.error("ASGIApp application instance is required and cannot be None.")
+            raise ValueError("ASGIApp application instance is required and cannot be None.")
         if not isinstance(max_concurrent_requests, int):
             logger.error("max_concurrent_requests is not an integer.")
             raise TypeError(f"max_concurrent_requests must be an integer, got {type(max_concurrent_requests)}.")
@@ -305,19 +294,17 @@ class ConcurrencyLimitMiddleware(BaseHTTPMiddleware):
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """Time-window based rate limiting middleware (production-grade implementation)"""
 
-    def __init__(self, app: Union[FastAPI, ExceptionMiddleware], config: RateLimitConfig = None) -> None:
+    def __init__(self, app: ASGIApp, config: RateLimitConfig = None) -> None:
         """
-        Initialize the middleware with the given FastAPI app and rate limit configuration.
+        Initialize the middleware with the given ASGIApp app and rate limit configuration.
 
         Args:
-            app (FastAPI): The FastAPI application.
+            app (ASGIApp): The ASGIApp application.
             config (RateLimitConfig): The rate limit configuration. Default is a default RateLimitConfig instance.
         """
-        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger.error(
-                f"FastApi or ExceptionMiddleware app instance is required for RateLimitMiddleware, got {type(app)}.")
-            raise TypeError(
-                f"FastApi or ExceptionMiddleware app instance is required for RateLimitMiddleware, got {type(app)}.")
+        if app is None:
+            logger.error("ASGIApp application instance is required and cannot be None.")
+            raise ValueError("ASGIApp application instance is required and cannot be None.")
         """Ensure that self.config can always obtain a RateLimitConfig instance"""
         if config and not isinstance(config, RateLimitConfig):
             logger.error(f"Invalid config type: {type(config)}, RateLimitConfig needed")
@@ -477,20 +464,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 class RequestTimeoutMiddleware(BaseHTTPMiddleware):
     """Middleware for setting a timeout on incoming requests (production-grade implementation)"""
 
-    def __init__(self, app: Union[FastAPI, ExceptionMiddleware],
-                 request_timeout_in_sec: int = constants.REQUEST_TIMEOUT_IN_SEC):
+    def __init__(self, app: ASGIApp, request_timeout_in_sec: int = constants.REQUEST_TIMEOUT_IN_SEC):
         """
-        Initialize the middleware with the given FastAPI app and request timeout in seconds.
+        Initialize the middleware with the given ASGIApp app and request timeout in seconds.
         Args:
-            app (FastAPI): The FastAPI application.
+            app (ASGIApp): The ASGIApp application.
             request_timeout_in_sec (int): The maximum allowed time (in seconds) for a request to be processed.
                                           Default is defined by `constants.REQUEST_TIMEOUT_IN_SEC`.
         """
-        if not isinstance(app, (FastAPI, ExceptionMiddleware)):
-            logger.error(
-                f"FastApi or ExceptionMiddleware app instance is required for RequestTimeoutMiddleware, got {type(app)}.")
-            raise TypeError(
-                f"FastApi or ExceptionMiddleware app instance is required for RequestTimeoutMiddleware, got {type(app)}.")
+        if app is None:
+            logger.error("ASGIApp application instance is required and cannot be None.")
+            self.error = ValueError("ASGIApp application instance is required and cannot be None.")
+            raise self.error
         if not isinstance(request_timeout_in_sec, int):
             logger.error("request_timeout_in_sec is not an integer.")
             raise TypeError(f"request_timeout_in_sec must be an integer, got {type(request_timeout_in_sec)}.")

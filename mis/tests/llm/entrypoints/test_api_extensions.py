@@ -69,7 +69,7 @@ class TestAPIExtensions(unittest.TestCase):
         self.assertIn("messages", request.__dict__)
         self.assertIn("model", request.__dict__)
         self.assertNotIn("invalid_param", request.__dict__)
-        mock_logger.assert_called_once_with("MIS chat completion ignore invalid param.")
+        mock_logger.assert_called_once_with("MIS chat completion ignore invalid param: invalid_param.")
 
     def test_message_cleaning(self):
         test_messages = [
@@ -112,14 +112,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["frequency_penalty"] = -3.0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: -3.0 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: not in [-2.0, 2.0]"
 
     def test_frequency_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["frequency_penalty"] = 2.1
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: 2.1 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for frequency_penalty: not in [-2.0, 2.0]"
 
     def test_max_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -133,14 +133,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["max_tokens"] = 0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for max_tokens: 0 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_tokens: not in [1, 64000]"
 
     def test_max_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_tokens"] = 64001
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for max_tokens: 64001 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_tokens: not in [1, 64000]"
 
     def test_messages_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -168,14 +168,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["min_tokens"] = -1
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for min_tokens: -1 not in [0, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for min_tokens: not in [0, 64000]"
 
     def test_min_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["min_tokens"] = 64001
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for min_tokens: 64001 not in [0, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for min_tokens: not in [0, 64000]"
 
     def test_model_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -189,7 +189,7 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["model"] = "Qwen3-0.6B"
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for model: Qwen3-0.6B not in ('Qwen3-8B',)"
+        assert str(exc_info.value) == "400: Invalid value for model: not in ('Qwen3-8B',)"
 
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -203,14 +203,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["presence_penalty"] = -3.0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for presence_penalty: -3.0 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for presence_penalty: not in [-2.0, 2.0]"
 
     def test_presence_penalty_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = 2.1
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for presence_penalty: 2.1 not in [-2.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for presence_penalty: not in [-2.0, 2.0]"
 
     def test_seed_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -224,14 +224,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["seed"] = -65536
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for seed: -65536 not in [-65535, 65535]"
+        assert str(exc_info.value) == "400: Invalid value for seed: not in [-65535, 65535]"
 
     def test_seed_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["seed"] = 65536
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for seed: 65536 not in [-65535, 65535]"
+        assert str(exc_info.value) == "400: Invalid value for seed: not in [-65535, 65535]"
 
     def test_stream_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -252,14 +252,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["temperature"] = -1.0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for temperature: -1.0 not in [0.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for temperature: not in [0.0, 2.0]"
 
     def test_temperature_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["temperature"] = 3.0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for temperature: 3.0 not in [0.0, 2.0]"
+        assert str(exc_info.value) == "400: Invalid value for temperature: not in [0.0, 2.0]"
 
     def test_top_p_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -273,14 +273,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["top_p"] = 1e-9
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for top_p: 1e-09 not in [1e-08, 1.0]"
+        assert str(exc_info.value) == "400: Invalid value for top_p: not in [1e-08, 1.0]"
 
     def test_top_p_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["top_p"] = 2.0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for top_p: 2.0 not in [1e-08, 1.0]"
+        assert str(exc_info.value) == "400: Invalid value for top_p: not in [1e-08, 1.0]"
 
     def test_max_completion_tokens_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
@@ -294,14 +294,14 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["max_completion_tokens"] = 0
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: 0 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: not in [1, 64000]"
 
     def test_max_completion_tokens_more_than_max(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["max_completion_tokens"] = 64001
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: 64001 not in [1, 64000]"
+        assert str(exc_info.value) == "400: Invalid value for max_completion_tokens: not in [1, 64000]"
 
     def test_max_completion_tokens_None(self):
         kwargs = copy.deepcopy(self.valid_params)

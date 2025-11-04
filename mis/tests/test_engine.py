@@ -13,13 +13,13 @@ class TestAutoEngine(unittest.TestCase):
     def test_from_config_with_none_args(self):
         with self.assertRaises(TypeError) as context:
             VLLMEngine.from_args(None)
-        self.assertEqual(str(context.exception), f"Invalid args type: <class 'NoneType'>, GlobalArgs needed")
+        self.assertEqual(str(context.exception), "Invalid args type: <class 'NoneType'>, GlobalArgs needed")
 
     def test_from_config_with_invalid_args_type(self):
         invalid_args = "not a GlobalArgs instance"
         with self.assertRaises(TypeError) as context:
             VLLMEngine.from_args(invalid_args)
-        self.assertEqual(str(context.exception), f"Invalid args type: <class 'str'>, GlobalArgs needed")
+        self.assertEqual(str(context.exception), "Invalid args type: <class 'str'>, GlobalArgs needed")
 
     @patch('mis.llm.engine_factory.VLLMEngine.from_args')
     def test_from_config_vllm(self, mock_from_args):
@@ -52,7 +52,7 @@ class TestAutoEngine(unittest.TestCase):
             AutoEngine.from_config(args)
 
         # Verify the exception message
-        self.assertEqual(str(context.exception), f"Model Engine for 'invalid_engine_type' is not implemented, "
+        self.assertEqual(str(context.exception), "Model Engine for 'invalid_engine_type' is not implemented, "
                                                  f"available types are {constants.MIS_ENGINE_TYPES}.")
 
 

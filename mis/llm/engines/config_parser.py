@@ -2,7 +2,6 @@
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
 import os
-import stat
 import sys
 from typing import Dict, Optional, Union
 
@@ -30,7 +29,7 @@ class ConfigParser:
         Check all args are valid.
         :param args: global args
         """
-        logger.debug(f"Initializing ConfigParser with args.")
+        logger.debug("Initializing ConfigParser with args.")
         self.args = args
         self._check_all_args_valid()
         self.args.engine_optimization_config = {}
@@ -39,7 +38,7 @@ class ConfigParser:
         self.model_folder_path = os.path.join(self._get_configs_root(), "configs", "llm", self.model_type.lower())
         self.engine_type = self.args.engine_type
         self.mis_config = self.args.mis_config
-        logger.debug(f"ConfigParser initialized successfully")
+        logger.debug("ConfigParser initialized successfully")
 
     @staticmethod
     def _get_configs_root():
@@ -75,10 +74,10 @@ class ConfigParser:
         if not issubclass(validator_class, AbsEngineConfigValidator):
             logger.error(
                 f"Invalid validator_class type: {validator_class.__name__}, "
-                f"subclass of AbsEngineConfigValidator needed")
+                "subclass of AbsEngineConfigValidator needed")
             raise TypeError(
                 f"Invalid validator_class type: {validator_class.__name__}, "
-                f"subclass of AbsEngineConfigValidator needed")
+                "subclass of AbsEngineConfigValidator needed")
         validator = validator_class(selected_engine_config.get(selected_engine_type))
         logger.debug(f"Attributes for engine type {selected_engine_type} updated successfully.")
         return validator.filter_and_validate_config()
@@ -167,7 +166,7 @@ class ConfigParser:
         try:
             expected_mode = DIRECTORY_PERMISSIONS  # 750
             GeneralChecker.check_path_or_file(
-                path_label=f"Configuration path",
+                path_label="Configuration path",
                 path=self.model_folder_path,
                 is_dir=True,
                 expected_mode=expected_mode,

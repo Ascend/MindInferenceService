@@ -43,7 +43,7 @@ def environment_preparation(args: GlobalArgs) -> GlobalArgs:
         logger.info(f"Set served_model_name to {args.model}")
 
     args.model = get_model_path(args.model)
-    logger.debug(f"Resolved model path")
+    logger.debug("Resolved model path")
 
     logger.info("Environment preparation completed")
     return args

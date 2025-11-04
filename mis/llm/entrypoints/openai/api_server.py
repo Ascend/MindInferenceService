@@ -32,7 +32,7 @@ from mis.llm.entrypoints.openai.api_extensions import (
 from mis.logger import init_logger, LogType
 from mis.utils.utils import get_client_ip, get_vllm_version
 
-logger = init_logger(__name__, log_type=LogType.OPERATION)
+logger = init_logger(__name__, log_type=LogType.SERVICE)
 op_logger = init_logger(__name__ + ".operation", log_type=LogType.OPERATION)
 
 router = APIRouter()
@@ -47,7 +47,7 @@ MIS_MODEL_REMOVE_FIELDS = [
 @router.get("/openai/v1/models")
 async def show_available_models(raw_request: Request):
     client_ip = get_client_ip(raw_request)
-    logger.debug(f"Handling request to show available models.")
+    logger.debug("Handling request to show available models.")
     handler = models(raw_request)
 
     try:
@@ -78,40 +78,40 @@ def _align_non_streaming_response(generator: ChatCompletionResponse) -> None:
     """
     remove stop_reason in vllm response to ensure consistent behavior
     """
-    logger.debug(f"Aligning non-streaming response")
+    logger.debug("Aligning non-streaming response")
     for choice in generator.choices:
         del choice.stop_reason
-    logger.debug(f"Non-streaming response aligned")
+    logger.debug("Non-streaming response aligned")
 
 
 async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> AsyncGenerator[str, None]:
     """
     remove stop_reason in vllm stream response to ensure consistent behavior
     """
-    logger.debug(f"Aligning streaming response")
+    logger.debug("Aligning streaming response")
     async for content in generator:
         if "stop_reason" in content:
             if not content.startswith("data: "):
-                logger.warning(f"Content does not start with 'data: ' prefix: {content[:100]}...")
+                logger.warning("Content does not start with 'data:'")
                 yield content
                 continue
 
             try:
                 content_dict = json.loads(content[len("data: "):])
             except json.JSONDecodeError:
-                logger.warning(f"Failed to parse JSON content")
+                logger.warning("Failed to parse JSON content")
                 yield content
                 continue
 
             if not isinstance(content_dict, dict):
-                logger.warning(f"Content is not a dictionary")
+                logger.warning("Content is not a dictionary")
                 yield content
                 continue
 
             try:
                 content_obj = ChatCompletionStreamResponse(**content_dict)
             except ValidationError:
-                logger.warning(f"Validation error in content object")
+                logger.warning("Validation error in content object")
                 yield content
                 continue
 
@@ -121,18 +121,18 @@ async def _align_streaming_response(generator: AsyncGenerator[str, None]) -> Asy
             yield f"data: {content_obj.model_dump_json(exclude_unset=True)}\n\n"
         else:
             yield content
-    logger.debug(f"Streaming response aligned")
+    logger.debug("Streaming response aligned")
 
 
 @router.post("/openai/v1/chat/completions")
 async def create_chat_completions(request: MISChatCompletionRequest,
                                   raw_request: Request):
     client_ip = get_client_ip(raw_request)
-    logger.debug(f"Handling request to create chat completions.")
+    logger.debug("Handling request to create chat completions.")
     handler = chat(raw_request)
     if handler is None:
         op_logger.error(f"[IP: {client_ip}] {HTTPStatus.BAD_REQUEST} "
-                        f"The model does not support Chat Completions API")
+                        "The model does not support Chat Completions API")
         return base(raw_request).create_error_response(message="The model does not support Chat Completions API")
     try:
         if raw_request.app.state.request_timeout:
