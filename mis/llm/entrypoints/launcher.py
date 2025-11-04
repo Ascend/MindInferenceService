@@ -133,9 +133,7 @@ def _add_middlewares(args: GlobalArgs, app: ASGIApp):
     app.add_middleware(ConcurrencyLimitMiddleware, max_concurrent_requests=constants.MAX_CONCURRENT_REQUESTS)
 
     # Add rate limiting middleware
-    rate_limit_config = RateLimitConfig(
-        requests_per_minute=getattr(args, 'rate_limit_per_minute', constants.RATE_LIMIT_PER_MINUTE),
-    )
+    rate_limit_config = RateLimitConfig(requests_per_minute=constants.RATE_LIMIT_PER_MINUTE)
 
     rate_limit_middleware = RateLimitMiddleware(app, config=rate_limit_config)
     app.add_middleware(rate_limit_middleware.__class__, config=rate_limit_config)
