@@ -50,7 +50,7 @@ function check_path() {
 
 function log_check() {
     local log_size
-    log_size="$(find $log_file -exec ls -l {} \; | awk '{ print $5 }')"
+    log_size="$(find "$log_file" -exec ls -l {} \; | awk '{ print $5 }')"
     if [[ "${log_size}" -ge "${LOG_SIZE_THRESHOLD}" ]];then
         rotate_log
     fi
@@ -78,8 +78,8 @@ get_run_path() {
   if [[ "$run_path" =~ /mis ]];then
     suffix='mis'
   else
-    log "Error: Directory agent does not exist, exiting!"
-    echo "Directory agent does not exist in path[$run_path], exiting!"
+    log "Error: Directory mis does not exist, exiting!"
+    echo "Directory mis does not exist in path[$run_path], exiting!"
     exit 1
   fi
   del_path=$(pwd)/"$suffix"
@@ -105,17 +105,34 @@ real_delete() {
     find "$log_file" -type f -exec chmod 640 {} \;
     log "$(cat "${version_info}")"
 
-    check_owner ${CUR_PATH}
-    find "$CUR_PATH" -type d -exec chmod 750 {} \;
-    [ -n "${CUR_PATH}" ] && rm -rf "${CUR_PATH}"
+    check_owner "${CUR_PATH}"
+    find "${CUR_PATH}" -type d -exec chmod 750 {} \;
+
+    # 删除特定文件和文件夹
+    rm -rf "${CUR_PATH}/configs"
+    rm -f "${CUR_PATH}/mis.pyz"
+    rm -f "${CUR_PATH}/uninstall.sh"
+    rm -f "${CUR_PATH}/version.info"
+
+    # 检查并删除 CUR_PATH
+    if [ -d "${CUR_PATH}" ] && [ -z "$(ls -A "${CUR_PATH}")" ]; then
+      rmdir "${CUR_PATH}"
+      if [ $? -eq 0 ]; then
+        log "INFO: Successfully removed ${CUR_PATH}"
+      else
+        log "ERROR: Failed to remove ${CUR_PATH}"
+      fi
+    else
+      log "WARNING: ${CUR_PATH} is not empty or does not exist"
+    fi
 
     if [ -d "${del_path}" ] && [ -z "$(ls -A "${del_path}")" ]; then
-      check_owner ${del_path}
+      check_owner "${del_path}"
       rmdir "${del_path}"
       current_user=$(whoami)
       install_info_path=/etc/Ascend/ascend_mis_install.info
       if [ "$current_user" != "root" ]; then
-          home_dir=$(getent passwd $current_user | cut -d: -f6)
+          home_dir=$(getent passwd "$current_user" | cut -d: -f6)
           install_info_path=$home_dir/Ascend/ascend_mis_install.info
       fi
       if [ -f "${install_info_path}" ]; then

@@ -3,10 +3,6 @@
 
 set -e
 
-readonly USER_N=$(whoami)
-readonly WHO_PATH=$(which who)
-readonly CUT_PATH=$(which cut)
-
 # 自定义变量
 install_path="${USER_PWD}"
 
@@ -15,7 +11,7 @@ install_info_path=/etc/Ascend/ascend_mis_install.info
 install_info_dir=/etc/Ascend
 
 if [ "$current_user" != "root" ]; then
-    home_dir=$(getent passwd $current_user | cut -d: -f6)
+    home_dir=$(getent passwd "$current_user" | cut -d: -f6)
     install_info_path=$home_dir/Ascend/ascend_mis_install.info
     install_info_dir=$home_dir/Ascend
 fi
@@ -42,8 +38,7 @@ ms_deployment_log_rotate() {
     exit 1
   fi
   if [[ ! -d "${info_record_path}" ]];then
-    mkdir -p "${info_record_path}"
-    chmod 750 "${info_record_path}"
+    install -d -m 750 "${info_record_path}"
   fi
   record_file_path="${info_record_path}"/"${info_record_file}"
   if [ -L "${record_file_path}" ]; then
@@ -51,7 +46,7 @@ ms_deployment_log_rotate() {
     exit 1
   fi
   if [[ ! -f "${record_file_path}" ]];then
-    touch "${record_file_path}" 2>/dev/null
+    install -m 600 /dev/null "${record_file_path}"
   fi
   record_file_path_bk="${info_record_path}"/"${info_record_file}".bk
   if [ -L "${record_file_path_bk}" ]; then
@@ -61,7 +56,7 @@ ms_deployment_log_rotate() {
   log_size=$(find "${record_file_path}" -exec ls -l {} \; | awk '{ print $5 }')
   if [[ "${log_size}" -ge "${LOG_SIZE_THRESHOLD}" ]];then
     mv -f "${record_file_path}" "${record_file_path_bk}"
-    touch "${record_file_path}" 2>/dev/null
+    install -m 600 /dev/null "${record_file_path}"
     chmod 400 "${record_file_path_bk}"
   fi
   chmod 600 "${record_file_path}"
@@ -104,7 +99,7 @@ function check_script_args() {
   done
 
   if [ "${print_version_flag}" = y ]; then
-    if [ "${install_flag}" = y ] || [ "${uninstall_flag}" = "y" ]; then
+    if [ "${install_flag}" = y ] || [ "${uninstall_flag}" = y ]; then
       ms_log "ERROR: --version param cannot config with install and uninstall param."
       exit 1
     fi
@@ -119,19 +114,19 @@ function check_script_args() {
   fi
 
   if [ "${uninstall_flag}" = y ]; then
-    if [ "${install_flag}" = y ] || [ "${print_version_flag}" = "y" ]; then
+    if [ "${install_flag}" = y ] || [ "${print_version_flag}" = y ]; then
       ms_log "ERROR: Unsupported parameters, operation failed."
       exit 1
     fi
   fi
   if [ "${install_flag}" = y ]; then
-    if [ "${uninstall_flag}" = "y" ] || [ "${print_version_flag}" = "y" ]; then
+    if [ "${uninstall_flag}" = y ] || [ "${print_version_flag}" = y ]; then
       ms_log "ERROR: Unsupported parameters, operation failed."
       exit 1
     fi
   fi
   if [ "${install_path_flag}" = y ]; then
-    if [ "${install_flag}" = "n" ] && [ "${uninstall_flag}" = "n" ]; then
+    if [ "${install_flag}" = n ] && [ "${uninstall_flag}" = n ]; then
       ms_log "ERROR: Unsupported separate 'install-path' used independently."
       exit 1
     fi
@@ -207,7 +202,7 @@ function parse_script_args() {
         existing_dir=$(dirname "${existing_dir}")
       done
       abs_existing_dir=$(readlink -f "${existing_dir}")
-      nonexistent_suffix="${install_path#$existing_dir}"
+      nonexistent_suffix="${install_path#"$existing_dir"}"
       install_path="${abs_existing_dir}${nonexistent_suffix}"
       install_path_flag=y
       ((param_dict["install-path"]++)) || true
@@ -272,12 +267,12 @@ ms_record_operator_info()
 
   find "${record_file_path}" -type f -exec chmod 750 {} \;
 
-  if test x"${install_flag}" = xy; then
+  if test "${install_flag}" = y; then
     ms_save_install_info "${record_file_path}"
     ms_log "INFO: Successfully installed MIS."
   fi
 
-  if test x"${uninstall_flag}" = xy; then
+  if test "${uninstall_flag}" = y; then
     ms_save_uninstall_info "${record_file_path}"
     ms_log "INFO: Successfully uninstall MIS."
   fi
@@ -314,8 +309,8 @@ function handle_eula() {
 function check_platform()
 {
   plat="$(uname -m)"
-  result="$(echo ${arch_name} | grep ${plat})"
-  if test x"${result}" = x""; then
+  result="$(echo "${arch_name}" | grep "${plat}")"
+  if test "${result}" = ""; then
     ms_print_warning "Warning: Platform(${plat}) mismatch for ${arch_name}, please check it."
     ms_log "Warning: Platform(${plat}) mismatch for ${arch_name}, please check it."
   fi
@@ -332,7 +327,6 @@ function check_owner()
     exit 1
   fi
 }
-
 
 function untar_file() {
   if [ "${print_version_flag}" = y ]; then
@@ -355,15 +349,15 @@ function untar_file() {
       ms_log "Error: ${install_info_dir} cannot be a symlink"
       exit 1
     fi
-    if [ ! -d "${install_info_dir}" ]; then
-      mkdir -p "${install_info_dir}"
-      chmod 750 "${install_info_dir}"
-    fi
-    last_install_path="Not Found"
     if [ -L "${install_info_path}" ]; then
       ms_log "Error: ${install_info_path} cannot be a symlink"
       exit 1
     fi
+    if [ ! -d "${install_info_dir}" ]; then
+      install -d -m 750 "${install_info_dir}"
+    fi
+    last_install_path="Not Found"
+
     if [ -f "${install_info_path}" ]; then
       while IFS="=" read -r key value; do
         if [ "$key" == "Install_Path" ]; then
@@ -399,15 +393,14 @@ function untar_file() {
       exit 1
     fi
     if [ ! -d "${install_path}" ]; then
-      mkdir -p "${install_path}"
-      if [ $? -ne 0 ]; then
+      if ! install -d -m 750 "${install_path}"; then
         ms_log "Error: Create ${install_path} failed"
         exit 1
       fi
     fi
     check_owner "${install_path}"
 
-    if test x"${install_flag}" = xy; then
+    if test "${install_flag}" = y; then
       handle_eula "install"
       if \
         [[ -d "${install_path}/${mis_name}/${new_version_info}/configs" ]] && \
@@ -418,16 +411,13 @@ function untar_file() {
         exit 1
       fi
     fi
-    mkdir -p ${install_path}/${mis_name}/${new_version_info}
-
-    if [ ! -d "${install_path}/${mis_name}/${new_version_info}" ]; then
+    if ! install -d -m 750 "${install_path}/${mis_name}/${new_version_info}"; then
       ms_log "ERROR: Create path at ${install_path}/${mis_name}/${new_version_info} failed"
       exit 1
     fi
-    check_owner ${install_path}/${mis_name}/${new_version_info}
+    check_owner "${install_path}/${mis_name}/${new_version_info}"
 
-    tar -xzf "${files}" -C "${install_path}/${mis_name}/${new_version_info}" --no-same-owner
-    if test $? -ne 0; then
+    if ! tar -xzf "${files}" -C "${install_path}/${mis_name}/${new_version_info}" --no-same-owner; then
       ms_log "ERROR: Failed to extract files to ${install_path}/${mis_name}/${new_version_info}"
       exit 1
     fi
@@ -437,12 +427,12 @@ function untar_file() {
     chmod 500 "${install_path}/${mis_name}/${new_version_info}/uninstall.sh"
 
     if [ ! -f "${install_info_path}" ]; then
-      echo "Install_Path=${install_path}" > $install_info_path
-      chmod 640 "$install_info_path"
+      install -m 640 /dev/null "${install_info_path}"
+      echo "Install_Path=${install_path}" > "$install_info_path"
       ms_log "INFO: Save install info in ${install_info_path}"
     fi
 
-    cd - > /dev/null
+    cd - > /dev/null || exit
     ms_record_operator_info
     echo -e "\n"
     echo -e "==========="
@@ -452,11 +442,11 @@ function untar_file() {
     if [ ${#PACKAGE_LOG_NAME} -gt $fixed_begin_len ]; then
         fixed_begin_len=${#PACKAGE_LOG_NAME}
     fi
-    let fixed_begin_len=$fixed_begin_len+3
+    (( fixed_begin_len += 3 ))
     printf "%-${fixed_begin_len}s" "MIS:"
     echo -e "Install MIS successfully, installed in ${install_path}/${mis_name}/${new_version_info}"
     echo -e "To start the MIS server, execute the command 'python ${install_path}/${mis_name}/${new_version_info}/mis.pyz'"
-  elif [ "${uninstall_flag}" = "y" ]; then
+  elif [ "${uninstall_flag}" = y ]; then
     ms_log "INFO: Uninstall start"
     mis_name="mis"
     last_install_path="Not Found"
@@ -480,18 +470,16 @@ function untar_file() {
       exit 1
     fi
 
-    check_owner ${last_install_path}
+    check_owner "${last_install_path}"
 
     find "${last_install_path}/${mis_name}" -type d -exec chmod 750 {} \;
-    rm -rf "${last_install_path}/${mis_name}"
-    if test $? -ne 0; then
+    if ! rm -rf "${last_install_path:?}/${mis_name}"; then
       ms_log "Error: Failed to remove MIS at ${last_install_path}/${mis_name}"
       exit 1
     else
       ms_log "Info: Remove MIS success!"
     fi
-    rm -rf "${install_info_path}"
-    if test $? -ne 0; then
+    if ! rm -rf "${install_info_path}"; then
       ms_log "Error: Failed to remove MIS install info file at ${install_info_path}"
       exit 1
     else
@@ -502,7 +490,6 @@ function untar_file() {
     ms_log "Info: Do not proceed with installation or uninstall and exit."
   fi
 }
-
 
 # 程序开始
 function main() {
