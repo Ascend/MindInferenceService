@@ -77,12 +77,14 @@ class VLLMEngine:
                 engine_args = AsyncEngineArgs(model=args.model,
                                               served_model_name=args.served_model_name,
                                               disable_log_stats=args.disable_log_stats,
+                                              load_format="safetensors",
                                               enable_log_requests=not args.disable_log_requests,
                                               **args.engine_optimization_config)
             else:
                 engine_args = AsyncEngineArgs(model=args.model,
                                               served_model_name=args.served_model_name,
                                               disable_log_stats=args.disable_log_stats,
+                                              load_format="safetensors",
                                               disable_log_requests=args.disable_log_requests,
                                               **args.engine_optimization_config)
             logger.info("AsyncLLMEngine args initialized successfully.")

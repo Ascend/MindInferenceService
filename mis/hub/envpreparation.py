@@ -13,10 +13,13 @@ logger = init_logger(__name__, log_type=LogType.SERVICE)
 
 
 def _source_components_envs() -> None:
-    """Set the default environment variable components_env to 1."""
-    for components_env in constants.SOURCE_COMPONENTS_ENVS:
+    """Set the environment variables of the third-party component to the fixed value."""
+    for components_env in constants.OFFLINE_COMPONENTS_ENVS:
         os.environ[components_env] = "1"
         logger.info(f"Set environment variable {components_env} to 1")
+    for components_key, components_value in constants.SOURCE_COMPONENTS_ENVS.items():
+        os.environ[components_key] = components_value
+        logger.info(f"Set environment variable {components_key} to {components_value}")
 
 
 def environment_preparation(args: GlobalArgs) -> GlobalArgs:
