@@ -1,6 +1,5 @@
 #!/bin/bash
 # Copyright (c) Huawei Technologies Co., Ltd. 2025. All rights reserved.
-set -e
 
 # Simple log helper functions
 CUR_PATH=$(cd "$(dirname "$0")" || { echo "Failed to enter current path" ; exit ; } ; pwd)
