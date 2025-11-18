@@ -1,8 +1,6 @@
 #!/bin/bash
 # Copyright © Huawei Technologies Co., Ltd. 2025-2025. All rights reserved.
 
-set -e
-
 # 自定义变量
 install_path="${USER_PWD}"
 
@@ -419,6 +417,14 @@ function untar_file() {
 
     if ! tar -xzf "${files}" -C "${install_path}/${mis_name}/${new_version_info}" --no-same-owner; then
       ms_log "ERROR: Failed to extract files to ${install_path}/${mis_name}/${new_version_info}"
+      # If the tar command fails to execute, it may leave behind residual files,
+      # so should delete any files that might have been extracted
+      rm -rf "${install_path}/${mis_name}/${new_version_info}/configs"
+      rm -f "${install_path}/${mis_name}/${new_version_info}/mis.pyz"
+      rm -f "${install_path}/${mis_name}/${new_version_info}/uninstall.sh"
+      rm -f "${install_path}/${mis_name}/${new_version_info}/version.info"
+      rmdir --ignore-fail-on-non-empty "${install_path}/${mis_name}/${new_version_info}"
+      rmdir --ignore-fail-on-non-empty "${install_path}/${mis_name}"
       exit 1
     fi
     cp "$SELF_DIR"/uninstall.sh "${install_path}/${mis_name}/${new_version_info}"
