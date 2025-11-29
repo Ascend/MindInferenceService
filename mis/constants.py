@@ -6,7 +6,7 @@ import stat
 
 MIS_MODEL_LIST = ("Qwen3-8B", )
 
-MIS_ENGINE_TYPES = ("vllm",)
+MIS_ENGINE_TYPES = ("vllm", "triton")
 
 MIS_CONFIGS_LIST = ("atlas800ia2-1x32gb-bf16-vllm-default",
                     "atlas800ia2-1x32gb-bf16-vllm-latency",

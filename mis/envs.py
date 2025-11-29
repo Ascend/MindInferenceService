@@ -24,8 +24,9 @@ if TYPE_CHECKING:
     UVICORN_LOG_LEVEL: str = "info"
 
 environment_variables: Dict[str, Callable[[], Any]] = {
-    "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH", os.path.join(os.path.expanduser('~'), "mis", ".cache")),
-    "MIS_MODEL": lambda: _get_str_from_env("MIS_MODEL", DEFAULT_MIS_MODEL, constants.MIS_MODEL_LIST),
+    "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH",
+                                                       os.path.join(os.path.expanduser('~'), "mis", ".cache")),
+    "MIS_MODEL": lambda: _get_mode_name_from_env("MIS_MODEL", DEFAULT_MIS_MODEL),
     "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
     "MIS_CONFIG": lambda: _get_str_from_env("MIS_CONFIG", DEFAULT_MIS_CONFIG, constants.MIS_CONFIGS_LIST),
 
@@ -106,6 +107,14 @@ def _get_cache_path_from_env(name: str, default: str) -> str:
     expected_mode = constants.DIRECTORY_PERMISSIONS  # 750
     GeneralChecker.check_path_or_file(name, cache_path, is_dir=True, expected_mode=expected_mode)
     return cache_path
+
+
+def _get_mode_name_from_env(name: str, default: str) -> str:
+    if name not in os.environ:
+        return default
+    value = os.environ[name]
+    GeneralChecker.check_model_name(name, value)
+    return value
 
 
 def __getattr__(name: str) -> Any:

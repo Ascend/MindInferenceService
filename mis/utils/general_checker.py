@@ -86,6 +86,23 @@ class GeneralChecker:
             raise ValueError(f"ENV {name} not in {valid_values}")
 
     @staticmethod
+    def check_model_name(name: str, value: str) -> None:
+        # Verify that the input string is a string
+        if not isinstance(value, str):
+            raise ValueError(f"Invalid {name} type: {type(value)}, only str is supported.")
+
+        # Verify that the input string is not empty
+        if not value.strip():
+            raise ValueError(f"Invalid {name} cannot be empty")
+
+        # Verify that the input string does not contain any special characters
+        pattern_risk = '[^\w\-\/]'  # Only letters, numbers, '_', '-', and '/' are allowed
+        compile_pattern = re.compile(pattern_risk)
+        if compile_pattern.search(value):
+            raise ValueError(f"The parameter {name} cannot contain special characters "
+                             "other than letters, numbers, '_', '-', '/'")
+
+    @staticmethod
     def _path_validate_input(path_label: str, path: str, is_dir: bool, expected_mode: int, max_file_size: int):
         if not isinstance(path_label, str) or not isinstance(path, str):
             raise TypeError("path_label and path must be a string.")
