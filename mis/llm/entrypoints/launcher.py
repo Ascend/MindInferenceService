@@ -283,7 +283,6 @@ async def _run_server(args: GlobalArgs) -> None:
             host=args.host,
             port=args.port,
             sock=sock,
-            log_level=args.uvicorn_log_level,
             timeout_keep_alive=TIMEOUT_KEEP_ALIVE,
             fd=sock.fileno() if sys.platform.startswith("darwin") else None
         )

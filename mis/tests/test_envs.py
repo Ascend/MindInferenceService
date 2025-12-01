@@ -67,7 +67,7 @@ class TestEnvs(unittest.TestCase):
 
     def test_get_optimization_config(self):
         os.environ["MIS_CONFIG"] = "atlas800ia2-1x32gb-bf16-vllm-default"
-        self.assertEqual(envs._get_str_from_env("MIS_CONFIG", None, constants.MIS_CONFIGS_LIST),
+        self.assertEqual(envs._get_str_from_env("MIS_CONFIG", None),
                          "atlas800ia2-1x32gb-bf16-vllm-default")
 
 
