@@ -300,6 +300,7 @@ class TestApiServer(unittest.TestCase):
         mock_engine_client = AsyncMock(spec=EngineClient)
         mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
+        mock_model_config.hf_config = MagicMock()
         mock_state = State()
         from mis.args import GlobalArgs
         args = GlobalArgs(
@@ -330,6 +331,7 @@ class TestApiServer(unittest.TestCase):
         mock_engine_client = AsyncMock(spec=EngineClient)
         mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
+        mock_model_config.hf_config = MagicMock()
         mock_state = State()
         from mis.args import GlobalArgs
         args = GlobalArgs(
@@ -360,6 +362,7 @@ class TestApiServer(unittest.TestCase):
         mock_engine_client = AsyncMock(spec=EngineClient)
         mock_model_config = MagicMock(spec=ModelConfig)
         mock_model_config.task = "test_task"
+        mock_model_config.hf_config = MagicMock()
         mock_state = State()
         from mis.args import GlobalArgs
         args = GlobalArgs(

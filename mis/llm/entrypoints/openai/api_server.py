@@ -151,20 +151,22 @@ async def create_chat_completions(request: MISChatCompletionRequest,
         )
 
     if isinstance(generator, ErrorResponse):
-        op_logger.error(
-            f"[IP: {client_ip}] {generator.code} Error in chat completion")
         vllm_version = get_vllm_version()
         if vllm_version is None:
-            return JSONResponse(
-                status_code=400,
-                content={"detail": f"[IP: {client_ip}] Can not get version of vllm"}
-            )
+            status_code = 400
+            error_detail = f"[IP: {client_ip}] Cannot get version of vllm"
         elif version.parse(vllm_version) > version.parse("0.10.0"):
-            return JSONResponse(content=generator.model_dump(),
-                                status_code=generator.error.code)
+            status_code = generator.error.code
+            error_detail = f"[IP: {client_ip}] {generator.error.code} Error in chat completion"
         else:
-            return JSONResponse(content=generator.model_dump(),
-                                status_code=generator.code)
+            status_code = generator.code
+            error_detail = f"[IP: {client_ip}] {generator.code} Error in chat completion"
+
+        op_logger.error(error_detail)
+        return JSONResponse(
+            status_code=status_code,
+            content={"detail": error_detail}
+        )
 
     elif isinstance(generator, ChatCompletionResponse):
         _align_non_streaming_response(generator)

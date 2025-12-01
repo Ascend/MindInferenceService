@@ -93,7 +93,7 @@ class TestVLLMEngine(unittest.TestCase):
             served_model_name=args.served_model_name,
             disable_log_stats=args.disable_log_stats,
             load_format='safetensors',
-            disable_log_requests=args.disable_log_requests,
+            enable_log_requests=not args.disable_log_requests,
             **args.engine_optimization_config
         )
 
