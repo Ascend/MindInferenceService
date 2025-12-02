@@ -1,0 +1,43 @@
+name: "yolov12s"
+backend: "python"
+max_batch_size: 128
+
+input [
+    {
+        name: "image"
+        data_type: TYPE_STRING
+        dims: [-1]
+    }
+]
+output [
+    {
+        name: "preds"
+        data_type: TYPE_FP32
+        dims: [84, 8400]
+    }
+]
+
+parameters: {
+  key: "backend_type"
+  value: { string_value: "ascend_om" }
+}
+
+parameters: {
+  key: "modal_type_list"
+  value: { string_value: "[\"image\"]" }
+}
+
+parameters: {
+  key: "backend_config"
+  value: { string_value: "{\"device_id\": 0}" }
+}
+
+parameters: {
+  key: "infer_config"
+  value: { string_value: "{\"infer_mode\": \"static\"}" }
+}
+
+parameters: {
+  key: "processor_config"
+  value: { string_value: "{\"target_size\": [640, 640]}" }
+}
