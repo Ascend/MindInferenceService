@@ -1,0 +1,105 @@
+name: "groundingdino"
+backend: "python"
+max_batch_size: 1
+
+input [
+  {
+    name: "image"
+    data_type: TYPE_STRING
+    dims: [-1]
+  },
+  {
+    name: "text"
+    data_type: TYPE_STRING
+    dims: [-1]
+  }
+]
+
+output [
+  {
+    name: "logits"
+    data_type: TYPE_FP32
+    dims: [900, 256]
+  },
+  {
+    name: "pred_boxes"
+    data_type: TYPE_FP32
+    dims: [900, 4]
+  },
+  {
+    name: "hs_layer1"
+    data_type: TYPE_FP32
+    dims: [-1, 900, 256]
+  },
+  {
+    name: "references_layer1"
+    data_type: TYPE_FP32
+    dims: [-1, 900, 4]
+  },
+  {
+    name: "hs_all_layers"
+    data_type: TYPE_FP32
+    dims: [-1, 6, 900, 256]
+  },
+  {
+    name: "references_all_layers"
+    data_type: TYPE_FP32
+    dims: [-1, 6, 900, 4]
+  },
+  {
+    name: "image_features"
+    data_type: TYPE_FP32
+    dims: [-1, -1, 256]
+  },
+  {
+    name: "text_features"
+    data_type: TYPE_FP32
+    dims: [-1, -1, 256]
+  },
+  {
+    name: "enhanced_image_features"
+    data_type: TYPE_FP32
+    dims: [-1, -1, 256]
+  },
+  {
+    name: "spatial_shapes"
+    data_type: TYPE_FP32
+    dims: [-1, -1, 4]
+  },
+  {
+    name: "text_self_attn_hs"
+    data_type: TYPE_FP32
+    dims: [-1, 900, 256]
+  },
+  {
+    name: "valid_mask"
+    data_type: TYPE_BOOL
+    dims: [1]
+  },
+  {
+    name: "text_lengths"
+    data_type: TYPE_INT64
+    dims: [-1, -1]
+  }
+
+]
+
+parameters: {
+  key: "backend_type"
+  value: { string_value: "ascend_om" }
+}
+
+parameters: {
+  key: "modal_type_list"
+  value: { string_value: "[\"image\", \"text\"]" }
+}
+
+parameters: {
+  key: "backend_config"
+  value: { string_value: "{\"device_id\": 0}"}
+}
+
+parameters: {
+  key: "infer_config"
+  value: { string_value: "{\"infer_mode\": \"dymshape\", \"custom_sizes\": 10485760}" }
+}
