@@ -7,9 +7,9 @@ import math
 import os
 import re
 from pathlib import Path
-from typing import Union, Tuple
+from typing import Any, Tuple, Union
 
-from fastapi import Request
+import json
 
 import mis.envs as envs
 from mis.constants import HW_910B, DIRECTORY_PERMISSIONS
@@ -140,11 +140,17 @@ def get_model_path(raw_model: str) -> str:
     return str(abs_model_path)
 
 
-def get_client_ip(request: Request) -> str:
+def get_client_ip(request) -> str:
     """Get client IP address
     Args:
         request: The request object from which to extract the client IP address.
     """
+    try:
+        from fastapi import Request
+    except ImportError as e:
+        logger.warning(f"Failed to import fastapi.Request: {e}")
+        raise ImportError("Failed to import fastapi.Request. Please ensure fastapi is installed.") from e
+
     if not isinstance(request, Request):
         logger.error("Invalid request type")
         raise TypeError("Invalid request type")
@@ -171,3 +177,30 @@ def get_vllm_version():
         return importlib.metadata.version("vllm")
     except importlib.metadata.PackageNotFoundError:
         return None
+
+
+def convert_string_to_dict(obj: Any, depth: int = 0, max_depth: int = 10):
+    """
+    Convert a string to a dictionary.
+    Args: obj (str): The string to convert.
+          depth (int): The current depth of recursion.
+          max_depth (int): The maximum depth of recursion.
+    Returns: Dict[str, Any]: The converted dictionary.
+    """
+    if isinstance(obj, dict):
+        return {k: convert_string_to_dict(v, depth+1, max_depth) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_string_to_dict(item, depth+1, max_depth) for item in obj]
+    elif isinstance(obj, str):
+        try:
+            parsed = json.loads(obj)
+            if isinstance(parsed, (dict, list)):
+                return convert_string_to_dict(parsed, depth+1, max_depth)
+            else:
+                return parsed
+        except json.JSONDecodeError:
+            return obj
+        except ValueError:
+            return obj
+    else:
+        return obj
