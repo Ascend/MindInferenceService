@@ -8,7 +8,6 @@ from fastapi import HTTPException
 from vllm.entrypoints.openai.protocol import ChatCompletionRequest
 from vllm.entrypoints.openai.serving_chat import OpenAIServingChat
 
-from mis.constants import MIS_MODEL_LIST
 from mis.logger import init_logger, LogType
 from mis.utils.utils import ConfigChecker
 
@@ -48,10 +47,6 @@ MIS_CHAT_COMPLETION_FIELD_VALIDATORS: Dict[str, Dict[str, Any]] = {
         "type": int,
         "min": 0,
         "max": 64000
-    },
-    "model": {
-        "type": str,
-        "valid_values": MIS_MODEL_LIST
     },
     "presence_penalty": {
         "type": float,

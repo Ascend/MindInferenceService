@@ -19,24 +19,18 @@ if TYPE_CHECKING:
     MIS_PORT: int = 8000
     MIS_ENABLE_DOS_PROTECTION: bool = True
     MIS_LOG_LEVEL: str = "INFO"
-    MIS_MAX_LOG_LEN: Optional[int] = 2048
 
-    UVICORN_LOG_LEVEL: str = "info"
 
 environment_variables: Dict[str, Callable[[], Any]] = {
     "MIS_CACHE_PATH": lambda: _get_cache_path_from_env("MIS_CACHE_PATH",
                                                        os.path.join(os.path.expanduser('~'), "mis", ".cache")),
     "MIS_MODEL": lambda: _get_mode_name_from_env("MIS_MODEL", DEFAULT_MIS_MODEL),
     "MIS_ENGINE_TYPE": lambda: _get_str_from_env("MIS_ENGINE_TYPE", "vllm", constants.MIS_ENGINE_TYPES),
-    "MIS_CONFIG": lambda: _get_str_from_env("MIS_CONFIG", DEFAULT_MIS_CONFIG, constants.MIS_CONFIGS_LIST),
+    "MIS_CONFIG": lambda: _get_str_from_env("MIS_CONFIG", DEFAULT_MIS_CONFIG),
 
     "MIS_PORT": lambda: _get_int_from_env("MIS_PORT", 8000, 1024, 65535),
     "MIS_ENABLE_DOS_PROTECTION": lambda: _get_bool_from_env("MIS_ENABLE_DOS_PROTECTION", True),
     "MIS_LOG_LEVEL": lambda: _get_str_from_env("MIS_LOG_LEVEL", "INFO", constants.MIS_LOG_LEVELS),
-    "MIS_MAX_LOG_LEN": lambda: _get_int_from_env("MIS_MAX_LOG_LEN", 2048, min_value=0, max_value=8192),
-
-    "UVICORN_LOG_LEVEL": lambda: _get_str_from_env("UVICORN_LOG_LEVEL", "info", constants.UVICORN_LOG_LEVELS),
-
 }
 
 

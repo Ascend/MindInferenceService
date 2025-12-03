@@ -177,20 +177,6 @@ class TestAPIExtensions(unittest.TestCase):
             MISChatCompletionRequest(**kwargs)
         assert str(exc_info.value) == "400: Invalid value for min_tokens: not in [0, 64000]"
 
-    def test_model_invalid_type(self):
-        kwargs = copy.deepcopy(self.valid_params)
-        kwargs["model"] = 1
-        with pytest.raises(HTTPException) as exc_info:
-            MISChatCompletionRequest(**kwargs)
-        assert str(exc_info.value) == "400: Unsupported type for model, expected: str"
-
-    def test_model_invalid_value(self):
-        kwargs = copy.deepcopy(self.valid_params)
-        kwargs["model"] = "Qwen3-0.6B"
-        with pytest.raises(HTTPException) as exc_info:
-            MISChatCompletionRequest(**kwargs)
-        assert "400: Invalid value for model" in str(exc_info.value)
-
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)
         kwargs["presence_penalty"] = "0.0"
