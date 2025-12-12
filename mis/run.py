@@ -1,12 +1,10 @@
 #!/usr/bin/env python
 # coding=utf-8
 # Copyright (c) Huawei Technologies Co. Ltd. 2025. All rights reserved.
-import os
 import signal
 import subprocess
 import sys
 
-from mis.envs import MIS_ENGINE_TYPE
 from mis.logger import init_logger, LogType
 
 logger = init_logger(__name__, log_type=LogType.SERVICE)
@@ -26,19 +24,15 @@ def main() -> None:
 
     try:
         logger.info("start mis_launcher")
-
-        if MIS_ENGINE_TYPE == 'triton':
-            command = ['bash', 'start_triton_server.sh']
-        else:
-            command = [
-                sys.executable, "-c",
-                ("import sys; sys.path.insert(0, sys.argv[1]);"
-                 "from mis.llm.entrypoints.launcher import _run_server,"
-                 "environment_preparation, ARGS;"
-                 "import uvloop; args = environment_preparation(ARGS);"
-                 "uvloop.run(_run_server(args))"),
-                sys.argv[0]
-            ]
+        command = [
+            sys.executable, "-c",
+            ("import sys; sys.path.insert(0, sys.argv[1]);"
+             "from mis.llm.entrypoints.launcher import _run_server,"
+             "environment_preparation, ARGS;"
+             "import uvloop; args = environment_preparation(ARGS);"
+             "uvloop.run(_run_server(args))"),
+            sys.argv[0]
+        ]
         process = subprocess.Popen(command, shell=False)
         logger.info("mis_launcher started successfully")
         exit_code = process.wait()

@@ -33,7 +33,7 @@ function test_mis() {
     "pytest-cov"
     "pytest-html"
     "starlette"
-    "vllm"
+    "vllm==0.9.1"
     "uvicorn"
     "cryptography"
     "transformers==4.52.3"

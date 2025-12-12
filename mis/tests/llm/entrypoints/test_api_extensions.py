@@ -189,7 +189,7 @@ class TestAPIExtensions(unittest.TestCase):
         kwargs["model"] = "Qwen3-0.6B"
         with pytest.raises(HTTPException) as exc_info:
             MISChatCompletionRequest(**kwargs)
-        assert "400: Invalid value for model" in str(exc_info.value)
+        assert str(exc_info.value) == "400: Invalid value for model: not in ('Qwen3-8B',)"
 
     def test_presence_penalty_invalid_type(self):
         kwargs = copy.deepcopy(self.valid_params)

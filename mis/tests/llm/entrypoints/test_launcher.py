@@ -94,7 +94,7 @@ class TestLauncher(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             self.run_async(test_init_app_state())
 
-        self.assertIn("Available EngineType is in", str(context.exception))
+        self.assertIn("Available EngineType is in ('vllm',)", str(context.exception))
 
     @patch('mis.llm.entrypoints.launcher.serve_http')
     @patch('mis.llm.entrypoints.launcher.create_server_socket')
