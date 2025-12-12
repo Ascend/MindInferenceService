@@ -97,7 +97,7 @@ class ModelFactory:
         if not processor_class:
             logger.error(f"Unsupported data type: {modal_type}")
             raise ValueError(f"Unsupported data type: {modal_type}")
-        return processor_class(config)
+        return processor_class(**config)
 
     @staticmethod
     def _import_module(module_name):
