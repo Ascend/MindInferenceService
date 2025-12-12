@@ -22,9 +22,11 @@ class GlobalArgs(BaseModel):
     port: int = envs.MIS_PORT
     enable_dos_protection: bool = envs.MIS_ENABLE_DOS_PROTECTION
     log_level: str = envs.MIS_LOG_LEVEL
-    max_log_len: int = constants.MIS_MAX_LOG_LEN
+    max_log_len: Optional[int] = envs.MIS_MAX_LOG_LEN
     disable_log_requests: bool = constants.MIS_DISABLE_LOG_REQUESTS
     disable_log_stats: bool = constants.MIS_DISABLE_LOG_STATS
+
+    uvicorn_log_level: str = envs.UVICORN_LOG_LEVEL
 
     # generated params
     engine_optimization_config: dict = {}

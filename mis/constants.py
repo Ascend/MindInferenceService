@@ -4,7 +4,14 @@
 import stat
 
 
+MIS_MODEL_LIST = ("Qwen3-8B", )
+
 MIS_ENGINE_TYPES = ("vllm", "triton")
+
+MIS_CONFIGS_LIST = ("atlas800ia2-1x32gb-bf16-vllm-default",
+                    "atlas800ia2-1x32gb-bf16-vllm-latency",
+                    "atlas800ia2-1x32gb-bf16-vllm-throughput"
+                    )
 
 MIS_HOST = "127.0.0.1"
 
@@ -16,7 +23,7 @@ MIS_DISABLE_LOG_REQUESTS = True
 
 MIS_DISABLE_LOG_STATS = True
 
-MIS_MAX_LOG_LEN = 4096
+UVICORN_LOG_LEVELS = ("debug", "info", "warning", "error", "critical")
 
 HW_910B = "910B"
 

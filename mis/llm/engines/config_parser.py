@@ -8,7 +8,7 @@ from typing import Dict, Optional, Union
 import yaml
 
 from mis.args import GlobalArgs
-from mis.constants import (HW_910B, MIS_ENGINE_TYPES, MIS_MAX_CONFIG_SIZE,
+from mis.constants import (HW_910B, MIS_ENGINE_TYPES, MIS_MODEL_LIST, MIS_MAX_CONFIG_SIZE,
                            DIRECTORY_PERMISSIONS, FILE_PERMISSIONS)
 from mis.llm.engines.config_validator import AbsEngineConfigValidator
 from mis.logger import init_logger, LogType
@@ -97,7 +97,8 @@ class ConfigParser:
         self.args.engine_optimization_config = self._config_attr_update(engine_type_selected,
                                                                         engine_optimization_config)
 
-        self.args.model = engine_optimization_config.get("model")
+        model_by_config = engine_optimization_config.get("model")
+        self.args.model = model_by_config if model_by_config in MIS_MODEL_LIST else self.args.model
         self.args.engine_type = engine_type_selected
         logger.info("Engine configuration loaded successfully.")
         return self.args
