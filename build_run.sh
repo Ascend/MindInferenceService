@@ -54,6 +54,6 @@ bash /usr1/opensource/makeself/makeself.sh --chown --nomd5 --sha256 --nocrc \
     --packaging-date "" \
     --tar-extra '--owner=root --group=root' \
     "$PROCESS_DIR" \
-    "$TARGET_DIR/Ascend-mindsdk-mis_${VERSION}_linux-$ARCH.run" \
+    "$TARGET_DIR/Ascend-mis_${VERSION}_linux-$ARCH.run" \
     "ASCEND MIS RUN PACKAGE" \
   ./install.sh
