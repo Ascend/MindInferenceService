@@ -292,32 +292,6 @@ ms_record_operator_info()
   find "${record_file_path}" -type f -exec chmod 440 {} \;
 }
 
-function handle_eula() {
-  local action=$1
-  if [ "${quiet_flag}" = y ]; then
-    ms_log "INFO: using quiet option implies acceptance of the EULA, start to ${action}"
-    return
-  fi
-  if echo "${LANG}" | grep -q "zh_CN.UTF-8"; then
-    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: 'zh_CN.UTF-8' for Chinese"
-    eula_file=./eula_cn.conf
-  else
-    ms_log "INFO: How the EULA is displayed depends on the value of environment variable LANG: '${LANG}' for English"
-    eula_file=./eula_en.conf
-  fi
-  cat "${eula_file}" 1>&2
-  read -n1 -re -p "Do you accept the EULA to ${action} MIS ?[Y/N]" answer
-  case "${answer}" in
-    Y|y)
-      ms_log "INFO: accept EULA, start to ${action}"
-      ;;
-    *)
-      ms_log "ERROR: reject EULA, quit to ${action}"
-      exit 1
-      ;;
-  esac
-}
-
 function check_platform()
 {
   plat="$(uname -m)"
@@ -413,7 +387,6 @@ function untar_file() {
     check_owner "${install_path}"
 
     if test "${install_flag}" = y; then
-      handle_eula "install"
       if \
         [[ -d "${install_path}/${mis_name}/${new_version_info}/configs" ]] && \
         [[ -f "${install_path}/${mis_name}/${new_version_info}/mis.pyz" ]] && \

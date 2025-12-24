@@ -38,12 +38,9 @@ cp "$workdir/output/uninstall.sh" "$PROCESS_DIR"
 cp "$workdir/output/help.info" "$PROCESS_DIR"
 cp "$workdir/output/install.sh" "$PROCESS_DIR"
 
-cp /usr1/mindxsdk/build/conf/scripts/eula_* "$PROCESS_DIR"
-
 cd "$PROCESS_DIR"
 
 # 设置文件权限
-chmod 400 eula_*
 chmod 500 -- *.sh
 chmod 640 Ascend-mis*.tar.gz
 chmod 440 help.info
