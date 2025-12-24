@@ -147,7 +147,7 @@ Mind Inference Service基于昇腾硬件提供即装即用的在线推理服务�
 
 # License
 
-Mind Inference Service对应许可证文本可查阅根目录。
+Mind Inference Service以Mulan PSL v2许可证许可，对应许可证文本可查阅[LICENSE](LICENSE.md)。
 
 # 建议与交流
 
