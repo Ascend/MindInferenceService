@@ -60,12 +60,24 @@
 
 ## 编译
 
+编译环境依赖：
+- Python 3.11.4
+
+编译流程：
+
 1.  拉取mis整体源码，例如放在/home目录下。
 2.  执行以下命令，进入/home/MIS目录，选择构建脚本执行：
     **cd /home/MIS**
 
         python compile.py
-3.  执行完成后进入/home/MIS/dist，在此目录下生成可直接执行的mis.pyz文件。
+3.  执行完成后，在/home/MIS/dist目录下生成可直接执行的mis.pyz文件。
+4.  将MIS/configs目录复制到mis.pyz文件所在目录，即可通过mis.pyz文件运行mis服务：
+    **cp -r /home/MIS/configs /home/MIS/dist**
+
+        cd /home/MIS/dist
+        python3 mis.pyz
+
+- 请注意，mis服务启动时会对configs目录进行校验，请保证configs目录的权限为750，配置文件的权限为640。
 
 # 快速入门
 
@@ -81,6 +93,18 @@
 - 安装MIS以及相关依赖，具体安装过程请参见[环境部署](#环境部署)。
 
 ## 启动MIS服务
+
+服务运行依赖：
+- fastapi 0.121.1
+- numpy 1.26.4
+- pydantic 2.12.2
+- PyYAML 6.0.3
+- starlette 0.49.1
+- uvloop 0.21.0
+- vllm 0.11.0
+- vllm-ascend 0.11.0rc2
+
+运行流程：
 
 1. 下载模型权重并设置路径。部署MIS前需将模型权重放置在本地，可选择从开源模型社区(如魔搭社区、魔乐社区、Huggingface)下载对应权重（safetensors类型权重）。假设模型权重下载路径为/data/Qwen3-8B，则将MIS权重缓存路径的环境变量MIS_CACHE_PATH设置为/data。
 
