@@ -31,9 +31,9 @@
 
 ### 合理配置sudo选项<a name="ZH-CN_TOPIC_0000002496569345"></a>
 
-将sudo命令中targetpw选项设置为默认要求输入目标用户密码，用于防止增加sudo规则后，所有用户不需要输入root密码，就可以提权root账号执行系统命令，导致普通用户越权执行命令。该选项默认不添加，建议添加该选项。可以通过执行cat /etc/sudoers | grep -E "^\[^\#\]\*Defaults\[\[:space:\]\]+targetpw"命令检查是否存在“Defaults targetpw”或“Defaults rootpw”配置项。如果不存在，请在“/etc/sudoers“文件的“\#Defaults specification”下添加“Defaults targetpw”或“Defaults rootpw”配置项。
+将sudo命令中targetpw选项设置为默认要求输入目标用户密码，用于防止增加sudo规则后，所有用户不需要输入root密码，就可以提权root账号执行系统命令，导致普通用户越权执行命令。该选项默认不添加，建议添加该选项。可以通过执行cat /etc/sudoers | grep -E "^\[^\#\]\*Defaults\[\[:space:\]\]+targetpw"命令检查是否存在“Defaults targetpw”或“Defaults rootpw”配置项。如果不存在，请在“/etc/sudoers”文件的“\#Defaults specification”下添加“Defaults targetpw”或“Defaults rootpw”配置项。
 
-禁止普通用户或组通过所有命令提权到root用户。 执行cat /etc/sudoers命令检查“/etc/sudoers“文件中是否存在“root ALL=\(ALL:ALL\) ALL”和“root ALL=\(ALL\) ALL”之外的其他用户或组的\(ALL\) ALL和\(ALL:ALL\) ALL。如果存在（如user ALL=\(ALL\) ALL、%admin ALL=\(ALL\) ALL或%sudo ALL=\(ALL:ALL\) ALL），请根据实际业务场景确认是否需要，如果确认不需要，请删除。
+禁止普通用户或组通过所有命令提权到root用户。 执行cat /etc/sudoers命令检查“/etc/sudoers”文件中是否存在“root ALL=\(ALL:ALL\) ALL”和“root ALL=\(ALL\) ALL”之外的其他用户或组的\(ALL\) ALL和\(ALL:ALL\) ALL。如果存在（如user ALL=\(ALL\) ALL、%admin ALL=\(ALL\) ALL或%sudo ALL=\(ALL:ALL\) ALL），请根据实际业务场景确认是否需要，如果确认不需要，请删除。
 
 
 ### 增强抵抗漏洞攻击的能力<a name="ZH-CN_TOPIC_0000002463409950"></a>
@@ -49,13 +49,13 @@
 
 以设置umask为027为例，具体操作如下所示。
 
-1.  以root用户登录服务器，编辑“/etc/profile“文件。
+1.  以root用户登录服务器，编辑“/etc/profile”文件。
 
     ```
     vim /etc/profile
     ```
 
-2.  在“/etc/profile“文件末尾加上**umask 027**，保存并退出。
+2.  在“/etc/profile”文件末尾加上**umask 027**，保存并退出。
 3.  执行如下命令使配置生效。
 
     ```

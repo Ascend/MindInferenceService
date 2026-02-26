@@ -8,11 +8,23 @@
 
 **环境准备<a name="section470012716523"></a>**
 
--   准备Atlas A2 推理系列产品的服务器，并安装对应的驱动和固件，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的““安装NPU驱动和固件”章节[（社区版）]。
+-   准备Atlas A2 推理系列产品的服务器，并安装对应的驱动和固件，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节[（社区版）]。
 -   安装CANN Toolkit，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（社区版）。
 -   安装MIS以及相关依赖，具体安装过程请参见[安装部署](installation_guide.md#安装部署)。
 
 **启动MIS服务<a name="section19292103315523"></a>**
+
+服务运行依赖：
+- fastapi 0.121.1
+- numpy 1.26.4
+- pydantic 2.12.2
+- PyYAML 6.0.3
+- starlette 0.49.1
+- uvloop 0.21.0
+- vllm 0.11.0rc3
+- vllm-ascend 0.11.0rc0
+
+运行流程：
 
 1.  下载模型权重并设置路径
 
@@ -68,7 +80,7 @@
 
 使用OpenAI API发起对话请求。
 
-```
+```python
 from openai import OpenAI
 client = OpenAI(
     base_url="http://127.0.0.1:8000/openai/v1",
@@ -84,4 +96,3 @@ response = client.chat.completions.create(
 )
 print(response.choices[0].message)
 ```
-

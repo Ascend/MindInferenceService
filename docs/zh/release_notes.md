@@ -49,7 +49,7 @@
 
 |MindSDK软件版本|MindSDK待升级版本|CANN版本兼容性|Ascend HDK版本兼容性|
 |--|--|--|--|
-|MindSDK 7.3.0|不涉及|<li>CANN 8.1.RC1及8.1.RC1.x<li>CANN 8.2.RC1及8.2.RC1.x<li>CANN 8.3.RC1及8.3.RC1.x<li>CANN 8.5.0及8.5.0.x|<li>Ascend HDK 25.0.RC1及Ascend HDK 25.0.RC1.x<li>Ascend HDK 25.2.0及Ascend HDK 25.2.0.x<li>Ascend HDK 25.3.RC1及Ascend HDK 25.3.RC1.x<li>Ascend HDK 25.5.0及Ascend HDK 25.5.0.x|
+|MindSDK 7.3.0|不涉及|<li>CANN 8.1.RC1及8.1.RC1.x</li><li>CANN 8.2.RC1及8.2.RC1.x</li><li>CANN 8.3.RC1及8.3.RC1.x</li><li>CANN 8.5.0及8.5.0.x</li>|<li>Ascend HDK 25.0.RC1及Ascend HDK 25.0.RC1.x</li><li>Ascend HDK 25.2.0及Ascend HDK 25.2.0.x</li><li>Ascend HDK 25.3.RC1及Ascend HDK 25.3.RC1.x</li><li>Ascend HDK 25.5.0及Ascend HDK 25.5.0.x</li>|
 
 
 >[!NOTE] 说明
@@ -115,5 +115,5 @@
 
 # 漏洞修补列表<a name="ZH-CN_TOPIC_0000002513526450"></a>
 
-请参见[MindSDK_7.3.0_漏洞修补列表.xlsx](./resource/MindSDK%207.3.0%20漏洞修补列表.xlsx)。
+请参见[MindSDK_7.3.0_漏洞修补列表.xlsx](./resource/MindSDK_7.3.0_漏洞修补列表.xlsx)。
 
