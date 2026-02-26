@@ -2,14 +2,14 @@
 
 ## 获取软件包<a name="ZH-CN_TOPIC_0000002463252390"></a>
 
-请参考本章获取所需软件包和对应的数字签名文件，下载本软件即表示同意[华为企业业务最终用户许可协议（EULA）](https://e.huawei.com/cn/about/eula)的条款和条件。
+请参考本章获取所需软件包和对应的数字签名文件。
 
 |组件名称|软件包名称|获取方式|
 |--|--|--|
-|Mind Inference Service（MIS）|Ascend-mindsdk-mis_*{version}*_linux-*{arch}*.run|待发布|
+|Mind Inference Service（MIS）|Ascend-mis_*{version}*_linux-*{arch}*.run|待发布|
 
 
-> [!NOTE] 说明
+>[!NOTE] 说明
 >{version\}为软件包的版本号。
 >{arch\}为CPU架构。
 
@@ -69,7 +69,6 @@ Python 3.11.13
 
 **下载依赖软件包<a name="section152612378439"></a>**
 
-下载本软件即表示同意[华为企业业务最终用户许可协议（EULA）](https://e.huawei.com/cn/about/eula)的条款和条件。
 
 **表 1**  软件包清单
 
@@ -77,8 +76,8 @@ Python 3.11.13
 |--|--|--|
 |昇腾NPU驱动|Ascend-hdk-*{chip_type}*-npu-driver_*{version}*_linux-*{arch}*.run|固件与驱动：[获取链接](https://www.hiascend.com/hardware/firmware-drivers/commercial?product=1&model=30&cann=8.3.RC1.alpha003&driver=Ascend+HDK+25.2.0)|
 |昇腾NPU固件|Ascend-hdk-*{chip_type}*-npu-firmware_*{version}*.run|固件与驱动：[获取链接](https://www.hiascend.com/hardware/firmware-drivers/commercial?product=1&model=30&cann=8.3.RC1.alpha003&driver=Ascend+HDK+25.2.0)|
-|CANN开发套件包|Ascend-cann-toolkit_*{version}*_linux-<arch>.run|支持在线一键下载和安装，无需获取软件包|
-|CANN算子包集成一系列库文件|Ascend-cann-<chip_type>-ops_*{version}*_linux-<arch>.run|支持在线一键下载和安装，无需获取软件包|
+|CANN开发套件包|Ascend-cann-toolkit_*{version}*_linux-*{arch}*.run|支持在线一键下载和安装，无需获取软件包|
+|CANN算子包集成一系列库文件|Ascend-cann-*{chip_type}*-ops_*{version}*_linux-*{arch}*.run|支持在线一键下载和安装，无需获取软件包|
 |NNAL软件包|Ascend-cann-nnal_*{version}*_linux-*{arch}*.run|资源下载中心：[获取链接](https://www.hiascend.com/developer/download/commercial?product=4&model=10&os=j0105&networkadapter=SP333&raidcard=9460-8i&solution=4f0929885dcb40a7a12be5704f5ccb15)|
 
 
@@ -132,7 +131,7 @@ Python 3.11.13
     -   安装和运行MIS的用户需为同一用户。
     -   安装NPU驱动固件，CANN（toolkit），NNAL和安装MIS的用户需为同一用户，建议为普通用户。
 
--   软件包的安装、卸载等管理面的相关日志会保存至“\~/log/mis/deployment.log“；完整性校验、提取文件、tar命令访问相关的日志会保存至“\~/log/makeself/makeself.log“文件。用户可查看相应文件，完成后续的日志跟踪及审计。
+-   软件包的安装、卸载等管理面的相关日志会保存至“\~/log/mis/deployment.log”；完整性校验、提取文件、tar命令访问相关的日志会保存至“\~/log/makeself/makeself.log”文件。用户可查看相应文件，完成后续的日志跟踪及审计。
 
 **安装准备<a name="section1818125498"></a>**
 
@@ -148,13 +147,13 @@ source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实
 1.  进入MIS安装包所在路径，增加对软件包的可执行权限。
 
     ```
-    chmod u+x Ascend-mindsdk-mis_{version}_linux-{arch}.run
+    chmod u+x Ascend-mis_{version}_linux-{arch}.run
     ```
 
 2.  执行如下命令，校验软件包的一致性和完整性。
 
     ```
-    ./Ascend-mindsdk-mis_{version}_linux-{arch}.run --check 
+    ./Ascend-mis_{version}_linux-{arch}.run --check 
     ```
 
     如果系统没有shasum或者sha256sum工具则会校验失败，此时需要自行安装shasum或者sha256sum工具。
@@ -168,14 +167,12 @@ source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实
 3.  安装软件包（安装命令支持--install-path=_<path\>_等参数，具体使用方式请参见[安装软件包参数说明](appendix.md#安装软件包参数说明)）。
 
     ```
-    ./Ascend-mindsdk-mis_{version}_linux-{arch}.run --install
+    ./Ascend-mis_{version}_linux-{arch}.run --install
     ```
 
     如果用户未指定安装路径，软件会默认安装到软件包所在的路径。
 
-4.  安装过程中提示“Do you accept the EULA to install MIS?”时，输入Y或y，表示同意[华为企业业务最终用户许可协议（EULA）](https://e.huawei.com/cn/about/eula)，继续进行安装；输入其他字符时停止安装，退出程序。
-
-    安装完成后，若显示如下信息，表示软件安装成功。
+4.  安装完成后，若显示如下信息，表示软件安装成功。
 
     ```
     Successfully installed MIS
@@ -197,7 +194,7 @@ source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实
 2.  执行以下命令卸载软件包。
 
     ```
-    ./Ascend-mindsdk-mis_{version}_linux-{arch}.run --uninstall
+    ./Ascend-mis_{version}_linux-{arch}.run --uninstall
     ```
 
     > [!NOTE] 说明
@@ -222,7 +219,7 @@ source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实
     ./uninstall.sh
     ```
 
-    若脚本没有可执行权限，请执行如下命令赋予“uninstall.sh“脚本的可执行权限。
+    若脚本没有可执行权限，请执行如下命令赋予“uninstall.sh”脚本的可执行权限。
 
     ```
     chmod u+x uninstall.sh
@@ -231,6 +228,6 @@ source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实
     > [!NOTE] 说明
     >-   该方式将删除MIS当前版本的所在目录。若删除MIS的当前版本后，安装目录为空，则会删除对应的安装信息文件，否则安装信息文件将会保留。
     >-   MIS的安装目录所属用户必须与当前执行操作的用户相同。
-    >-   使用“uninstall.sh“脚本进行卸载操作仅适用于正常安装途径，且安装后未对安装文件结构进行修改。如需解决安装异常等情况，请删除安装目录下有关MIS的全部文件夹，以及ascend\_mis\_install.info文件（root用户路径：/etc/Ascend/ascend\_mis\_install.info；普通用户路径：$HOME/Ascend/ascend\_mis\_install.info）。
+    >-   使用“uninstall.sh”脚本进行卸载操作仅适用于正常安装途径，且安装后未对安装文件结构进行修改。如需解决安装异常等情况，请删除安装目录下有关MIS的全部文件夹，以及ascend\_mis\_install.info文件（root用户路径：/etc/Ascend/ascend\_mis\_install.info；普通用户路径：$HOME/Ascend/ascend\_mis\_install.info）。
 
 
