@@ -16,18 +16,17 @@
 |MIS_MAX_LOG_LEN|int|配置日志的最大长度。|默认值：2048。<br>取值范围：[0, 8192]。|
 |UVICORN_LOG_LEVEL|str|配置Uvicorn服务的日志级别。|默认值：info。<br>取值范围：[debug, info, warning, error, critical]。|
 
-
 > [!NOTE] 说明
 >三方组件的环境变量可能会更改MIS的服务状态，请参阅对应三方组件文档。
-
 
 ## 模型最优配置<a name="ZH-CN_TOPIC_0000002463252414"></a>
 
 > [!NOTE] 说明
->-   请确保参数配置路径及文件与运行用户属主一致。
->-   请确保参数配置文件的大小不超过1MB。
->-   请确保参数配置文件不为软链接，路径字符串长度不大于1024。
->-   请确保参数配置路径权限为750，配置文件为640。
+>
+>- 请确保参数配置路径及文件与运行用户属主一致。
+>- 请确保参数配置文件的大小不超过1MB。
+>- 请确保参数配置文件不为软链接，路径字符串长度不大于1024。
+>- 请确保参数配置路径权限为750，配置文件为640。
 
 **模型支持<a name="section7482154712357"></a>**
 
@@ -39,10 +38,9 @@
 |qwen3-8b|atlas800ia2-1x32gb-bf16-vllm-latency|Atlas 800I A2|1x32GB|BF16|vLLM|低时延|16GB|
 |qwen3-8b|atlas800ia2-1x32gb-bf16-vllm-throughput|Atlas 800I A2|1x32GB|BF16|vLLM|高吞吐|16GB|
 
-
 **优化配置参数示例<a name="section49261519367"></a>**
 
-```
+```shell
 vllm:  # 引擎类型 (必填项，可选项为vllm，与后续engine_type对应)  
   dtype: bfloat16  # 具体配置信息(选填项，详情见如下配置参数总览)  
   tensor_parallel_size: 1  
@@ -62,7 +60,6 @@ model: Qwen3-8B  # 模型权重路径(必填项)
 |vllm|dict|引擎类型对应的配置字典。键名及其值请参考[表3 引擎详细配置](#table3)。|
 |engine_type|str|引擎类型，取值范围：[vllm]。|
 |model|str|模型的权重路径，取值范围：[Qwen3-8B]。|
-
 
 **表 3**  引擎详细配置<a id="table3"></a>
 
@@ -85,6 +82,3 @@ model: Qwen3-8B  # 模型权重路径(必填项)
 |enable_prefix_caching|bool|是否启用前缀缓存，取值范围：[True, False]。|
 |multi_step_stream_outputs|bool|是否启用多步流输出，取值范围：[True, False]。|
 |enforce_eager|bool|是否强制即时执行模式，取值范围：[True, False]。|
-
-
-

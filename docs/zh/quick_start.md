@@ -8,13 +8,14 @@
 
 **环境准备<a name="section470012716523"></a>**
 
--   准备Atlas A2 推理系列产品的服务器，并安装对应的驱动和固件，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节[（社区版）]。
--   安装CANN Toolkit，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（社区版）。
--   安装MIS以及相关依赖，具体安装过程请参见[安装部署](installation_guide.md#安装部署)。
+- 准备Atlas A2 推理系列产品的服务器，并安装对应的驱动和固件，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)中的“安装NPU驱动和固件”章节[（社区版）]。
+- 安装CANN Toolkit，具体安装过程请参见[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/canncommercial/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（商用版）或[《CANN 软件安装指南》](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/850/softwareinst/instg/instg_0000.html?Mode=PmIns&InstallType=netconda&OS=openEuler&Software=cannToolKit)的“安装CANN”章节（社区版）。
+- 安装MIS以及相关依赖，具体安装过程请参见[安装部署](installation_guide.md#安装部署)。
 
 **启动MIS服务<a name="section19292103315523"></a>**
 
 服务运行依赖：
+
 - fastapi 0.121.1
 - numpy 1.26.4
 - pydantic 2.12.2
@@ -26,55 +27,56 @@
 
 运行流程：
 
-1.  下载模型权重并设置路径
+1. 下载模型权重并设置路径
 
     部署MIS前需将模型权重放置在本地，可选择从开源模型社区\(如魔乐社区、Huggingface\)下载对应权重（safetensors类型权重）。假设模型权重下载路径为/data/Qwen3-8B，则将MIS权重缓存路径的环境变量MIS\_CACHE\_PATH设置为/data。
 
-    ```
+    ```shell
     export MIS_CACHE_PATH=/data
     ```
 
-2.  配置CANN运行环境变量
+2. 配置CANN运行环境变量
 
     确保安装环境中已执行CANN环境变量配置脚本，使环境变量生效。具体执行路径，请以实际安装路径为准。
 
-    ```
+    ```shell
     source $HOME/Ascend/cann/set_env.sh #此处为示例安装路径，根据实际安装路径修改
     source $HOME/Ascend/nnal/atb/set_env.sh #此处为示例安装路径，根据实际安装路径修改
     ```
 
-3.  指定运行模型
+3. 指定运行模型
 
-    ```
+    ```shell
     export MIS_MODEL=Qwen3-8B
     ```
 
-4.  执行启动命令
+4. 执行启动命令
 
     进入MIS软件包安装路径，例如：
 
-    ```
+    ```shell
     cd $HOME/Ascend/mis/7.3.0
     ```
 
     执行如下命令部署MIS
 
-    ```
+    ```shell
     ./mis.pyz
     ```
 
     或通过Python解释器执行部署命令（请根据对应Python环境调整）
 
-    ```
+    ```shell
     python3 mis.pyz
     ```
 
 > [!NOTICE] 须知 
->-   请确保模型文件来源可信，文件未被篡改且权重类型为safetensors。
->-   请确保模型权重路径，MIS安装路径及所有文件的属主与运行用户一致。
->-   请确保参数配置文件不为软链接，路径字符串长度不大于1024。
->-   请确保模型权重路径权限为750，权重文件为640。
->-   推理微服务MIS监听至127.0.0.1且MIS需要通过组件集成的方式与其他系统配合才能形成完整的推理服务系统 ，请参考[推理微服务安全加固](security_hardening.md#推理微服务安全加固)。
+>
+>- 请确保模型文件来源可信，文件未被篡改且权重类型为safetensors。
+>- 请确保模型权重路径，MIS安装路径及所有文件的属主与运行用户一致。
+>- 请确保参数配置文件不为软链接，路径字符串长度不大于1024。
+>- 请确保模型权重路径权限为750，权重文件为640。
+>- 推理微服务MIS监听至127.0.0.1且MIS需要通过组件集成的方式与其他系统配合才能形成完整的推理服务系统 ，请参考[推理微服务安全加固](security_hardening.md#推理微服务安全加固)。
 
 **发起请求<a name="section57121852205210"></a>**
 

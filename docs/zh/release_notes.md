@@ -1,8 +1,5 @@
 # 版本配套说明<a name="ZH-CN_TOPIC_0000002545206337"></a>
 
-
-
-
 ## 产品版本信息<a name="ZH-CN_TOPIC_0000002513526454"></a>
 
 <a name="zh-cn_topic_0000001938532254_zh-cn_topic_0000001935094108__Ref249955742"></a>
@@ -36,21 +33,19 @@
 |Ascend HDK|25.5.0|
 |CANN|8.5.0|
 
-
 ## 病毒扫描结果<a name="ZH-CN_TOPIC_0000002513526448"></a>
 
 病毒扫描通过，详细请参见[MindSDK_7.3.0_virus_scan_report.docx](./resource/MindSDK_7.3.0_virus_scan_report.docx)。
 
 # 版本兼容性说明<a name="ZH-CN_TOPIC_0000002545286323"></a>
 
--   MIS：本版本无兼容性问题
+- MIS：本版本无兼容性问题
 
 **表 1**  软件版本兼容性说明
 
 |MindSDK软件版本|MindSDK待升级版本|CANN版本兼容性|Ascend HDK版本兼容性|
 |--|--|--|--|
 |MindSDK 7.3.0|不涉及|<li>CANN 8.1.RC1及8.1.RC1.x</li><li>CANN 8.2.RC1及8.2.RC1.x</li><li>CANN 8.3.RC1及8.3.RC1.x</li><li>CANN 8.5.0及8.5.0.x</li>|<li>Ascend HDK 25.0.RC1及Ascend HDK 25.0.RC1.x</li><li>Ascend HDK 25.2.0及Ascend HDK 25.2.0.x</li><li>Ascend HDK 25.3.RC1及Ascend HDK 25.3.RC1.x</li><li>Ascend HDK 25.5.0及Ascend HDK 25.5.0.x</li>|
-
 
 >[!NOTE] 说明
 >软件版本兼容性是指网元软件版本升级时，关联设备、网管和上层OSS不需要联动升级或打补丁，仍然可以支持已有功能。
@@ -61,30 +56,24 @@
 
 # 更新说明<a name="ZH-CN_TOPIC_0000002513686360"></a>
 
-
-
-
-
-
 ## 新增特性<a name="ZH-CN_TOPIC_0000002545206335"></a>
 
 |特性名称|特性描述|配套产品型号|
 |--|--|--|
 |MIS|支持对Qwen3-8B模型的推理服务|Atlas 800I A2 推理服务器|
 
-
 ## 业务接口变更<a name="ZH-CN_TOPIC_0000002545286327"></a>
 
 **MIS<a name="section19761056658"></a>**
 
--   新增获取可用模型接口。
--   新增聊天补全接口
+- 新增获取可用模型接口。
+- 新增聊天补全接口
 
 ## 关键特性变更<a name="ZH-CN_TOPIC_0000002513686364"></a>
 
 **MIS<a name="section169547124513"></a>**
 
--   新增对Qwen3-8B模型的推理服务的支持。
+- 新增对Qwen3-8B模型的推理服务的支持。
 
 ## 已解决的问题<a name="ZH-CN_TOPIC_0000002513526452"></a>
 
@@ -95,8 +84,6 @@
 无
 
 # 升级影响<a name="ZH-CN_TOPIC_0000002545286321"></a>
-
-
 
 ## 升级过程对现行系统的影响<a name="ZH-CN_TOPIC_0000002545206343"></a>
 
@@ -112,8 +99,6 @@
 |--|--|--|
 |《MindSDK 推理微服务 7.3.0 用户指南》|主要包括推理微服务的简介、主要功能、开发流程和相关的API接口参考。|变更详见《[MindSDK 推理微服务 7.3.0 用户指南](introduction.md#简介)》|
 
-
 # 漏洞修补列表<a name="ZH-CN_TOPIC_0000002513526450"></a>
 
 请参见[MindSDK_7.3.0_漏洞修补列表.xlsx](./resource/MindSDK_7.3.0_漏洞修补列表.xlsx)。
-

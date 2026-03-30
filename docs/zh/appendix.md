@@ -26,19 +26,18 @@
 |--install-path=\<path>|（可选）自定义软件包安装根目录。如未设置，默认为当前命令执行所在目录。<li>建议用户使用绝对路径安装MIS，指定安装路径时请避免使用相对路径。</li><li>需要和--install参数配合使用。</li><li>传入的路径参数不能存在非法字符，仅支持大小写字母、数字、-_./特殊字符。</li>|
 |--uninstall|卸载所有已安装的MIS版本。|
 
-
 > [!NOTE] 说明
 >以下参数未展示在--help参数中，用户请勿直接使用。
->-   --xwin：使用xwin模式运行。
->-   --phase2：要求执行第二步动作。
-
+>
+>- --xwin：使用xwin模式运行。
+>- --phase2：要求执行第二步动作。
 
 ## 日志说明<a name="ZH-CN_TOPIC_0000002498452221"></a>
 
 本系统内置了日志记录功能，用于记录MIS运行过程中的操作日志和服务日志。
 
--   日志会同时输出到控制台（标准输出）和磁盘文件。
--   控制台输出格式与磁盘文件格式一致。
+- 日志会同时输出到控制台（标准输出）和磁盘文件。
+- 控制台输出格式与磁盘文件格式一致。
 
 **日志落盘地址<a name="section1982832611817"></a>**
 
@@ -46,30 +45,29 @@
 
 日志文件名以 log\_mis\_disk\_ 为前缀，后缀根据日志类型和时间戳生成，例如：
 
--   普通日志：log\_mis\_disk\_20250405\_143000.log
--   操作日志：log\_mis\_disk\_operation\_20250405\_143000.log
--   服务日志：log\_mis\_disk\_service\_20250405\_143000.log
+- 普通日志：log\_mis\_disk\_20250405\_143000.log
+- 操作日志：log\_mis\_disk\_operation\_20250405\_143000.log
+- 服务日志：log\_mis\_disk\_service\_20250405\_143000.log
 
 **日志文件管理<a name="section177191716122916"></a>**
 
--   日志文件大小限制：单个日志文件最大为 50MB，超过后会自动进行日志轮转（即生成新的日志文件）。
--   日志文件数量限制：系统最多保留 36 个日志文件，超出部分会自动删除最早的日志文件。
--   日志文件权限：
-    -   当前正在写入的日志文件权限为 640（即用户可读写，组可读）。
-    -   已轮转的日志文件权限为 440（即用户和组均可读，不可写）。
+- 日志文件大小限制：单个日志文件最大为 50MB，超过后会自动进行日志轮转（即生成新的日志文件）。
+- 日志文件数量限制：系统最多保留 36 个日志文件，超出部分会自动删除最早的日志文件。
+- 日志文件权限：
+    - 当前正在写入的日志文件权限为 640（即用户可读写，组可读）。
+    - 已轮转的日志文件权限为 440（即用户和组均可读，不可写）。
 
 > [!NOTE] 说明
->-   请确保日志落盘路径及文件与运行用户属主一致。
->-   请确保日志落盘路径权限为750。
->-   请确保日志落盘路径与文件不为软链接，路径字符串长度不能大于1024。
-
+>
+>- 请确保日志落盘路径及文件与运行用户属主一致。
+>- 请确保日志落盘路径权限为750。
+>- 请确保日志落盘路径与文件不为软链接，路径字符串长度不能大于1024。
 
 ## 公网地址<a name="ZH-CN_TOPIC_0000002469838190"></a>
 
 MIS软件中会存在公开网址，MIS本身不会访问也不会造成风险。
 
 更多公网地址请参考[MIS 公网地址.xlsx](./resource/MIS%20公网地址.xlsx)。
-
 
 ## 三方环境变量使用设置<a name="ZH-CN_TOPIC_0000002466051662"></a>
 
@@ -83,8 +81,6 @@ MIS在服务部署过程中会设置如下三方环境变量。
 |TRANSFORMERS_OFFLINE|用于控制是否以离线模式运行Transformers相关操作。取值为1，即表示以离线模式运行Transformers相关操作。|
 |VLLM_HOST_IP|vLLM分布式环境中当前节点的IP地址。取值为127.0.0.1。|
 |GLOO_SOCKET_IFNAME|强制Gloo使用loopback接口（127.0.0.1）。取值为lo。|
-
-
 
 ## vLLM环境变量参考列表<a name="ZH-CN_TOPIC_0000002496449369"></a>
 
@@ -104,7 +100,6 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_DP_MASTER_IP|str|数据并行主节点IP，默认为127.0.0.1。|
 |VLLM_DP_MASTER_PORT|int|数据并行主节点端口，默认为0。|
 
-
 **表 2** **注意力机制配置**
 
 |环境变量名称|类型|描述|
@@ -114,7 +109,6 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_FLASH_ATTN_VERSION|int|强制指定使用的Flash Attention版本，仅在使用Flash Attention后端时有效。取值范围[2, 3]，其中：<li>2：表示使用Flash Attention 2。</li><li>3：表示使用Flash Attention 3。</li>|
 |VLLM_USE_FLASHINFER_SAMPLER|bool|是否使用FlashInfer采样器。默认为0，取值范围：[0, 1]，其中：<li>0：表示不使用FlashInfer采样器。</li><li>1：表示使用FlashInfer采样器。</li>|
 |VLLM_DISABLE_FLASHINFER_PREFILL|bool|是否禁用FlashInfer的预填充注意力内核。默认为0，取值范围：[0, 1]，其中：<li>0：表示启用FlashInfer预填充内核。</li><li>1：表示禁用FlashInfer预填充内核。</li>|
-
 
 **表 3** **API服务器配置**
 
@@ -130,14 +124,12 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_LOOPBACK_IP|str|强制设置回环IP。|
 |VLLM_PROCESS_NAME_PREFIX|str|进程名前缀。默认值为VLLM。|
 
-
 **表 4** **内核选择配置**
 
 |环境变量名称|类型|描述|
 |--|--|--|
 |VLLM_DISABLED_KERNELS|list|禁用的量化内核列表。|
 |VLLM_COMPUTE_NANS_IN_LOGITS|bool|是否在计算logits时检查并报告NaN值。默认为0，取值范围：[0, 1]，其中：<li>0：表示不检查NaN值。</li><li>1：表示检查并报告NaN值。</li>|
-
 
 **表 5** **日志与监控配置**
 
@@ -160,14 +152,12 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_TORCH_PROFILER_WITH_STACK|bool|在使用PyTorch Profiler时，是否记录Python堆栈信息。默认为1，取值范围：[0, 1]，其中：<li>0：表示性能分析时不记录堆栈信息。</li><li>1：表示性能分析时记录堆栈信息。</li>|
 |VLLM_TORCH_PROFILER_WITH_FLOPS|bool|在使用PyTorch Profiler时，是否分析操作的浮点运算次数。默认为0，取值范围：[0, 1]，其中：<li>0：表示性能分析时不记录FLOPS数据。</li><li>1：表示性能分析时记录FLOPS数据。</li>|
 
-
 **表 6** **CPU后端配置**
 
 |环境变量名称|类型|描述|
 |--|--|--|
 |VLLM_CPU_KVCACHE_SPACE|int|CPU键值缓存空间。|
 |VLLM_CPU_OMP_THREADS_BIND|str|OpenMP线程绑定的CPU核心。默认为auto。|
-
 
 **表 7** **测试与调试配置**
 
@@ -179,7 +169,6 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_MLA_DISABLE|bool|是否禁用MLA注意力优化。默认为0，取值范围：[0, 1]，其中：<li>0：表示启用MLA注意力优化。</li><li>1：表示禁用MLA注意力优化。</li>|
 |VLLM_GC_DEBUG|str|GC调试配置。|
 
-
 **表 8** **通信与RPC配置**
 
 |环境变量名称|类型|描述|
@@ -190,16 +179,14 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_HTTP_TIMEOUT_KEEP_ALIVE|int|HTTP长连接保持超时时长（秒）。默认为5。|
 |VLLM_MQ_MAX_CHUNK_BYTES_MB|int|RPC消息队列最大块（MB）。默认为16。|
 
-
 **表 9** **统计和调试配置**
 
 |环境变量名称|类型|描述|
 |--|--|--|
-|VLLM_USAGE_STATS_SERVER|str|使用统计服务器URL。默认为https://stats.vllm.ai。|
+|VLLM_USAGE_STATS_SERVER|str|使用统计服务器URL。默认为<https://stats.vllm.ai。>|
 |VLLM_NO_USAGE_STATS|bool|是否禁止向vLLM服务器发送使用情况统计信息。默认为0，取值范围：[0, 1]，其中：<li>0：表示允许发送使用统计。</li><li>1：表示禁止发送任何使用统计。</li>|
 |VLLM_DO_NOT_TRACK|bool|是否禁止跟踪和上报使用数据。默认为0，取值范围：[0, 1]，其中：<li>0：表示允许跟踪和上报数据。</li><li>1：表示禁止跟踪和上报数据。</li>|
 |VLLM_USAGE_SOURCE|str|使用统计来源。默认为production。|
-
 
 **表 10** **其他配置**
 
@@ -210,20 +197,19 @@ vLLM环境变量可能会影响MIS的部署环境，参考如下：
 |VLLM_USE_V1|bool|是否启用vLLM V1版本的引擎。默认为1，取值范围：[0, 1]，其中：<li>0：表示启用V0引擎。</li><li>1：表示启用V1引擎。</li>|
 |VLLM_ENABLE_V1_MULTIPROCESSING|bool|是否在V1代引擎启用多进程支持。默认为1，取值范围：[0, 1]，其中：<li>0：表示禁用V1多进程。</li><li>1：表示启用V1多进程。</li>|
 
-
-
 ## 软件通讯矩阵示例<a name="ZH-CN_TOPIC_0000002504077011"></a>
 
 > [!NOTE] 说明
->-   vLLM基于PyTorch分布式服务开启的通信端口默认为全0侦听，为了降低安全风险，建议用户针对此场景进行安全加固（可参见[安全加固](./security_hardening.md)）。如使用iptables配置防火墙，在运行推理服务前限制外部对PyTorch分布式使用端口的访问，在运行推理服务结束后清理防火墙规则。HTTP协议存在安全风险，建议使用HTTPS安全协议。
->-   推理微服务MIS监听至127.0.0.1，默认端口为8000，若部署时修改环境变量MIS\_PORT请参考实际端口。
->-   PyTorch（与vLLM）的通信端口号与vLLM环境变量VLLM\_PORT设置相关。
+>
+>- vLLM基于PyTorch分布式服务开启的通信端口默认为全0侦听，为了降低安全风险，建议用户针对此场景进行安全加固（可参见[安全加固](./security_hardening.md)）。如使用iptables配置防火墙，在运行推理服务前限制外部对PyTorch分布式使用端口的访问，在运行推理服务结束后清理防火墙规则。HTTP协议存在安全风险，建议使用HTTPS安全协议。
+>- 推理微服务MIS监听至127.0.0.1，默认端口为8000，若部署时修改环境变量MIS\_PORT请参考实际端口。
+>- PyTorch（与vLLM）的通信端口号与vLLM环境变量VLLM\_PORT设置相关。
 
 **vLLM侦听示例**（LISTEN）
 
 \(单机部署情况下\)如下述7个端口侦听\(用于vLLM内部通讯\)：
 
-```
+```text
 # 示例
 tcp        0      0 127.0.0.1:39601       0.0.0.0:*               LISTEN
 tcp        0      0 127.0.0.1:39465       0.0.0.0:*               LISTEN      
@@ -233,5 +219,3 @@ tcp        0      0 127.0.0.1:36289       0.0.0.0:*               LISTEN
 tcp        0      0 127.0.0.1:45093       0.0.0.0:*               LISTEN 
 tcp        0      0 127.0.0.1:38382       0.0.0.0:*               LISTEN
 ```
-
-
